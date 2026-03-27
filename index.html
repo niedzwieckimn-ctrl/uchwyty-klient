@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Panel Klienta</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body{font-family:Arial,sans-serif;background:#f5f7fb;margin:0;color:#111}
+    .top{background:#111;color:#fff;padding:12px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .wrap{max-width:980px;margin:16px auto;padding:0 12px}
+    .card{background:#fff;border:1px solid #e8e8ef;border-radius:12px;padding:12px;margin-bottom:12px}
+    .btn{padding:8px 12px;border:1px solid #ddd;border-radius:10px;background:#fff;cursor:pointer}
+    .btn.primary{background:#111;color:#fff;border-color:#111}
+    input,textarea,select{width:100%;padding:10px;border:1px solid #ddd;border-radius:10px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+    .muted{color:#666;font-size:12px}
+    .hidden{display:none}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media(max-width:800px){.row{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="top">
+    <b>Panel Klienta</b>
+    <button id="btnLogout" class="btn hidden">Wyloguj</button>
+    <span id="who" class="muted"></span>
+  </div>
+
+  <div class="wrap">
+    <div id="authCard" class="card">
+      <h3>Logowanie klienta</h3>
+      <div class="row">
+        <div>
+          <label>Email</label>
+          <input id="email" type="email" placeholder="email" />
+        </div>
+        <div>
+          <label>Hasło</label>
+          <input id="password" type="password" placeholder="hasło" />
+        </div>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <button id="btnLogin" class="btn primary">Zaloguj</button>
+        <button id="btnRegister" class="btn">Załóż konto</button>
+      </div>
+      <div id="authMsg" class="muted" style="margin-top:8px"></div>
+    </div>
+
+    <div id="appArea" class="hidden">
+      <div class="card">
+        <h3>Stany magazynowe</h3>
+        <button id="btnLoadStock" class="btn">Odśwież stany</button>
+        <div class="muted" style="margin-top:6px">Widok z `v_client_stock`</div>
+        <div style="overflow:auto;margin-top:10px">
+          <table id="stockTable">
+            <thead>
+              <tr><th>SKU</th><th>Model</th><th>Nazwa</th><th>Na stanie</th><th>W drodze</th><th>Razem</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Nowe zamówienie</h3>
+        <div class="muted">Format: product_id i qty (po jednej linii)</div>
+        <textarea id="itemsJson" rows="6">[
+  {"product_id": 1, "qty": 2}
+]</textarea>
+        <input id="orderNote" placeholder="Notatka (opcjonalnie)" style="margin-top:8px" />
+        <div style="margin-top:8px">
+          <button id="btnCreateOrder" class="btn primary">Wyślij zamówienie</button>
+        </div>
+        <div id="orderMsg" class="muted" style="margin-top:8px"></div>
+      </div>
+
+      <div class="card">
+        <h3>Moje zamówienia</h3>
+        <button id="btnLoadOrders" class="btn">Odśwież zamówienia</button>
+        <div style="overflow:auto;margin-top:10px">
+          <table id="ordersTable">
+            <thead>
+              <tr><th>Nr</th><th>Status</th><th>Netto</th><th>Brutto</th><th>Data</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Skan QR / Token paczki</h3>
+        <input id="tokenInput" placeholder="Wklej token z QR" />
+        <button id="btnTrack" class="btn" style="margin-top:8px">Sprawdź paczkę</button>
+        <pre id="trackOut" style="white-space:pre-wrap;background:#fafafa;padding:10px;border-radius:10px"></pre>
+      </div>
+    </div>
+  </div>
+
+<script>
+const SUPABASE_URL = "https://qfzawzkynmqkbjlbtkjd.supabase.co";
+const SUPABASE_ANON_KEY = "TU_WKLEJ_SWOJ_ANON_KEY";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const $ = (id)=>document.getElementById(id);
+const authCard=$("authCard"), appArea=$("appArea"), who=$("who"), btnLogout=$("btnLogout");
+
+function showAuth(msg=""){ authCard.classList.remove("hidden"); appArea.classList.add("hidden"); btnLogout.classList.add("hidden"); who.textContent=""; $("authMsg").textContent=msg; }
+function showApp(email){ authCard.classList.add("hidden"); appArea.classList.remove("hidden"); btnLogout.classList.remove("hidden"); who.textContent=email; }
+
+async function loadSession(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session){ showAuth(); return; }
+  showApp(session.user.email || "zalogowany");
+  loadStock(); loadOrders();
+}
+
+$("btnLogin").onclick = async () => {
+  const email=$("email").value.trim(), password=$("password").value;
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if(error){ showAuth("Błąd logowania: " + error.message); return; }
+  loadSession();
+};
+
+$("btnRegister").onclick = async () => {
+  const email=$("email").value.trim(), password=$("password").value;
+  const { error } = await sb.auth.signUp({ email, password });
+  if(error){ showAuth("Błąd rejestracji: " + error.message); return; }
+  showAuth("Konto utworzone. Zaloguj się.");
+};
+
+btnLogout.onclick = async () => {
+  await sb.auth.signOut();
+  showAuth("Wylogowano.");
+};
+
+async function loadStock(){
+  const { data, error } = await sb.from("v_client_stock")
+    .select("*")
+    .order("sku", { ascending:true })
+    .limit(500);
+  const tb = $("stockTable").querySelector("tbody");
+  tb.innerHTML = "";
+  if(error){ tb.innerHTML = `<tr><td colspan="6">Błąd: ${error.message}</td></tr>`; return; }
+  (data||[]).forEach(r=>{
+    tb.innerHTML += `<tr>
+      <td>${r.sku||""}</td><td>${r.model||""}</td><td>${r.name||""}</td>
+      <td>${r.qty_on_stock??0}</td><td>${r.qty_in_delivery??0}</td><td>${r.qty_total_visible??0}</td>
+    </tr>`;
+  });
+}
+$("btnLoadStock").onclick = loadStock;
+
+async function loadOrders(){
+  const { data, error } = await sb.from("customer_orders")
+    .select("id,order_no,status,total_net,total_gross,created_at")
+    .order("created_at", { ascending:false })
+    .limit(200);
+  const tb = $("ordersTable").querySelector("tbody");
+  tb.innerHTML = "";
+  if(error){ tb.innerHTML = `<tr><td colspan="5">Błąd: ${error.message}</td></tr>`; return; }
+  (data||[]).forEach(r=>{
+    tb.innerHTML += `<tr>
+      <td>${r.order_no||r.id}</td><td>${r.status||""}</td>
+      <td>${Number(r.total_net||0).toFixed(2)}</td>
+      <td>${Number(r.total_gross||0).toFixed(2)}</td>
+      <td>${(r.created_at||"").replace("T"," ").slice(0,19)}</td>
+    </tr>`;
+  });
+}
+$("btnLoadOrders").onclick = loadOrders;
+
+$("btnCreateOrder").onclick = async () => {
+  try{
+    const p_items = JSON.parse($("itemsJson").value);
+    const p_note = $("orderNote").value || null;
+    const { data, error } = await sb.rpc("create_customer_order", { p_note, p_items });
+    if(error){ $("orderMsg").textContent = "Błąd: " + error.message; return; }
+    $("orderMsg").textContent = "OK, utworzono zamówienie ID: " + data;
+    loadOrders();
+  }catch(e){
+    $("orderMsg").textContent = "Niepoprawny JSON pozycji.";
+  }
+};
+
+$("btnTrack").onclick = async () => {
+  const p_token = $("tokenInput").value.trim();
+  const { data, error } = await sb.rpc("track_package_by_token", { p_token });
+  $("trackOut").textContent = error ? ("Błąd: " + error.message) : JSON.stringify(data, null, 2);
+};
+
+loadSession();
+</script>
+</body>
+</html>
