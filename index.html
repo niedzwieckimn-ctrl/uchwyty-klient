@@ -100,74 +100,130 @@
 
 <script>
 const SUPABASE_URL = "https://qfzawzkynmqkbjlbtkjd.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmemF3emt5bm1xa2JqbGJ0a2pkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MjQ4MTAsImV4cCI6MjA5MDEwMDgxMH0.Z_FcKX_iMS7rdx8gNOAWOEBJgO2MA7cqm8ppZiqu7DM";
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SUPABASE_ANON_KEY = "TU_TWOJ_ANON_KEY";
+
+// klient do auth + akcji użytkownika
+const sbAuth = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+});
+
+// klient publiczny (bez sesji) -> zawsze anon, do stocku
+const sbPublic = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+});
+
+// debug w konsoli
+window.sb = sbAuth;
+window.sbPublic = sbPublic;
 
 const $ = (id)=>document.getElementById(id);
 const authCard=$("authCard"), appArea=$("appArea"), who=$("who"), btnLogout=$("btnLogout");
 
-function showAuth(msg=""){ authCard.classList.remove("hidden"); appArea.classList.add("hidden"); btnLogout.classList.add("hidden"); who.textContent=""; $("authMsg").textContent=msg; }
-function showApp(email){ authCard.classList.add("hidden"); appArea.classList.remove("hidden"); btnLogout.classList.remove("hidden"); who.textContent=email; }
+function showAuth(msg=""){
+  authCard.classList.remove("hidden");
+  appArea.classList.add("hidden");
+  btnLogout.classList.add("hidden");
+  who.textContent="";
+  $("authMsg").textContent=msg;
+}
+function showApp(email){
+  authCard.classList.add("hidden");
+  appArea.classList.remove("hidden");
+  btnLogout.classList.remove("hidden");
+  who.textContent=email;
+}
 
 async function loadSession(){
-  const { data:{ session } } = await sb.auth.getSession();
+  const { data:{ session }, error } = await sbAuth.auth.getSession();
+  if(error){ showAuth("Błąd sesji: " + error.message); return; }
   if(!session){ showAuth(); return; }
-  showApp(session.user.email || "zalogowany");
-  loadStock(); loadOrders();
+
+  showApp(session.user?.email || "zalogowany");
+  await loadStock();   // czytamy przez sbPublic
+  await loadOrders();  // czytamy przez sbAuth
 }
 
 $("btnLogin").onclick = async () => {
   const email=$("email").value.trim(), password=$("password").value;
-  const { error } = await sb.auth.signInWithPassword({ email, password });
+  const { error } = await sbAuth.auth.signInWithPassword({ email, password });
   if(error){ showAuth("Błąd logowania: " + error.message); return; }
-  loadSession();
+  await loadSession();
 };
 
 $("btnRegister").onclick = async () => {
   const email=$("email").value.trim(), password=$("password").value;
-  const { error } = await sb.auth.signUp({ email, password });
+  const { error } = await sbAuth.auth.signUp({ email, password });
   if(error){ showAuth("Błąd rejestracji: " + error.message); return; }
   showAuth("Konto utworzone. Zaloguj się.");
 };
 
 btnLogout.onclick = async () => {
-  await sb.auth.signOut();
+  await sbAuth.auth.signOut();
   showAuth("Wylogowano.");
 };
 
 async function loadStock(){
-  const { data, error } = await sb.from("v_client_stock")
-    .select("*")
+  const tb = $("stockTable").querySelector("tbody");
+  tb.innerHTML = `<tr><td colspan="6">Ładowanie...</td></tr>`;
+
+  const { data, error } = await sbPublic
+    .from("v_client_stock")
+    .select("product_id,sku,model,name,qty_on_stock,qty_in_delivery,qty_total_visible")
     .order("sku", { ascending:true })
     .limit(500);
-  const tb = $("stockTable").querySelector("tbody");
-  tb.innerHTML = "";
-  if(error){ tb.innerHTML = `<tr><td colspan="6">Błąd: ${error.message}</td></tr>`; return; }
-  (data||[]).forEach(r=>{
-    tb.innerHTML += `<tr>
-      <td>${r.sku||""}</td><td>${r.model||""}</td><td>${r.name||""}</td>
-      <td>${r.qty_on_stock??0}</td><td>${r.qty_in_delivery??0}</td><td>${r.qty_total_visible??0}</td>
-    </tr>`;
-  });
+
+  if(error){
+    tb.innerHTML = `<tr><td colspan="6">Błąd: ${error.message}</td></tr>`;
+    return;
+  }
+
+  if(!data || data.length===0){
+    tb.innerHTML = `<tr><td colspan="6">Brak danych</td></tr>`;
+    return;
+  }
+
+  tb.innerHTML = data.map(r => `
+    <tr>
+      <td>${r.sku||""}</td>
+      <td>${r.model||""}</td>
+      <td>${r.name||""}</td>
+      <td>${r.qty_on_stock ?? 0}</td>
+      <td>${r.qty_in_delivery ?? 0}</td>
+      <td>${r.qty_total_visible ?? 0}</td>
+    </tr>
+  `).join("");
 }
 $("btnLoadStock").onclick = loadStock;
 
 async function loadOrders(){
-  const { data, error } = await sb.from("customer_orders")
+  const tb = $("ordersTable").querySelector("tbody");
+  tb.innerHTML = `<tr><td colspan="5">Ładowanie...</td></tr>`;
+
+  const { data, error } = await sbAuth
+    .from("customer_orders")
     .select("id,order_no,status,total_net,total_gross,created_at")
     .order("created_at", { ascending:false })
     .limit(200);
-  const tb = $("ordersTable").querySelector("tbody");
-  tb.innerHTML = "";
-  if(error){ tb.innerHTML = `<tr><td colspan="5">Błąd: ${error.message}</td></tr>`; return; }
-  (data||[]).forEach(r=>{
-    tb.innerHTML += `<tr>
-      <td>${r.order_no||r.id}</td><td>${r.status||""}</td>
+
+  if(error){
+    tb.innerHTML = `<tr><td colspan="5">Błąd: ${error.message}</td></tr>`;
+    return;
+  }
+
+  if(!data || data.length===0){
+    tb.innerHTML = `<tr><td colspan="5">Brak zamówień</td></tr>`;
+    return;
+  }
+
+  tb.innerHTML = data.map(r => `
+    <tr>
+      <td>${r.order_no||r.id}</td>
+      <td>${r.status||""}</td>
       <td>${Number(r.total_net||0).toFixed(2)}</td>
       <td>${Number(r.total_gross||0).toFixed(2)}</td>
       <td>${(r.created_at||"").replace("T"," ").slice(0,19)}</td>
-    </tr>`;
-  });
+    </tr>
+  `).join("");
 }
 $("btnLoadOrders").onclick = loadOrders;
 
@@ -175,10 +231,10 @@ $("btnCreateOrder").onclick = async () => {
   try{
     const p_items = JSON.parse($("itemsJson").value);
     const p_note = $("orderNote").value || null;
-    const { data, error } = await sb.rpc("create_customer_order", { p_note, p_items });
+    const { data, error } = await sbAuth.rpc("create_customer_order", { p_note, p_items });
     if(error){ $("orderMsg").textContent = "Błąd: " + error.message; return; }
     $("orderMsg").textContent = "OK, utworzono zamówienie ID: " + data;
-    loadOrders();
+    await loadOrders();
   }catch(e){
     $("orderMsg").textContent = "Niepoprawny JSON pozycji.";
   }
@@ -186,7 +242,7 @@ $("btnCreateOrder").onclick = async () => {
 
 $("btnTrack").onclick = async () => {
   const p_token = $("tokenInput").value.trim();
-  const { data, error } = await sb.rpc("track_package_by_token", { p_token });
+  const { data, error } = await sbAuth.rpc("track_package_by_token", { p_token });
   $("trackOut").textContent = error ? ("Błąd: " + error.message) : JSON.stringify(data, null, 2);
 };
 
