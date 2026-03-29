@@ -20,6 +20,11 @@
     .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .row3{display:grid;grid-template-columns:1fr 140px 140px;gap:10px}
     .badge{display:inline-block;padding:2px 8px;border:1px solid #ddd;border-radius:999px;font-size:12px}
+    .status-chip{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;color:#fff}
+    .status-new{background:#ef4444}
+    .status-confirmed{background:#16a34a}
+    .status-in-delivery{background:#2563eb}
+    .status-other{background:#6b7280}
     @media(max-width:900px){.row,.row3{grid-template-columns:1fr}}
   </style>
 </head>
@@ -31,10 +36,9 @@
   </div>
 
   <div class="wrap">
-    <!-- AUTH -->
     <div id="authCard" class="card">
       <h3>Logowanie klienta</h3>
-      <form id="authForm" onsubmit="return false;">
+      <form onsubmit="return false;">
         <div class="row">
           <div>
             <label for="email">Email</label>
@@ -53,12 +57,9 @@
       <div id="authMsg" class="muted" style="margin-top:8px"></div>
     </div>
 
-    <!-- APP -->
     <div id="appArea" class="hidden">
-      <!-- STANY -->
       <div class="card">
         <h3>Stany magazynowe</h3>
-
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <button id="btnLoadStock" class="btn" type="button">Odśwież stany</button>
           <input id="stockSearch" placeholder="Szukaj: SKU / model / nazwa..." style="max-width:360px" />
@@ -69,7 +70,7 @@
           <span id="stockCount" class="badge">Pozycji: 0</span>
         </div>
 
-        <div class="muted" style="margin-top:6px"> <code></code></div>
+        <div class="muted" style="margin-top:6px">Widok z <code>v_client_stock</code></div>
         <div style="overflow:auto;margin-top:10px">
           <table id="stockTable">
             <thead>
@@ -82,13 +83,12 @@
         </div>
       </div>
 
-      <!-- ZAMÓWIENIE -->
       <div class="card">
         <h3>Złóż zamówienie</h3>
 
         <div class="row3">
           <div>
-            <label>Produkt (wpisz, aby wyszukać)</label>
+            <label>Produkt (pisz, aby wyszukać)</label>
             <input id="orderProductInput" list="orderProductList" placeholder="np. CH010 / Winsor..." />
             <datalist id="orderProductList"></datalist>
           </div>
@@ -119,10 +119,10 @@
         <div id="orderMsg" class="muted" style="margin-top:8px"></div>
       </div>
 
-      <!-- MOJE ZAMÓWIENIA -->
       <div class="card">
         <h3>Moje zamówienia</h3>
-        <button id="btnLoadOrders" class="btn" type="button">Odśwież zamówienia</button>
+        <div class="muted">Statusy synchronizują się z główną aplikacją: <b>niepotwierdzone</b>, <b>potwierdzone</b>, <b>w dostawie</b>.</div>
+        <button id="btnLoadOrders" class="btn" type="button" style="margin-top:8px">Odśwież zamówienia</button>
         <div style="overflow:auto;margin-top:10px">
           <table id="ordersTable">
             <thead>
@@ -133,7 +133,6 @@
         </div>
       </div>
 
-      <!-- TRACKING -->
       <div class="card">
         <h3>Skan QR / Token paczki</h3>
         <input id="tokenInput" placeholder="Wklej token z QR" />
@@ -145,90 +144,108 @@
 
 <script>
 const SUPABASE_URL = "https://qfzawzkynmqkbjlbtkjd.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmemF3emt5bm1xa2JqbGJ0a2pkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MjQ4MTAsImV4cCI6MjA5MDEwMDgxMH0.Z_FcKX_iMS7rdx8gNOAWOEBJgO2MA7cqm8ppZiqu7DM";
+const SUPABASE_ANON_KEY = "TU_WSTAW_ANON_KEY";
 
-// auth + RPC + orders
 const sbAuth = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
 });
 
-// odczyt stocku jako anon (bez sesji usera)
 const sbPublic = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
 });
 
-// debug
 window.sb = sbAuth;
 window.sbPublic = sbPublic;
 
+const STATUS_LABELS = {
+  new: 'Niepotwierdzone',
+  unconfirmed: 'Niepotwierdzone',
+  pending: 'Niepotwierdzone',
+  confirmed: 'Potwierdzone',
+  in_delivery: 'W dostawie'
+};
+
+function orderStatusMeta(statusRaw) {
+  const key = String(statusRaw || '').toLowerCase();
+  if (key === 'new' || key === 'unconfirmed' || key === 'pending') {
+    return { label: STATUS_LABELS[key], cls: 'status-new' };
+  }
+  if (key === 'confirmed') {
+    return { label: STATUS_LABELS[key], cls: 'status-confirmed' };
+  }
+  if (key === 'in_delivery') {
+    return { label: STATUS_LABELS[key], cls: 'status-in-delivery' };
+  }
+  return { label: statusRaw || '-', cls: 'status-other' };
+}
+
 const $ = (id)=>document.getElementById(id);
-const authCard=$("authCard"), appArea=$("appArea"), who=$("who"), btnLogout=$("btnLogout");
+const authCard=$('authCard'), appArea=$('appArea'), who=$('who'), btnLogout=$('btnLogout');
 
 let STOCK_RAW = [];
 let STOCK_VIEW = [];
 let ORDER_DRAFT = [];
 
-function showAuth(msg=""){
-  authCard.classList.remove("hidden");
-  appArea.classList.add("hidden");
-  btnLogout.classList.add("hidden");
-  who.textContent="";
-  $("authMsg").textContent=msg;
+function showAuth(msg='') {
+  authCard.classList.remove('hidden');
+  appArea.classList.add('hidden');
+  btnLogout.classList.add('hidden');
+  who.textContent='';
+  $('authMsg').textContent=msg;
 }
-function showApp(email){
-  authCard.classList.add("hidden");
-  appArea.classList.remove("hidden");
-  btnLogout.classList.remove("hidden");
+
+function showApp(email) {
+  authCard.classList.add('hidden');
+  appArea.classList.remove('hidden');
+  btnLogout.classList.remove('hidden');
   who.textContent=email;
 }
 
-// ===== AUTH =====
-async function loadSession(){
+async function loadSession() {
   const { data:{ session }, error } = await sbAuth.auth.getSession();
-  if(error){ showAuth("Błąd sesji: " + error.message); return; }
+  if(error){ showAuth('Błąd sesji: ' + error.message); return; }
   if(!session){ showAuth(); return; }
 
-  showApp(session.user?.email || "zalogowany");
+  showApp(session.user?.email || 'zalogowany');
   await loadStock();
   await loadOrders();
 }
 
-$("btnLogin").onclick = async () => {
-  const email=$("email").value.trim();
-  const password=$("password").value;
+$('btnLogin').onclick = async () => {
+  const email=$('email').value.trim();
+  const password=$('password').value;
   const { error } = await sbAuth.auth.signInWithPassword({ email, password });
-  if(error){ showAuth("Błąd logowania: " + error.message); return; }
+  if(error){ showAuth('Błąd logowania: ' + error.message); return; }
   await loadSession();
 };
 
-$("btnRegister").onclick = async () => {
-  const email=$("email").value.trim();
-  const password=$("password").value;
+$('btnRegister').onclick = async () => {
+  const email=$('email').value.trim();
+  const password=$('password').value;
   const { error } = await sbAuth.auth.signUp({ email, password });
-  if(error){ showAuth("Błąd rejestracji: " + error.message); return; }
-  showAuth("Konto utworzone. Zaloguj się.");
+  if(error){ showAuth('Błąd rejestracji: ' + error.message); return; }
+  showAuth('Konto utworzone. Zaloguj się.');
 };
 
 btnLogout.onclick = async () => {
   await sbAuth.auth.signOut();
-  showAuth("Wylogowano.");
+  showAuth('Wylogowano.');
 };
 
-// ===== STOCK =====
 function normalizeStockRow(r){
   const rawOn = Number(r.qty_on_stock ?? 0);
   const rawIn = Number(r.qty_in_delivery ?? 0);
 
-  const debt = Math.max(0, -rawOn);      // ile jest "na minusie"
-  const onStock = Math.max(0, rawOn);    // nie pokazujemy ujemnych
-  const inDelivery = Math.max(0, rawIn - debt); // minus odejmij od "w drodze"
+  const debt = Math.max(0, -rawOn);
+  const onStock = Math.max(0, rawOn);
+  const inDelivery = Math.max(0, rawIn - debt);
   const total = onStock + inDelivery;
 
   return {
     product_id: Number(r.product_id),
-    sku: r.sku || "",
-    model: r.model || "",
-    name: r.name || "",
+    sku: r.sku || '',
+    model: r.model || '',
+    name: r.name || '',
     qty_on_stock: onStock,
     qty_in_delivery: inDelivery,
     qty_total_visible: total
@@ -236,14 +253,13 @@ function normalizeStockRow(r){
 }
 
 function renderStockTable(){
-  const tb = $("stockTable").querySelector("tbody");
-  const q = ($("stockSearch")?.value || "").trim().toLowerCase();
-  const onlyAvail = !!$("onlyAvailable")?.checked;
+  const tb = $('stockTable').querySelector('tbody');
+  const q = ($('stockSearch')?.value || '').trim().toLowerCase();
+  const onlyAvail = !!$('onlyAvailable')?.checked;
 
-  // KLUCZOWE: nie pokazuj całej listy, gdy brak filtrowania
   if (!q && !onlyAvail) {
-    $("stockCount").textContent = "Pozycji: 0";
-    tb.innerHTML = `<tr><td colspan="6">Wpisz frazę w wyszukiwarce lub zaznacz „Na stanie”.</td></tr>`;
+    $('stockCount').textContent = 'Pozycji: 0';
+    tb.innerHTML = '<tr><td colspan="6">Wpisz frazę lub zaznacz „Na stanie”.</td></tr>';
     return;
   }
 
@@ -261,10 +277,10 @@ function renderStockTable(){
     rows = rows.filter(r => Number(r.qty_on_stock) > 0);
   }
 
-  $("stockCount").textContent = `Pozycji: ${rows.length}`;
+  $('stockCount').textContent = `Pozycji: ${rows.length}`;
 
   if (!rows.length) {
-    tb.innerHTML = `<tr><td colspan="6">Brak danych</td></tr>`;
+    tb.innerHTML = '<tr><td colspan="6">Brak danych</td></tr>';
     return;
   }
 
@@ -277,27 +293,27 @@ function renderStockTable(){
       <td>${r.qty_in_delivery}</td>
       <td>${r.qty_total_visible}</td>
     </tr>
-  `).join("");
+  `).join('');
 }
 
 function rebuildOrderProductList(){
-  const dl = $("orderProductList");
-  dl.innerHTML = "";
+  const dl = $('orderProductList');
+  dl.innerHTML = '';
   STOCK_VIEW.forEach(r => {
-    const opt = document.createElement("option");
+    const opt = document.createElement('option');
     opt.value = `${r.sku} | ${r.model} | ${r.name} | #${r.product_id}`;
     dl.appendChild(opt);
   });
 }
 
 async function loadStock(){
-  const tb = $("stockTable").querySelector("tbody");
-  tb.innerHTML = `<tr><td colspan="6">Ładowanie...</td></tr>`;
+  const tb = $('stockTable').querySelector('tbody');
+  tb.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
 
   const { data, error } = await sbPublic
-    .from("v_client_stock")
-    .select("product_id,sku,model,name,qty_on_stock,qty_in_delivery,qty_total_visible")
-    .order("sku", { ascending:true })
+    .from('v_client_stock')
+    .select('product_id,sku,model,name,qty_on_stock,qty_in_delivery,qty_total_visible')
+    .order('sku', { ascending:true })
     .limit(1000);
 
   if(error){
@@ -312,16 +328,15 @@ async function loadStock(){
   rebuildOrderProductList();
 }
 
-$("btnLoadStock").onclick = loadStock;
-$("stockSearch").oninput = renderStockTable;
-$("onlyAvailable").onchange = renderStockTable;
+$('btnLoadStock').onclick = loadStock;
+$('stockSearch').oninput = renderStockTable;
+$('onlyAvailable').onchange = renderStockTable;
 
-// ===== ORDER DRAFT =====
 function renderOrderDraft(){
-  const tb = $("orderDraftTable").querySelector("tbody");
+  const tb = $('orderDraftTable').querySelector('tbody');
 
   if(!ORDER_DRAFT.length){
-    tb.innerHTML = `<tr><td colspan="5">Brak pozycji</td></tr>`;
+    tb.innerHTML = '<tr><td colspan="5">Brak pozycji</td></tr>';
   } else {
     tb.innerHTML = ORDER_DRAFT.map((it, idx) => `
       <tr>
@@ -331,30 +346,30 @@ function renderOrderDraft(){
         <td><input type="number" min="1" value="${it.qty}" data-qty-idx="${idx}" style="width:90px" /></td>
         <td><button class="btn" type="button" data-del-idx="${idx}">Usuń</button></td>
       </tr>
-    `).join("");
+    `).join('');
   }
 
-  $("orderDraftSummary").textContent = `Pozycji: ${ORDER_DRAFT.length}`;
+  $('orderDraftSummary').textContent = `Pozycji: ${ORDER_DRAFT.length}`;
 }
 
 function parseProductInputToId(txt){
-  const m = String(txt || "").match(/#(\d+)\s*$/);
+  const m = String(txt || '').match(/#(\d+)\s*$/);
   return m ? Number(m[1]) : null;
 }
 
-$("btnAddOrderItem").onclick = () => {
-  const txt = $("orderProductInput").value.trim();
-  const qty = Math.max(1, Number($("orderQtyInput").value || 1));
+$('btnAddOrderItem').onclick = () => {
+  const txt = $('orderProductInput').value.trim();
+  const qty = Math.max(1, Number($('orderQtyInput').value || 1));
   const productId = parseProductInputToId(txt);
 
   if(!productId){
-    $("orderMsg").textContent = "Wybierz produkt z listy podpowiedzi.";
+    $('orderMsg').textContent = 'Wybierz produkt z listy podpowiedzi.';
     return;
   }
 
   const row = STOCK_VIEW.find(x => Number(x.product_id) === Number(productId));
   if(!row){
-    $("orderMsg").textContent = "Nie znaleziono produktu.";
+    $('orderMsg').textContent = 'Nie znaleziono produktu.';
     return;
   }
 
@@ -371,58 +386,57 @@ $("btnAddOrderItem").onclick = () => {
     });
   }
 
-  $("orderProductInput").value = "";
-  $("orderQtyInput").value = 1;
-  $("orderMsg").textContent = "";
+  $('orderProductInput').value = '';
+  $('orderQtyInput').value = 1;
+  $('orderMsg').textContent = '';
   renderOrderDraft();
 };
 
-$("orderDraftTable").addEventListener("input", (e) => {
+$('orderDraftTable').addEventListener('input', (e) => {
   const idx = e.target?.dataset?.qtyIdx;
   if(idx == null) return;
   ORDER_DRAFT[Number(idx)].qty = Math.max(1, Number(e.target.value || 1));
-  $("orderMsg").textContent = "";
+  $('orderMsg').textContent = '';
 });
 
-$("orderDraftTable").addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-del-idx]");
+$('orderDraftTable').addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-del-idx]');
   if(!btn) return;
   ORDER_DRAFT.splice(Number(btn.dataset.delIdx), 1);
   renderOrderDraft();
-  $("orderMsg").textContent = "";
+  $('orderMsg').textContent = '';
 });
 
-$("btnCreateOrder").onclick = async () => {
+$('btnCreateOrder').onclick = async () => {
   if(!ORDER_DRAFT.length){
-    $("orderMsg").textContent = "Dodaj przynajmniej jedną pozycję.";
+    $('orderMsg').textContent = 'Dodaj przynajmniej jedną pozycję.';
     return;
   }
 
   const p_items = ORDER_DRAFT.map(x => ({ product_id: x.product_id, qty: x.qty }));
-  const p_note = $("orderNote").value || null;
+  const p_note = $('orderNote').value || null;
 
-  const { data, error } = await sbAuth.rpc("create_customer_order", { p_note, p_items });
+  const { data, error } = await sbAuth.rpc('create_customer_order', { p_note, p_items });
   if(error){
-    $("orderMsg").textContent = "Błąd: " + error.message;
+    $('orderMsg').textContent = 'Błąd: ' + error.message;
     return;
   }
 
-  $("orderMsg").textContent = "OK, utworzono zamówienie ID: " + data;
+  $('orderMsg').textContent = 'OK, utworzono zamówienie ID: ' + data;
   ORDER_DRAFT = [];
-  $("orderNote").value = "";
+  $('orderNote').value = '';
   renderOrderDraft();
   await loadOrders();
 };
 
-// ===== ORDERS =====
 async function loadOrders(){
-  const tb = $("ordersTable").querySelector("tbody");
-  tb.innerHTML = `<tr><td colspan="5">Ładowanie...</td></tr>`;
+  const tb = $('ordersTable').querySelector('tbody');
+  tb.innerHTML = '<tr><td colspan="5">Ładowanie...</td></tr>';
 
   const { data, error } = await sbAuth
-    .from("customer_orders")
-    .select("id,order_no,status,total_net,total_gross,created_at")
-    .order("created_at", { ascending:false })
+    .from('customer_orders')
+    .select('id,order_no,status,total_net,total_gross,created_at')
+    .order('created_at', { ascending:false })
     .limit(200);
 
   if(error){
@@ -431,30 +445,31 @@ async function loadOrders(){
   }
 
   if(!data || data.length === 0){
-    tb.innerHTML = `<tr><td colspan="5">Brak zamówień</td></tr>`;
+    tb.innerHTML = '<tr><td colspan="5">Brak zamówień</td></tr>';
     return;
   }
 
-  tb.innerHTML = data.map(r => `
-    <tr>
-      <td>${r.order_no || r.id}</td>
-      <td>${r.status || ""}</td>
-      <td>${Number(r.total_net || 0).toFixed(2)}</td>
-      <td>${Number(r.total_gross || 0).toFixed(2)}</td>
-      <td>${(r.created_at || "").replace("T"," ").slice(0,19)}</td>
-    </tr>
-  `).join("");
+  tb.innerHTML = data.map(r => {
+    const st = orderStatusMeta(r.status);
+    return `
+      <tr>
+        <td>${r.order_no || r.id}</td>
+        <td><span class="status-chip ${st.cls}">${st.label}</span></td>
+        <td>${Number(r.total_net || 0).toFixed(2)}</td>
+        <td>${Number(r.total_gross || 0).toFixed(2)}</td>
+        <td>${(r.created_at || '').replace('T',' ').slice(0,19)}</td>
+      </tr>
+    `;
+  }).join('');
 }
-$("btnLoadOrders").onclick = loadOrders;
+$('btnLoadOrders').onclick = loadOrders;
 
-// ===== TRACK =====
-$("btnTrack").onclick = async () => {
-  const p_token = $("tokenInput").value.trim();
-  const { data, error } = await sbAuth.rpc("track_package_by_token", { p_token });
-  $("trackOut").textContent = error ? ("Błąd: " + error.message) : JSON.stringify(data, null, 2);
+$('btnTrack').onclick = async () => {
+  const p_token = $('tokenInput').value.trim();
+  const { data, error } = await sbAuth.rpc('track_package_by_token', { p_token });
+  $('trackOut').textContent = error ? ('Błąd: ' + error.message) : JSON.stringify(data, null, 2);
 };
 
-// init
 renderOrderDraft();
 loadSession();
 </script>
