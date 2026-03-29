@@ -64,7 +64,7 @@
           <button id="btnLoadStock" class="btn" type="button">Odśwież stany</button>
           <input id="stockSearch" placeholder="Szukaj: SKU / model / nazwa..." style="max-width:360px" />
           <label class="btn" style="display:flex;align-items:center;gap:6px;cursor:pointer">
-            <input id="onlyAvailable" type="checkbox" checked />
+            <input id="onlyAvailable" type="checkbox" />
             Na stanie
           </label>
           <span id="stockCount" class="badge">Pozycji: 0</span>
@@ -308,6 +308,12 @@ function renderStockTable(){
   const tb = $('stockTable').querySelector('tbody');
   const q = ($('stockSearch')?.value || '').trim().toLowerCase();
   const onlyAvail = !!$('onlyAvailable')?.checked;
+
+  if (!q && !onlyAvail) {
+    $('stockCount').textContent = 'Pozycji: 0';
+    tb.innerHTML = '<tr><td colspan="6">Wpisz model / SKU / nazwę albo zaznacz „Na stanie”.</td></tr>';
+    return;
+  }
 
   let rows = [...STOCK_VIEW];
 
