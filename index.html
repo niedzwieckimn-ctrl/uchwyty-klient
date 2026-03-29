@@ -233,50 +233,13 @@ async function getSession(){
   return session;
 }
 
-async function ensureCustomer(){
-  const session = await getSession();
-  if(!session?.user?.email) throw new Error('Brak zalogowanego użytkownika.');
-  const email = session.user.email.trim().toLowerCase();
-
-  const existingRes = await sbAuth
-    .from('customers')
-    .select('id,name,address,phone,email,nip')
-    .eq('email', email)
-    .order('id', { ascending:false })
-    .limit(1);
-
-  if(existingRes.error) throw existingRes.error;
-  if(existingRes.data && existingRes.data.length){
-    CURRENT_CUSTOMER = existingRes.data[0];
-    return CURRENT_CUSTOMER;
-  }
-
-  const fallbackName = email.split('@')[0] || email;
-  const inserted = await sbAuth
-    .from('customers')
-    .insert([{
-      name: fallbackName,
-      address: '',
-      phone: '',
-      email,
-      nip: '',
-      created_at: nowIso()
-    }])
-    .select('id,name,address,phone,email,nip')
-    .single();
-
-  if(inserted.error) throw inserted.error;
-  CURRENT_CUSTOMER = inserted.data;
-  return CURRENT_CUSTOMER;
-}
-
 async function loadSession() {
   try {
     const session = await getSession();
     if(!session){ showAuth(); return; }
 
     showApp(session.user?.email || 'zalogowany');
-    await ensureCustomer();
+    $('authMsg').textContent = '';
     await loadStock();
     await loadOrders();
   } catch(error){
@@ -287,17 +250,25 @@ async function loadSession() {
 $('btnLogin').onclick = async () => {
   const email=$('email').value.trim();
   const password=$('password').value;
-  const { error } = await sbAuth.auth.signInWithPassword({ email, password });
+  const { data, error } = await sbAuth.auth.signInWithPassword({ email, password });
   if(error){ showAuth('Błąd logowania: ' + error.message); return; }
+  if(!data?.session){
+    showAuth('Logowanie przyjęte, ale brak aktywnej sesji. Jeśli masz włączone potwierdzenie mailowe, potwierdź e-mail.');
+    return;
+  }
   await loadSession();
 };
 
 $('btnRegister').onclick = async () => {
   const email=$('email').value.trim();
   const password=$('password').value;
-  const { error } = await sbAuth.auth.signUp({ email, password });
+  const { data, error } = await sbAuth.auth.signUp({ email, password });
   if(error){ showAuth('Błąd rejestracji: ' + error.message); return; }
-  showAuth('Konto utworzone. Jeśli masz włączone potwierdzenie mailowe, potwierdź e-mail i zaloguj się.');
+  if(data?.session){
+    await loadSession();
+    return;
+  }
+  showAuth('Konto utworzone. Jeśli masz włączone potwierdzenie mailowe, potwierdź e-mail i dopiero się zaloguj.');
 };
 
 btnLogout.onclick = async () => {
@@ -305,6 +276,14 @@ btnLogout.onclick = async () => {
   CURRENT_CUSTOMER = null;
   showAuth('Wylogowano.');
 };
+
+sbAuth.auth.onAuthStateChange((_event, session) => {
+  if(session){
+    loadSession();
+  } else {
+    showAuth();
+  }
+});
 
 function normalizeStockRow(r){
   const rawOn = Number(r.qty_on_stock ?? 0);
@@ -507,18 +486,18 @@ $('btnCreateOrder').onclick = async () => {
   try {
     const session = await getSession();
     if(!session?.user?.email) throw new Error('Brak zalogowanego użytkownika.');
-    const customer = await ensureCustomer();
     const email = session.user.email.trim().toLowerCase();
+    const fallbackName = email.split('@')[0] || email;
     const p_note = $('orderNote').value || null;
 
     const insertedOrder = await sbAuth
       .from('orders')
       .insert([{
         order_no: 'TEMP',
-        customer_id: customer.id,
-        customer_name: customer.name || email,
-        customer_address: customer.address || '',
-        customer_phone: customer.phone || '',
+        customer_id: null,
+        customer_name: fallbackName,
+        customer_address: '',
+        customer_phone: '',
         customer_email: email,
         status: 'new',
         note: p_note,
