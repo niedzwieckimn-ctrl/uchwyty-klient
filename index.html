@@ -104,7 +104,7 @@
         <div style="overflow:auto;margin-top:10px">
           <table id="orderDraftTable">
             <thead>
-              <tr><th>SKU</th><th>Model</th><th>Nazwa</th><th>Ilość</th><th></th></tr>
+              <tr><th>SKU</th><th>Model</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Ilość</th><th>Wartość brutto</th><th></th></tr>
             </thead>
             <tbody></tbody>
           </table>
@@ -190,6 +190,8 @@ let STOCK_RAW = [];
 let STOCK_VIEW = [];
 let ORDER_DRAFT = [];
 let CURRENT_CUSTOMER = null;
+let PRICE_BY_MODEL = new Map();
+let PRICE_BY_SKU = new Map();
 
 function nowIso(){
   return new Date().toISOString().replace('T',' ').slice(0,19);
@@ -200,7 +202,7 @@ function makeOrderNo(id){
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth()+1).padStart(2,'0');
   const dd = String(d.getDate()).padStart(2,'0');
-  return `ORD-${yyyy}${mm}${dd}-${String(id).padStart(6,'0')}`;
+  return `ZAM-${yyyy}${mm}${dd}-${String(id).padStart(6,'0')}`;
 }
 
 function makeClientOrderNo(){
@@ -212,7 +214,19 @@ function makeClientOrderNo(){
   const mi = String(d.getMinutes()).padStart(2,'0');
   const ss = String(d.getSeconds()).padStart(2,'0');
   const rand = Math.random().toString(36).slice(2,6).toUpperCase();
-  return `ORD-${yyyy}${mm}${dd}-${hh}${mi}${ss}-${rand}`;
+  return `ZAM-${yyyy}${mm}${dd}-${hh}${mi}${ss}-${rand}`;
+}
+
+function displayOrderNo(order){
+  const raw = String(order?.order_no || '').trim();
+  if(raw && raw.toUpperCase() !== 'TEMP'){
+    return raw.replace(/^ORD-/, 'ZAM-');
+  }
+
+  const id = String(order?.id || '').padStart(6, '0');
+  const created = String(order?.created_at || '');
+  const datePart = created ? created.slice(0,10).replace(/-/g,'') : new Date().toISOString().slice(0,10).replace(/-/g,'');
+  return `ZAM-${datePart}-${id}`;
 }
 
 function esc(v){
@@ -310,6 +324,8 @@ function normalizeStockRow(r){
     sku: r.sku || '',
     model: r.model || '',
     name: r.name || '',
+    net_price: Number(r.net_price || 0),
+    gross_price: Number(r.gross_price || 0),
     qty_on_stock: onStock,
     qty_in_delivery: inDelivery,
     qty_total_visible: total
@@ -372,15 +388,33 @@ async function loadStock(){
   const tb = $('stockTable').querySelector('tbody');
   tb.innerHTML = '<tr><td colspan="4">Ładowanie...</td></tr>';
 
-  const [productsRes, stockRes, packagesRes] = await Promise.all([
+  const [productsRes, stockRes, packagesRes, pricingRes] = await Promise.all([
     sbPublic.from('products').select('id,sku,model,name').order('sku', { ascending:true }).limit(5000),
     sbPublic.from('stock').select('product_id,qty').limit(5000),
-    sbPublic.from('china_packages').select('id,status').in('status', ['planned','ordered','shipped']).limit(5000)
+    sbPublic.from('china_packages').select('id,status').in('status', ['planned','ordered','shipped']).limit(5000),
+    sbPublic.from('pricing').select('model,net_price,gross_price').limit(5000)
   ]);
 
   if(productsRes.error){ tb.innerHTML = `<tr><td colspan="4">Błąd: ${productsRes.error.message}</td></tr>`; return; }
   if(stockRes.error){ tb.innerHTML = `<tr><td colspan="4">Błąd: ${stockRes.error.message}</td></tr>`; return; }
   if(packagesRes.error){ tb.innerHTML = `<tr><td colspan="4">Błąd: ${packagesRes.error.message}</td></tr>`; return; }
+  if(pricingRes.error){ tb.innerHTML = `<tr><td colspan="4">Błąd: ${pricingRes.error.message}</td></tr>`; return; }
+
+  PRICE_BY_MODEL = new Map();
+  PRICE_BY_SKU = new Map();
+  (pricingRes.data || []).forEach(p => {
+    const key = String(p.model || '').trim().toLowerCase();
+    if(key){
+      PRICE_BY_MODEL.set(key, {
+        net: Number(p.net_price || 0),
+        gross: Number(p.gross_price || 0)
+      });
+      PRICE_BY_SKU.set(key, {
+        net: Number(p.net_price || 0),
+        gross: Number(p.gross_price || 0)
+      });
+    }
+  });
 
   const packageIds = (packagesRes.data || []).map(x => x.id);
   let chinaItems = [];
@@ -399,15 +433,23 @@ async function loadStock(){
     inDeliveryMap.set(pid, (inDeliveryMap.get(pid) || 0) + Number(r.qty || 0));
   });
 
-  STOCK_RAW = (productsRes.data || []).map(p => ({
-    product_id: Number(p.id),
-    sku: p.sku || '',
-    model: p.model || '',
-    name: p.name || '',
-    qty_on_stock: Number(stockMap.get(Number(p.id)) || 0),
-    qty_in_delivery: Number(inDeliveryMap.get(Number(p.id)) || 0),
-    qty_total_visible: Number(stockMap.get(Number(p.id)) || 0) + Number(inDeliveryMap.get(Number(p.id)) || 0)
-  }));
+  STOCK_RAW = (productsRes.data || []).map(p => {
+    const modelKey = String(p.model || '').trim().toLowerCase();
+    const skuKey = String(p.sku || '').trim().toLowerCase();
+    const price = PRICE_BY_MODEL.get(modelKey) || PRICE_BY_SKU.get(skuKey) || { net:0, gross:0 };
+
+    return {
+      product_id: Number(p.id),
+      sku: p.sku || '',
+      model: p.model || '',
+      name: p.name || '',
+      net_price: Number(price.net || 0),
+      gross_price: Number(price.gross || 0),
+      qty_on_stock: Number(stockMap.get(Number(p.id)) || 0),
+      qty_in_delivery: Number(inDeliveryMap.get(Number(p.id)) || 0),
+      qty_total_visible: Number(stockMap.get(Number(p.id)) || 0) + Number(inDeliveryMap.get(Number(p.id)) || 0)
+    };
+  });
   STOCK_VIEW = STOCK_RAW.map(normalizeStockRow);
 
   renderStockTable();
@@ -422,20 +464,28 @@ function renderOrderDraft(){
   const tb = $('orderDraftTable').querySelector('tbody');
 
   if(!ORDER_DRAFT.length){
-    tb.innerHTML = '<tr><td colspan="5">Brak pozycji</td></tr>';
+    tb.innerHTML = '<tr><td colspan="8">Brak pozycji</td></tr>';
   } else {
-    tb.innerHTML = ORDER_DRAFT.map((it, idx) => `
+    tb.innerHTML = ORDER_DRAFT.map((it, idx) => {
+      const grossLine = Number(it.gross_price || 0) * Number(it.qty || 0);
+      return `
       <tr>
         <td>${esc(it.sku)}</td>
         <td>${esc(it.model)}</td>
         <td>${esc(it.name)}</td>
+        <td>${Number(it.net_price || 0).toFixed(2)}</td>
+        <td>${Number(it.gross_price || 0).toFixed(2)}</td>
         <td><input type="number" min="1" value="${it.qty}" data-qty-idx="${idx}" style="width:90px" /></td>
+        <td>${grossLine.toFixed(2)}</td>
         <td><button class="btn" type="button" data-del-idx="${idx}">Usuń</button></td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
   }
 
-  $('orderDraftSummary').textContent = `Pozycji: ${ORDER_DRAFT.length}`;
+  const totalNet = ORDER_DRAFT.reduce((sum, it) => sum + Number(it.net_price || 0) * Number(it.qty || 0), 0);
+  const totalGross = ORDER_DRAFT.reduce((sum, it) => sum + Number(it.gross_price || 0) * Number(it.qty || 0), 0);
+  $('orderDraftSummary').textContent = `Pozycji: ${ORDER_DRAFT.length} | Netto: ${totalNet.toFixed(2)} | Brutto: ${totalGross.toFixed(2)}`;
 }
 
 function parseProductInputToId(txt){
@@ -468,6 +518,8 @@ $('btnAddOrderItem').onclick = () => {
       sku: row.sku,
       model: row.model,
       name: row.name,
+      net_price: Number(row.net_price || 0),
+      gross_price: Number(row.gross_price || 0),
       qty
     });
   }
@@ -627,7 +679,7 @@ async function loadOrders(){
       const totals = totalsByOrder.get(Number(r.id)) || { net:0, gross:0 };
       return `
         <tr>
-          <td>${esc(r.order_no || r.id)}</td>
+          <td>${esc(displayOrderNo(r))}</td>
           <td><span class="status-chip ${st.cls}">${esc(st.label)}</span></td>
           <td>${Number(totals.net || 0).toFixed(2)}</td>
           <td>${Number(totals.gross || 0).toFixed(2)}</td>
