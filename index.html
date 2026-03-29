@@ -75,7 +75,7 @@
           <table id="stockTable">
             <thead>
               <tr>
-                <th>SKU</th><th>Model</th><th>Nazwa</th><th>Na stanie</th><th>W drodze</th><th>Razem</th>
+                <th>SKU</th><th>Model</th><th>Nazwa</th><th>Na stanie</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -311,7 +311,7 @@ function renderStockTable(){
 
   if (!q && !onlyAvail) {
     $('stockCount').textContent = 'Pozycji: 0';
-    tb.innerHTML = '<tr><td colspan="6">Wpisz model / SKU / nazwę albo zaznacz „Na stanie”.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="4">Wpisz model / SKU / nazwę albo zaznacz „Na stanie”.</td></tr>';
     return;
   }
 
@@ -332,7 +332,7 @@ function renderStockTable(){
   $('stockCount').textContent = `Pozycji: ${rows.length}`;
 
   if (!rows.length) {
-    tb.innerHTML = '<tr><td colspan="6">Brak danych</td></tr>';
+    tb.innerHTML = '<tr><td colspan="4">Brak danych</td></tr>';
     return;
   }
 
@@ -360,7 +360,7 @@ function rebuildOrderProductList(){
 
 async function loadStock(){
   const tb = $('stockTable').querySelector('tbody');
-  tb.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
+  tb.innerHTML = '<tr><td colspan="4">Ładowanie...</td></tr>';
 
   const [productsRes, stockRes, packagesRes] = await Promise.all([
     sbPublic.from('products').select('id,sku,model,name').order('sku', { ascending:true }).limit(5000),
@@ -368,15 +368,15 @@ async function loadStock(){
     sbPublic.from('china_packages').select('id,status').in('status', ['planned','ordered','shipped']).limit(5000)
   ]);
 
-  if(productsRes.error){ tb.innerHTML = `<tr><td colspan="6">Błąd: ${productsRes.error.message}</td></tr>`; return; }
-  if(stockRes.error){ tb.innerHTML = `<tr><td colspan="6">Błąd: ${stockRes.error.message}</td></tr>`; return; }
-  if(packagesRes.error){ tb.innerHTML = `<tr><td colspan="6">Błąd: ${packagesRes.error.message}</td></tr>`; return; }
+  if(productsRes.error){ tb.innerHTML = `<tr><td colspan="4">Błąd: ${productsRes.error.message}</td></tr>`; return; }
+  if(stockRes.error){ tb.innerHTML = `<tr><td colspan="4">Błąd: ${stockRes.error.message}</td></tr>`; return; }
+  if(packagesRes.error){ tb.innerHTML = `<tr><td colspan="4">Błąd: ${packagesRes.error.message}</td></tr>`; return; }
 
   const packageIds = (packagesRes.data || []).map(x => x.id);
   let chinaItems = [];
   if(packageIds.length){
     const ciRes = await sbPublic.from('china_items').select('package_id,product_id,qty').in('package_id', packageIds).limit(10000);
-    if(ciRes.error){ tb.innerHTML = `<tr><td colspan="6">Błąd: ${ciRes.error.message}</td></tr>`; return; }
+    if(ciRes.error){ tb.innerHTML = `<tr><td colspan="4">Błąd: ${ciRes.error.message}</td></tr>`; return; }
     chinaItems = ciRes.data || [];
   }
 
