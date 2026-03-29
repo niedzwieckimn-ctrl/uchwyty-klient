@@ -326,7 +326,7 @@ function renderStockTable(){
   }
 
   if (onlyAvail) {
-    rows = rows.filter(r => Number(r.qty_on_stock) > 0 || Number(r.qty_in_delivery) > 0);
+    rows = rows.filter(r => Number(r.qty_on_stock) > 0);
   }
 
   $('stockCount').textContent = `Pozycji: ${rows.length}`;
@@ -342,8 +342,6 @@ function renderStockTable(){
       <td>${esc(r.model)}</td>
       <td>${esc(r.name)}</td>
       <td>${r.qty_on_stock}</td>
-      <td>${r.qty_in_delivery}</td>
-      <td>${r.qty_total_visible}</td>
     </tr>
   `).join('');
 }
