@@ -203,6 +203,18 @@ function makeOrderNo(id){
   return `ORD-${yyyy}${mm}${dd}-${String(id).padStart(6,'0')}`;
 }
 
+function makeClientOrderNo(){
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mi = String(d.getMinutes()).padStart(2,'0');
+  const ss = String(d.getSeconds()).padStart(2,'0');
+  const rand = Math.random().toString(36).slice(2,6).toUpperCase();
+  return `ORD-${yyyy}${mm}${dd}-${hh}${mi}${ss}-${rand}`;
+}
+
 function esc(v){
   return String(v ?? '')
     .replace(/&/g, '&amp;')
@@ -494,10 +506,12 @@ $('btnCreateOrder').onclick = async () => {
     const fallbackName = email.split('@')[0] || email;
     const p_note = $('orderNote').value || null;
 
+    const orderNo = makeClientOrderNo();
+
     const insertedOrder = await sbAuth
       .from('orders')
       .insert([{
-        order_no: 'TEMP',
+        order_no: orderNo,
         customer_id: null,
         customer_name: fallbackName,
         customer_address: '',
@@ -507,19 +521,12 @@ $('btnCreateOrder').onclick = async () => {
         note: p_note,
         created_at: nowIso()
       }])
-      .select('id')
+      .select('id,order_no')
       .single();
 
     if(insertedOrder.error) throw insertedOrder.error;
 
     const orderId = Number(insertedOrder.data.id);
-    const orderNo = makeOrderNo(orderId);
-
-    const updRes = await sbAuth
-      .from('orders')
-      .update({ order_no: orderNo })
-      .eq('id', orderId);
-    if(updRes.error) throw updRes.error;
 
     const itemsPayload = ORDER_DRAFT.map(x => ({
       order_id: orderId,
@@ -535,7 +542,7 @@ $('btnCreateOrder').onclick = async () => {
       throw itemsRes.error;
     }
 
-    $('orderMsg').textContent = 'OK, utworzono zamówienie: ' + orderNo;
+    $('orderMsg').textContent = 'OK, utworzono zamówienie: ' + (insertedOrder.data?.order_no || orderNo);
     ORDER_DRAFT = [];
     $('orderNote').value = '';
     renderOrderDraft();
