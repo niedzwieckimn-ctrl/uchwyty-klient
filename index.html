@@ -9,33 +9,51 @@
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
     body{font-family:Arial,sans-serif;background:#f5f7fb;margin:0;color:#111}
-    .top{background:#111;color:#fff;padding:12px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .top{background:#111;color:#fff;padding:16px 14px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
+    .top-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .brand{font-size:20px;font-weight:700}
+    .top .btn{padding:8px 14px;border-radius:16px}
+    .who{color:#a3a3a3;font-size:13px}
+    .client-nav{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
+    .client-nav a{color:#fff;text-decoration:none;padding:12px 18px;border:1px solid rgba(255,255,255,.22);border-radius:18px;background:rgba(255,255,255,.02);display:inline-block}
+    .client-nav a:hover{background:rgba(255,255,255,.08)}
     .wrap{max-width:1100px;margin:16px auto;padding:0 12px}
-    .card{background:#fff;border:1px solid #e8e8ef;border-radius:12px;padding:12px;margin-bottom:12px}
-    .btn{padding:8px 12px;border:1px solid #ddd;border-radius:10px;background:#fff;cursor:pointer}
+    .card{background:#fff;border:1px solid #e8e8ef;border-radius:18px;padding:14px;margin-bottom:14px;box-shadow:0 6px 18px rgba(0,0,0,.03)}
+    .btn{padding:10px 14px;border:1px solid #ddd;border-radius:14px;background:#fff;cursor:pointer}
     .btn.primary{background:#111;color:#fff;border-color:#111}
-    input,textarea,select{width:100%;padding:10px;border:1px solid #ddd;border-radius:10px;box-sizing:border-box}
+    input,textarea,select{width:100%;padding:12px;border:1px solid #ddd;border-radius:14px;box-sizing:border-box}
     table{width:100%;border-collapse:collapse}
-    th,td{padding:8px;border-bottom:1px solid #eee;text-align:left;vertical-align:middle}
+    th,td{padding:10px 8px;border-bottom:1px solid #eee;text-align:left;vertical-align:middle}
+    th{font-size:14px}
     .muted{color:#666;font-size:12px}
     .hidden{display:none}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .row3{display:grid;grid-template-columns:1fr 140px 140px;gap:10px}
-    .badge{display:inline-block;padding:2px 8px;border:1px solid #ddd;border-radius:999px;font-size:12px}
-    .status-chip{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;color:#fff}
+    .badge{display:inline-block;padding:4px 10px;border:1px solid #ddd;border-radius:999px;font-size:12px}
+    .status-chip{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;color:#fff}
     .status-new{background:#ef4444}
     .status-confirmed{background:#16a34a}
     .status-in-delivery{background:#2563eb}
     .status-other{background:#6b7280}
     #qrScannerModal.hidden{display:none}
+    h3{font-size:22px;margin:4px 0 10px}
     @media(max-width:900px){.row,.row3{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
   <div class="top">
-    <b>Panel Klienta</b>
-    <button id="btnLogout" class="btn hidden" type="button">Wyloguj</button>
-    <span id="who" class="muted"></span>
+    <div class="top-head">
+      <div class="brand">Panel Klienta</div>
+      <button id="btnLogout" class="btn hidden" type="button">Wyloguj</button>
+      <span id="who" class="who"></span>
+    </div>
+    <div id="clientNav" class="client-nav hidden">
+      <a href="#stockSection">Stany magazynowe</a>
+      <a href="#orderSection">Złóż zamówienie</a>
+      <a href="#ordersSection">Moje zamówienia</a>
+      <a href="#settingsSection">Ustawienia</a>
+      <a href="#scanSection">Skan QR</a>
+    </div>
   </div>
 
   <div class="wrap">
@@ -61,7 +79,7 @@
     </div>
 
     <div id="appArea" class="hidden">
-      <div class="card">
+      <div class="card" id="stockSection">
         <h3>Stany magazynowe</h3>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <button id="btnLoadStock" class="btn" type="button">Odśwież stany</button>
@@ -86,7 +104,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" id="orderSection">
         <h3>Złóż zamówienie</h3>
 
         <div class="row3">
@@ -122,7 +140,7 @@
         <div id="orderMsg" class="muted" style="margin-top:8px"></div>
       </div>
 
-      <div class="card">
+      <div class="card" id="ordersSection">
         <h3>Moje zamówienia</h3>
         <div class="muted">Statusy synchronizują się z główną aplikacją: <b>niepotwierdzone</b>, <b>potwierdzone</b>, <b>w dostawie</b>, <b>wydane</b>.</div>
         <button id="btnLoadOrders" class="btn" type="button" style="margin-top:8px">Odśwież zamówienia</button>
@@ -136,7 +154,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" id="settingsSection">
         <h3>Ustawienia</h3>
         <div class="muted">Tutaj zmienisz hasło do logowania w panelu klienta.</div>
         <div class="row" style="margin-top:10px;">
@@ -155,7 +173,7 @@
         <div id="passwordMsg" class="muted" style="margin-top:8px"></div>
       </div>
 
-      <div class="card">
+      <div class="card" id="scanSection">
         <h3 id="openQrScanner" style="cursor:pointer;text-decoration:underline;">Skanuj QR zamówienia</h3>
         <div>
           <input id="orderCodeInput" placeholder="Wklej kod zamówienia ZAM-... albo kliknij „Skanuj QR zamówienia”" />
@@ -175,12 +193,6 @@
         </div>
       </div>
 
-      <div class="card">
-        <h3>Tracking / numer paczki</h3>
-        <input id="tokenInput" placeholder="Wklej numer tracking albo numer paczki" />
-        <button id="btnTrack" class="btn" type="button" style="margin-top:8px">Sprawdź paczkę</button>
-        <pre id="trackOut" style="white-space:pre-wrap;background:#fafafa;padding:10px;border-radius:10px"></pre>
-      </div>
     </div>
   </div>
 
@@ -434,6 +446,7 @@ function showAuth(msg='') {
   authCard.classList.remove('hidden');
   appArea.classList.add('hidden');
   btnLogout.classList.add('hidden');
+  $('clientNav').classList.add('hidden');
   who.textContent='';
   $('authMsg').textContent=msg;
 }
@@ -442,6 +455,7 @@ function showApp(email) {
   authCard.classList.add('hidden');
   appArea.classList.remove('hidden');
   btnLogout.classList.remove('hidden');
+  $('clientNav').classList.remove('hidden');
   who.textContent=email;
 }
 
@@ -805,81 +819,6 @@ async function loadOrders(){
 $('btnLoadOrders').onclick = loadOrders;
 $('btnShowOrderByCode').onclick = () => showOrderByCode();
 
-$('btnTrack').onclick = async () => {
-  const token = $('tokenInput').value.trim();
-  if(!token){
-    $('trackOut').textContent = 'Wpisz numer tracking albo numer paczki.';
-    return;
-  }
-
-  try {
-    let packages = [];
-    let res = await sbPublic
-      .from('china_packages')
-      .select('id,package_no,status,tracking,note,created_at')
-      .eq('tracking', token)
-      .limit(20);
-    if(res.error) throw res.error;
-    packages = res.data || [];
-
-    if(!packages.length){
-      res = await sbPublic
-        .from('china_packages')
-        .select('id,package_no,status,tracking,note,created_at')
-        .eq('package_no', token)
-        .limit(20);
-      if(res.error) throw res.error;
-      packages = res.data || [];
-    }
-
-    if(!packages.length){
-      $('trackOut').textContent = 'Brak paczki o takim numerze.';
-      return;
-    }
-
-    const packageIds = packages.map(x => x.id);
-    const itemsRes = await sbPublic
-      .from('china_items')
-      .select('id,package_id,product_id,sku,qty')
-      .in('package_id', packageIds)
-      .limit(10000);
-    if(itemsRes.error) throw itemsRes.error;
-    const items = itemsRes.data || [];
-
-    const productIds = [...new Set(items.map(x => Number(x.product_id)).filter(Boolean))];
-    let products = [];
-    if(productIds.length){
-      const prodRes = await sbPublic
-        .from('products')
-        .select('id,sku,model,name')
-        .in('id', productIds)
-        .limit(5000);
-      if(prodRes.error) throw prodRes.error;
-      products = prodRes.data || [];
-    }
-    const productMap = new Map(products.map(p => [Number(p.id), p]));
-
-    const out = packages.map(p => ({
-      package_no: p.package_no,
-      status: p.status,
-      tracking: p.tracking,
-      note: p.note,
-      created_at: p.created_at,
-      items: items
-        .filter(x => Number(x.package_id) === Number(p.id))
-        .map(x => ({
-          sku: x.sku,
-          model: productMap.get(Number(x.product_id))?.model || '',
-          name: productMap.get(Number(x.product_id))?.name || '',
-          qty: x.qty
-        }))
-    }));
-
-    $('trackOut').textContent = JSON.stringify(out, null, 2);
-  } catch(error){
-    $('trackOut').textContent = 'Błąd: ' + error.message;
-  }
-};
 
 $('btnChangePassword').onclick = async () => {
   const p1 = ($('newPassword').value || '').trim();
