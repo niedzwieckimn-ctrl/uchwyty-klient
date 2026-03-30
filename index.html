@@ -156,15 +156,6 @@
         </div>
       </div>
 
-      <div class="card">
-        <h3>Tracking / numer paczki</h3>
-        <input id="tokenInput" placeholder="Wklej numer tracking albo numer paczki" />
-        <button id="btnTrack" class="btn" type="button" style="margin-top:8px">Sprawdź paczkę</button>
-        <pre id="trackOut" style="white-space:pre-wrap;background:#fafafa;padding:10px;border-radius:10px"></pre>
-      </div>
-    </div>
-  </div>
-
 <script>
 const SUPABASE_URL = "https://qfzawzkynmqkbjlbtkjd.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmemF3emt5bm1xa2JqbGJ0a2pkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MjQ4MTAsImV4cCI6MjA5MDEwMDgxMH0.Z_FcKX_iMS7rdx8gNOAWOEBJgO2MA7cqm8ppZiqu7DM";
@@ -786,81 +777,6 @@ async function loadOrders(){
 $('btnLoadOrders').onclick = loadOrders;
 $('btnShowOrderByCode').onclick = () => showOrderByCode();
 
-$('btnTrack').onclick = async () => {
-  const token = $('tokenInput').value.trim();
-  if(!token){
-    $('trackOut').textContent = 'Wpisz numer tracking albo numer paczki.';
-    return;
-  }
-
-  try {
-    let packages = [];
-    let res = await sbPublic
-      .from('china_packages')
-      .select('id,package_no,status,tracking,note,created_at')
-      .eq('tracking', token)
-      .limit(20);
-    if(res.error) throw res.error;
-    packages = res.data || [];
-
-    if(!packages.length){
-      res = await sbPublic
-        .from('china_packages')
-        .select('id,package_no,status,tracking,note,created_at')
-        .eq('package_no', token)
-        .limit(20);
-      if(res.error) throw res.error;
-      packages = res.data || [];
-    }
-
-    if(!packages.length){
-      $('trackOut').textContent = 'Brak paczki o takim numerze.';
-      return;
-    }
-
-    const packageIds = packages.map(x => x.id);
-    const itemsRes = await sbPublic
-      .from('china_items')
-      .select('id,package_id,product_id,sku,qty')
-      .in('package_id', packageIds)
-      .limit(10000);
-    if(itemsRes.error) throw itemsRes.error;
-    const items = itemsRes.data || [];
-
-    const productIds = [...new Set(items.map(x => Number(x.product_id)).filter(Boolean))];
-    let products = [];
-    if(productIds.length){
-      const prodRes = await sbPublic
-        .from('products')
-        .select('id,sku,model,name')
-        .in('id', productIds)
-        .limit(5000);
-      if(prodRes.error) throw prodRes.error;
-      products = prodRes.data || [];
-    }
-    const productMap = new Map(products.map(p => [Number(p.id), p]));
-
-    const out = packages.map(p => ({
-      package_no: p.package_no,
-      status: p.status,
-      tracking: p.tracking,
-      note: p.note,
-      created_at: p.created_at,
-      items: items
-        .filter(x => Number(x.package_id) === Number(p.id))
-        .map(x => ({
-          sku: x.sku,
-          model: productMap.get(Number(x.product_id))?.model || '',
-          name: productMap.get(Number(x.product_id))?.name || '',
-          qty: x.qty
-        }))
-    }));
-
-    $('trackOut').textContent = JSON.stringify(out, null, 2);
-  } catch(error){
-    $('trackOut').textContent = 'Błąd: ' + error.message;
-  }
-};
 
 renderOrderDraft();
 
