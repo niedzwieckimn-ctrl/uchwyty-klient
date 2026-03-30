@@ -64,7 +64,7 @@
         <h3>Stany magazynowe</h3>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <button id="btnLoadStock" class="btn" type="button">Odśwież stany</button>
-          <input id="stockSearch" placeholder="Szukaj: SKU / model / nazwa..." style="max-width:360px" />
+          <input id="stockSearch" placeholder="Szukaj: model / nazwa..." style="max-width:360px" />
           <label class="btn" style="display:flex;align-items:center;gap:6px;cursor:pointer">
             <input id="onlyAvailable" type="checkbox" />
             Na stanie
@@ -77,7 +77,7 @@
           <table id="stockTable">
             <thead>
               <tr>
-                <th>SKU</th><th>Model</th><th>Nazwa</th><th>Netto B2B</th><th>Brutto klient</th><th>Na stanie</th>
+                <th>Model</th><th>Nazwa</th><th>Netto B2B</th><th>Brutto klient</th><th>Na stanie</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -336,7 +336,7 @@ async function fetchOrdersBundle(){
     products = prodRes.data || [];
   }
 
-  const pricingRes = await sbPublic.from('pricing').select('model,net_price,gross_price').limit(5000);
+  const pricingRes = await sbAuth.from('pricing').select('model,net_price,gross_price').limit(5000);
   if(pricingRes.error) throw pricingRes.error;
 
   const productMap = new Map(products.map(p => [Number(p.id), p]));
@@ -519,7 +519,7 @@ function renderStockTable(){
 
   if (!q && !onlyAvail) {
     $('stockCount').textContent = 'Pozycji: 0';
-    tb.innerHTML = '<tr><td colspan="6">Wpisz model / SKU / nazwę albo zaznacz „Na stanie”.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="5">Wpisz model / SKU / nazwę albo zaznacz „Na stanie”.</td></tr>';
     return;
   }
 
@@ -540,14 +540,13 @@ function renderStockTable(){
   $('stockCount').textContent = `Pozycji: ${rows.length}`;
 
   if (!rows.length) {
-    tb.innerHTML = '<tr><td colspan="6">Brak danych</td></tr>';
+    tb.innerHTML = '<tr><td colspan="5">Brak danych</td></tr>';
     return;
   }
 
   tb.innerHTML = rows.map(r => `
     <tr>
       <td>${esc(r.sku)}</td>
-      <td>${esc(r.model)}</td>
       <td>${esc(r.name)}</td>
       <td>${formatMoney(r.net_price)}</td>
       <td>${formatMoney(calcClientGrossFromNet(r.net_price))}</td>
@@ -568,19 +567,19 @@ function rebuildOrderProductList(){
 
 async function loadStock(){
   const tb = $('stockTable').querySelector('tbody');
-  tb.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
+  tb.innerHTML = '<tr><td colspan="5">Ładowanie...</td></tr>';
 
   const [productsRes, stockRes, packagesRes, pricingRes] = await Promise.all([
     sbPublic.from('products').select('id,sku,model,name').order('sku', { ascending:true }).limit(5000),
     sbPublic.from('stock').select('product_id,qty').limit(5000),
     sbPublic.from('china_packages').select('id,status').in('status', ['planned','ordered','shipped']).limit(5000),
-    sbPublic.from('pricing').select('model,net_price,gross_price').limit(5000)
+    sbAuth.from('pricing').select('model,net_price,gross_price').limit(5000)
   ]);
 
-  if(productsRes.error){ tb.innerHTML = `<tr><td colspan="6">Błąd: ${productsRes.error.message}</td></tr>`; return; }
-  if(stockRes.error){ tb.innerHTML = `<tr><td colspan="6">Błąd: ${stockRes.error.message}</td></tr>`; return; }
-  if(packagesRes.error){ tb.innerHTML = `<tr><td colspan="6">Błąd: ${packagesRes.error.message}</td></tr>`; return; }
-  if(pricingRes.error){ tb.innerHTML = `<tr><td colspan="6">Błąd: ${pricingRes.error.message}</td></tr>`; return; }
+  if(productsRes.error){ tb.innerHTML = `<tr><td colspan="5">Błąd: ${productsRes.error.message}</td></tr>`; return; }
+  if(stockRes.error){ tb.innerHTML = `<tr><td colspan="5">Błąd: ${stockRes.error.message}</td></tr>`; return; }
+  if(packagesRes.error){ tb.innerHTML = `<tr><td colspan="5">Błąd: ${packagesRes.error.message}</td></tr>`; return; }
+  if(pricingRes.error){ tb.innerHTML = `<tr><td colspan="5">Błąd: ${pricingRes.error.message}</td></tr>`; return; }
 
   PRICE_BY_MODEL = new Map();
   PRICE_BY_SKU = new Map();
@@ -602,7 +601,7 @@ async function loadStock(){
   let chinaItems = [];
   if(packageIds.length){
     const ciRes = await sbPublic.from('china_items').select('package_id,product_id,qty').in('package_id', packageIds).limit(10000);
-    if(ciRes.error){ tb.innerHTML = `<tr><td colspan="6">Błąd: ${ciRes.error.message}</td></tr>`; return; }
+    if(ciRes.error){ tb.innerHTML = `<tr><td colspan="5">Błąd: ${ciRes.error.message}</td></tr>`; return; }
     chinaItems = ciRes.data || [];
   }
 
@@ -790,14 +789,14 @@ $('btnCreateOrder').onclick = async () => {
 
 async function loadOrders(){
   const tb = $('ordersTable').querySelector('tbody');
-  tb.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
+  tb.innerHTML = '<tr><td colspan="5">Ładowanie...</td></tr>';
 
   try {
     const bundle = await fetchOrdersBundle();
     const orders = bundle.orders || [];
 
     if(!orders.length){
-      tb.innerHTML = '<tr><td colspan="6">Brak zamówień</td></tr>';
+      tb.innerHTML = '<tr><td colspan="5">Brak zamówień</td></tr>';
       return;
     }
 
@@ -816,7 +815,7 @@ async function loadOrders(){
           <td><button class="btn" type="button" data-open-order="${r.id}">Szczegóły</button></td>
         </tr>
         <tr id="order-detail-${r.id}" class="hidden">
-          <td colspan="6">${detailsHtml}</td>
+          <td colspan="5">${detailsHtml}</td>
         </tr>
       `;
     }).join('');
@@ -829,7 +828,7 @@ async function loadOrders(){
       };
     });
   } catch(error){
-    tb.innerHTML = `<tr><td colspan="6">Błąd: ${esc(error.message)}</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="5">Błąd: ${esc(error.message)}</td></tr>`;
   }
 }
 $('btnLoadOrders').onclick = loadOrders;
