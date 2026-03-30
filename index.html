@@ -27,6 +27,7 @@
     .status-confirmed{background:#16a34a}
     .status-in-delivery{background:#2563eb}
     .status-other{background:#6b7280}
+    #qrScannerModal.hidden{display:none}
     @media(max-width:900px){.row,.row3{grid-template-columns:1fr}}
   </style>
 </head>
@@ -136,17 +137,23 @@
       </div>
 
       <div class="card">
-        <h3>Skan QR zamówienia</h3>
-        <div class="row">
-          <div>
-            <input id="orderCodeInput" placeholder="Wklej kod zamówienia ZAM-... albo zeskanuj QR" />
-            <button id="btnShowOrderByCode" class="btn" type="button" style="margin-top:8px">Pokaż zamówienie</button>
-          </div>
-          <div>
-            <div id="orderQrReader" style="width:100%;max-width:360px;"></div>
-          </div>
+        <h3 id="openQrScanner" style="cursor:pointer;text-decoration:underline;">Skanuj QR zamówienia</h3>
+        <div>
+          <input id="orderCodeInput" placeholder="Wklej kod zamówienia ZAM-... albo kliknij „Skanuj QR zamówienia”" />
+          <button id="btnShowOrderByCode" class="btn" type="button" style="margin-top:8px">Pokaż zamówienie</button>
         </div>
         <div id="orderScanOut" style="margin-top:10px"></div>
+      </div>
+
+      <div id="qrScannerModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:9999;padding:16px;box-sizing:border-box;">
+        <div style="max-width:420px;margin:4vh auto;background:#fff;border-radius:16px;padding:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">
+            <b>Skanuj QR</b>
+            <button id="closeQrScanner" class="btn" type="button">Zamknij</button>
+          </div>
+          <div class="muted" style="margin-bottom:8px;">Uruchamia się tylko tylny aparat.</div>
+          <div id="orderQrReader" style="width:100%;min-height:280px;"></div>
+        </div>
       </div>
 
       <div class="card">
@@ -840,14 +847,69 @@ $('btnTrack').onclick = async () => {
 
 renderOrderDraft();
 
-window.addEventListener('load', () => {
-  if(window.Html5QrcodeScanner){
-    const scanner = new Html5QrcodeScanner('orderQrReader', { fps: 10, qrbox: 220 });
-    scanner.render((decodedText) => {
-      $('orderCodeInput').value = decodedText;
-      showOrderByCode(decodedText);
-    }, () => {});
+let orderQrScanner = null;
+let orderQrScannerRunning = false;
+
+async function startOrderQrScanner(){
+  if(!window.Html5Qrcode) return;
+  if(!orderQrScanner){
+    orderQrScanner = new Html5Qrcode('orderQrReader');
   }
+  if(orderQrScannerRunning) return;
+
+  const onSuccess = async (decodedText) => {
+    $('orderCodeInput').value = decodedText;
+    await stopOrderQrScanner();
+    $('qrScannerModal').classList.add('hidden');
+    showOrderByCode(decodedText);
+  };
+
+  try {
+    await orderQrScanner.start(
+      { facingMode: { exact: 'environment' } },
+      { fps: 10, qrbox: 220, aspectRatio: 1.0 },
+      onSuccess,
+      () => {}
+    );
+    orderQrScannerRunning = true;
+  } catch (e1) {
+    try {
+      await orderQrScanner.start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: 220, aspectRatio: 1.0 },
+        onSuccess,
+        () => {}
+      );
+      orderQrScannerRunning = true;
+    } catch (e2) {
+      $('orderScanOut').innerHTML = '<div class="muted">Nie udało się uruchomić tylnego aparatu.</div>';
+      $('qrScannerModal').classList.add('hidden');
+    }
+  }
+}
+
+async function stopOrderQrScanner(){
+  try {
+    if(orderQrScanner && orderQrScannerRunning){
+      await orderQrScanner.stop();
+      await orderQrScanner.clear();
+    }
+  } catch (e) {}
+  orderQrScannerRunning = false;
+}
+
+$('openQrScanner').onclick = async () => {
+  $('qrScannerModal').classList.remove('hidden');
+  await startOrderQrScanner();
+};
+
+$('closeQrScanner').onclick = async () => {
+  await stopOrderQrScanner();
+  $('qrScannerModal').classList.add('hidden');
+};
+
+window.addEventListener('beforeunload', () => {
+  stopOrderQrScanner();
 });
 
 loadSession();
