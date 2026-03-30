@@ -258,10 +258,6 @@ function formatMoney(v){
 }
 
 function renderOrderDetailsHtml(order, items, totals){
-  const qr = order.qr_data_url
-    ? `<img src="${esc(order.qr_data_url)}" alt="QR" style="width:160px;height:160px;border:1px solid #eee;border-radius:12px;padding:8px;background:#fff;">`
-    : '';
-
   const rows = (items || []).map(it => `
     <tr>
       <td>${esc(it.sku)}</td>
@@ -277,16 +273,13 @@ function renderOrderDetailsHtml(order, items, totals){
 
   return `
     <div class="card" style="margin:8px 0 0 0">
-      <div class="row">
-        <div>
-          <div><b>${esc(displayOrderNo(order))}</b></div>
-          <div class="muted" style="margin-top:6px">Klient: ${esc(order.customer_name || '-')}</div>
-          <div class="muted">Email: ${esc(order.customer_email || '-')}</div>
-          <div class="muted">Data: ${esc(String(order.created_at || '').replace('T',' ').slice(0,19))}</div>
-          <div class="muted">Notatka: ${esc(order.note || '-')}</div>
-          <div style="margin-top:8px"><span class="badge">Netto: ${formatMoney(totals.net)}</span> <span class="badge">Brutto: ${formatMoney(totals.gross)}</span></div>
-        </div>
-        <div>${qr}</div>
+      <div>
+        <div><b>${esc(displayOrderNo(order))}</b></div>
+        <div class="muted" style="margin-top:6px">Klient: ${esc(order.customer_name || '-')}</div>
+        <div class="muted">Email: ${esc(order.customer_email || '-')}</div>
+        <div class="muted">Data: ${esc(String(order.created_at || '').replace('T',' ').slice(0,19))}</div>
+        <div class="muted">Notatka: ${esc(order.note || '-')}</div>
+        <div style="margin-top:8px"><span class="badge">Netto: ${formatMoney(totals.net)}</span> <span class="badge">Brutto: ${formatMoney(totals.gross)}</span></div>
       </div>
       <div style="overflow:auto;margin-top:10px">
         <table>
