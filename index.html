@@ -342,8 +342,8 @@ async function fetchOrdersBundle(){
         }));
         itemsByOrder.set(Number(order.id), items);
         totalsByOrder.set(Number(order.id), {
-          net: Number(payload.total_net || 0),
-          gross: Number(payload.total_gross || 0)
+          net: Number(payload.order?.total_net ?? payload.total_net ?? 0),
+          gross: Number(payload.order?.total_gross ?? payload.total_gross ?? 0)
         });
       } catch(error) {
         itemsByOrder.set(Number(order.id), []);
