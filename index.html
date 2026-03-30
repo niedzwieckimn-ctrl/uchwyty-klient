@@ -362,9 +362,25 @@ async function fetchOrdersBundle(){
   return { orders, itemsByOrder, totalsByOrder };
 }
 
+function parseOrderCode(value){
+  const raw = String(value || '').trim();
+  if(!raw) return '';
+
+  const match = raw.match(/ZAM-[0-9]{8}-[A-Z0-9-]+/i);
+  if(match) return match[0].toUpperCase();
+
+  try {
+    const url = new URL(raw);
+    const fromPath = url.pathname.match(/ZAM-[0-9]{8}-[A-Z0-9-]+/i);
+    if(fromPath) return fromPath[0].toUpperCase();
+  } catch(e) {}
+
+  return raw.toUpperCase();
+}
+
 async function showOrderByCode(rawCode){
   const out = $('orderScanOut');
-  const code = String(rawCode || $('orderCodeInput').value || '').trim();
+  const code = parseOrderCode(rawCode || $('orderCodeInput').value || '');
   if(!code){
     out.innerHTML = '<div class="muted">Wpisz albo zeskanuj kod ZAM-...</div>';
     return;
@@ -380,6 +396,7 @@ async function showOrderByCode(rawCode){
     const items = bundle.itemsByOrder.get(Number(order.id)) || [];
     const totals = bundle.totalsByOrder.get(Number(order.id)) || { net:0, gross:0 };
     out.innerHTML = renderOrderDetailsHtml(order, items, totals);
+    out.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch(error){
     out.innerHTML = `<div class="muted">Błąd: ${esc(error.message)}</div>`;
   }
@@ -858,10 +875,11 @@ async function startOrderQrScanner(){
   if(orderQrScannerRunning) return;
 
   const onSuccess = async (decodedText) => {
-    $('orderCodeInput').value = decodedText;
+    const parsedCode = parseOrderCode(decodedText);
+    $('orderCodeInput').value = parsedCode || decodedText;
     await stopOrderQrScanner();
     $('qrScannerModal').classList.add('hidden');
-    showOrderByCode(decodedText);
+    await showOrderByCode(parsedCode || decodedText);
   };
 
   try {
@@ -906,6 +924,13 @@ $('openQrScanner').onclick = async () => {
 $('closeQrScanner').onclick = async () => {
   await stopOrderQrScanner();
   $('qrScannerModal').classList.add('hidden');
+};
+
+$('qrScannerModal').onclick = async (e) => {
+  if(e.target && e.target.id === 'qrScannerModal'){
+    await stopOrderQrScanner();
+    $('qrScannerModal').classList.add('hidden');
+  }
 };
 
 window.addEventListener('beforeunload', () => {
