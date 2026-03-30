@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Panel Klienta</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <style>
     body{font-family:Arial,sans-serif;background:#f5f7fb;margin:0;color:#111}
     .top{background:#111;color:#fff;padding:12px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
@@ -126,11 +128,25 @@
         <div style="overflow:auto;margin-top:10px">
           <table id="ordersTable">
             <thead>
-              <tr><th>Nr</th><th>Status</th><th>Netto</th><th>Brutto</th><th>Data</th></tr>
+              <tr><th>Nr</th><th>Status</th><th>Netto</th><th>Brutto</th><th>Data</th><th>Akcje</th></tr>
             </thead>
             <tbody></tbody>
           </table>
         </div>
+      </div>
+
+      <div class="card">
+        <h3>Skan QR zamówienia</h3>
+        <div class="row">
+          <div>
+            <input id="orderCodeInput" placeholder="Wklej kod zamówienia ZAM-... albo zeskanuj QR" />
+            <button id="btnShowOrderByCode" class="btn" type="button" style="margin-top:8px">Pokaż zamówienie</button>
+          </div>
+          <div>
+            <div id="orderQrReader" style="width:100%;max-width:360px;"></div>
+          </div>
+        </div>
+        <div id="orderScanOut" style="margin-top:10px"></div>
       </div>
 
       <div class="card">
@@ -227,6 +243,173 @@ function displayOrderNo(order){
   const created = String(order?.created_at || '');
   const datePart = created ? created.slice(0,10).replace(/-/g,'') : new Date().toISOString().slice(0,10).replace(/-/g,'');
   return `ZAM-${datePart}-${id}`;
+}
+
+async function makeQrDataUrl(value){
+  try {
+    return await QRCode.toDataURL(String(value || '').trim(), { width: 220, margin: 1 });
+  } catch(e){
+    return '';
+  }
+}
+
+function formatMoney(v){
+  return Number(v || 0).toFixed(2);
+}
+
+function renderOrderDetailsHtml(order, items, totals){
+  const qr = order.qr_data_url
+    ? `<img src="${esc(order.qr_data_url)}" alt="QR" style="width:160px;height:160px;border:1px solid #eee;border-radius:12px;padding:8px;background:#fff;">`
+    : '';
+
+  const rows = (items || []).map(it => `
+    <tr>
+      <td>${esc(it.sku)}</td>
+      <td>${esc(it.model || '')}</td>
+      <td>${esc(it.name || '')}</td>
+      <td>${formatMoney(it.net_price)}</td>
+      <td>${formatMoney(it.gross_price)}</td>
+      <td>${Number(it.qty || 0)}</td>
+      <td>${formatMoney(it.line_net)}</td>
+      <td>${formatMoney(it.line_gross)}</td>
+    </tr>
+  `).join('') || '<tr><td colspan="8">Brak pozycji</td></tr>';
+
+  return `
+    <div class="card" style="margin:8px 0 0 0">
+      <div class="row">
+        <div>
+          <div><b>${esc(displayOrderNo(order))}</b></div>
+          <div class="muted" style="margin-top:6px">Klient: ${esc(order.customer_name || '-')}</div>
+          <div class="muted">Email: ${esc(order.customer_email || '-')}</div>
+          <div class="muted">Data: ${esc(String(order.created_at || '').replace('T',' ').slice(0,19))}</div>
+          <div class="muted">Notatka: ${esc(order.note || '-')}</div>
+          <div style="margin-top:8px"><span class="badge">Netto: ${formatMoney(totals.net)}</span> <span class="badge">Brutto: ${formatMoney(totals.gross)}</span></div>
+        </div>
+        <div>${qr}</div>
+      </div>
+      <div style="overflow:auto;margin-top:10px">
+        <table>
+          <thead>
+            <tr><th>SKU</th><th>Model</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Ilość</th><th>Wartość netto</th><th>Wartość brutto</th></tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+async function fetchOrdersBundle(){
+  const session = await getSession();
+  if(!session?.user?.email) throw new Error('Brak sesji.');
+  const email = session.user.email.trim().toLowerCase();
+
+  const ordersRes = await sbAuth
+    .from('orders')
+    .select('id,order_no,qr_data_url,status,created_at,customer_name,customer_email,note')
+    .eq('customer_email', email)
+    .order('created_at', { ascending:false })
+    .limit(200);
+  if(ordersRes.error) throw ordersRes.error;
+
+  const orders = ordersRes.data || [];
+  const orderIds = orders.map(x => x.id);
+
+  let items = [];
+  if(orderIds.length){
+    const itemsRes = await sbAuth
+      .from('order_items')
+      .select('order_id,product_id,qty,sku')
+      .in('order_id', orderIds)
+      .limit(10000);
+    if(itemsRes.error) throw itemsRes.error;
+    items = itemsRes.data || [];
+  }
+
+  const productIds = [...new Set(items.map(x => Number(x.product_id)).filter(Boolean))];
+  let products = [];
+  if(productIds.length){
+    const prodRes = await sbPublic
+      .from('products')
+      .select('id,sku,model,name')
+      .in('id', productIds)
+      .limit(5000);
+    if(prodRes.error) throw prodRes.error;
+    products = prodRes.data || [];
+  }
+
+  const pricingRes = await sbPublic.from('pricing').select('model,net_price,gross_price').limit(5000);
+  if(pricingRes.error) throw pricingRes.error;
+
+  const productMap = new Map(products.map(p => [Number(p.id), p]));
+  const priceByModel = new Map();
+  const priceBySku = new Map();
+  (pricingRes.data || []).forEach(p => {
+    const k = String(p.model || '').trim().toLowerCase();
+    if(k){
+      priceByModel.set(k, p);
+      priceBySku.set(k, p);
+    }
+  });
+
+  const itemsByOrder = new Map();
+  const totalsByOrder = new Map();
+
+  items.forEach(it => {
+    const product = productMap.get(Number(it.product_id)) || {};
+    const modelKey = String(product.model || '').trim().toLowerCase();
+    const skuKey = String(product.sku || it.sku || '').trim().toLowerCase();
+    const price = priceByModel.get(modelKey) || priceBySku.get(skuKey) || {};
+    const net = Number(price.net_price || 0);
+    const gross = Number(price.gross_price || 0);
+
+    const row = {
+      order_id: Number(it.order_id),
+      product_id: Number(it.product_id),
+      sku: it.sku || product.sku || '',
+      model: product.model || '',
+      name: product.name || '',
+      qty: Number(it.qty || 0),
+      net_price: net,
+      gross_price: gross,
+      line_net: net * Number(it.qty || 0),
+      line_gross: gross * Number(it.qty || 0)
+    };
+
+    if(!itemsByOrder.has(row.order_id)) itemsByOrder.set(row.order_id, []);
+    itemsByOrder.get(row.order_id).push(row);
+
+    const prev = totalsByOrder.get(row.order_id) || { net:0, gross:0 };
+    prev.net += row.line_net;
+    prev.gross += row.line_gross;
+    totalsByOrder.set(row.order_id, prev);
+  });
+
+  return { orders, itemsByOrder, totalsByOrder };
+}
+
+async function showOrderByCode(rawCode){
+  const out = $('orderScanOut');
+  const code = String(rawCode || $('orderCodeInput').value || '').trim();
+  if(!code){
+    out.innerHTML = '<div class="muted">Wpisz albo zeskanuj kod ZAM-...</div>';
+    return;
+  }
+
+  try {
+    const bundle = await fetchOrdersBundle();
+    const order = (bundle.orders || []).find(o => displayOrderNo(o) === code || String(o.order_no || '').trim() === code);
+    if(!order){
+      out.innerHTML = '<div class="muted">Nie znaleziono Twojego zamówienia o takim kodzie.</div>';
+      return;
+    }
+    const items = bundle.itemsByOrder.get(Number(order.id)) || [];
+    const totals = bundle.totalsByOrder.get(Number(order.id)) || { net:0, gross:0 };
+    out.innerHTML = renderOrderDetailsHtml(order, items, totals);
+  } catch(error){
+    out.innerHTML = `<div class="muted">Błąd: ${esc(error.message)}</div>`;
+  }
 }
 
 function esc(v){
@@ -559,6 +742,7 @@ $('btnCreateOrder').onclick = async () => {
     const p_note = $('orderNote').value || null;
 
     const orderNo = makeClientOrderNo();
+    const qrDataUrl = await makeQrDataUrl(orderNo);
 
     const insertedOrder = await sbAuth
       .from('orders')
@@ -571,9 +755,10 @@ $('btnCreateOrder').onclick = async () => {
         customer_email: email,
         status: 'new',
         note: p_note,
-        created_at: nowIso()
+        created_at: nowIso(),
+        qr_data_url: qrDataUrl
       }])
-      .select('id,order_no')
+      .select('id,order_no,qr_data_url')
       .single();
 
     if(insertedOrder.error) throw insertedOrder.error;
@@ -606,92 +791,50 @@ $('btnCreateOrder').onclick = async () => {
 
 async function loadOrders(){
   const tb = $('ordersTable').querySelector('tbody');
-  tb.innerHTML = '<tr><td colspan="5">Ładowanie...</td></tr>';
+  tb.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
 
   try {
-    const session = await getSession();
-    if(!session?.user?.email){
-      tb.innerHTML = '<tr><td colspan="5">Brak sesji.</td></tr>';
-      return;
-    }
-    const email = session.user.email.trim().toLowerCase();
-
-    const ordersRes = await sbAuth
-      .from('orders')
-      .select('id,order_no,status,created_at')
-      .eq('customer_email', email)
-      .order('created_at', { ascending:false })
-      .limit(200);
-
-    if(ordersRes.error) throw ordersRes.error;
-    const orders = ordersRes.data || [];
+    const bundle = await fetchOrdersBundle();
+    const orders = bundle.orders || [];
 
     if(!orders.length){
-      tb.innerHTML = '<tr><td colspan="5">Brak zamówień</td></tr>';
+      tb.innerHTML = '<tr><td colspan="6">Brak zamówień</td></tr>';
       return;
     }
-
-    const orderIds = orders.map(x => x.id);
-    const itemsRes = await sbAuth
-      .from('order_items')
-      .select('order_id,product_id,qty,sku')
-      .in('order_id', orderIds)
-      .limit(10000);
-    if(itemsRes.error) throw itemsRes.error;
-    const items = itemsRes.data || [];
-
-    const productIds = [...new Set(items.map(x => Number(x.product_id)).filter(Boolean))];
-    let products = [];
-    if(productIds.length){
-      const prodRes = await sbPublic
-        .from('products')
-        .select('id,sku,model,name')
-        .in('id', productIds)
-        .limit(5000);
-      if(prodRes.error) throw prodRes.error;
-      products = prodRes.data || [];
-    }
-
-    const pricingRes = await sbPublic.from('pricing').select('model,net_price,gross_price').limit(5000);
-    if(pricingRes.error) throw pricingRes.error;
-    const pricing = pricingRes.data || [];
-
-    const productMap = new Map(products.map(p => [Number(p.id), p]));
-    const priceByModel = new Map();
-    pricing.forEach(p => priceByModel.set(String(p.model || '').trim().toLowerCase(), p));
-
-    const totalsByOrder = new Map();
-    items.forEach(it => {
-      const product = productMap.get(Number(it.product_id)) || {};
-      const modelKey = String(product.model || '').trim().toLowerCase();
-      const skuKey = String(product.sku || it.sku || '').trim().toLowerCase();
-      const price = priceByModel.get(modelKey) || priceByModel.get(skuKey) || {};
-      const net = Number(price.net_price || 0);
-      const gross = Number(price.gross_price || 0);
-      const prev = totalsByOrder.get(Number(it.order_id)) || { net:0, gross:0 };
-      prev.net += net * Number(it.qty || 0);
-      prev.gross += gross * Number(it.qty || 0);
-      totalsByOrder.set(Number(it.order_id), prev);
-    });
 
     tb.innerHTML = orders.map(r => {
       const st = orderStatusMeta(r.status);
-      const totals = totalsByOrder.get(Number(r.id)) || { net:0, gross:0 };
+      const totals = bundle.totalsByOrder.get(Number(r.id)) || { net:0, gross:0 };
+      const items = bundle.itemsByOrder.get(Number(r.id)) || [];
+      const detailsHtml = renderOrderDetailsHtml(r, items, totals);
       return `
         <tr>
           <td>${esc(displayOrderNo(r))}</td>
           <td><span class="status-chip ${st.cls}">${esc(st.label)}</span></td>
-          <td>${Number(totals.net || 0).toFixed(2)}</td>
-          <td>${Number(totals.gross || 0).toFixed(2)}</td>
+          <td>${formatMoney(totals.net)}</td>
+          <td>${formatMoney(totals.gross)}</td>
           <td>${esc((r.created_at || '').replace('T',' ').slice(0,19))}</td>
+          <td><button class="btn" type="button" data-open-order="${r.id}">Szczegóły</button></td>
+        </tr>
+        <tr id="order-detail-${r.id}" class="hidden">
+          <td colspan="6">${detailsHtml}</td>
         </tr>
       `;
     }).join('');
+
+    tb.querySelectorAll('[data-open-order]').forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.getAttribute('data-open-order');
+        const row = document.getElementById(`order-detail-${id}`);
+        if(row) row.classList.toggle('hidden');
+      };
+    });
   } catch(error){
-    tb.innerHTML = `<tr><td colspan="5">Błąd: ${esc(error.message)}</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="6">Błąd: ${esc(error.message)}</td></tr>`;
   }
 }
 $('btnLoadOrders').onclick = loadOrders;
+$('btnShowOrderByCode').onclick = () => showOrderByCode();
 
 $('btnTrack').onclick = async () => {
   const token = $('tokenInput').value.trim();
@@ -770,6 +913,17 @@ $('btnTrack').onclick = async () => {
 };
 
 renderOrderDraft();
+
+window.addEventListener('load', () => {
+  if(window.Html5QrcodeScanner){
+    const scanner = new Html5QrcodeScanner('orderQrReader', { fps: 10, qrbox: 220 });
+    scanner.render((decodedText) => {
+      $('orderCodeInput').value = decodedText;
+      showOrderByCode(decodedText);
+    }, () => {});
+  }
+});
+
 loadSession();
 </script>
 
