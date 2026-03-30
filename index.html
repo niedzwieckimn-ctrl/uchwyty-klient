@@ -77,7 +77,7 @@
           <table id="stockTable">
             <thead>
               <tr>
-                <th>SKU</th><th>Model</th><th>Nazwa</th><th>Na stanie</th>
+                <th>SKU</th><th>Model</th><th>Nazwa</th><th>Netto B2B</th><th>Brutto klient</th><th>Na stanie</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -255,6 +255,10 @@ async function makeQrDataUrl(value){
 
 function formatMoney(v){
   return Number(v || 0).toFixed(2);
+}
+
+function calcClientGrossFromNet(netB2B){
+  return Number(netB2B || 0) * 1.45 * 1.23;
 }
 
 function renderOrderDetailsHtml(order, items, totals){
@@ -515,7 +519,7 @@ function renderStockTable(){
 
   if (!q && !onlyAvail) {
     $('stockCount').textContent = 'Pozycji: 0';
-    tb.innerHTML = '<tr><td colspan="4">Wpisz model / SKU / nazwę albo zaznacz „Na stanie”.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="6">Wpisz model / SKU / nazwę albo zaznacz „Na stanie”.</td></tr>';
     return;
   }
 
@@ -536,7 +540,7 @@ function renderStockTable(){
   $('stockCount').textContent = `Pozycji: ${rows.length}`;
 
   if (!rows.length) {
-    tb.innerHTML = '<tr><td colspan="4">Brak danych</td></tr>';
+    tb.innerHTML = '<tr><td colspan="6">Brak danych</td></tr>';
     return;
   }
 
@@ -545,6 +549,8 @@ function renderStockTable(){
       <td>${esc(r.sku)}</td>
       <td>${esc(r.model)}</td>
       <td>${esc(r.name)}</td>
+      <td>${formatMoney(r.net_price)}</td>
+      <td>${formatMoney(calcClientGrossFromNet(r.net_price))}</td>
       <td>${r.qty_on_stock}</td>
     </tr>
   `).join('');
@@ -562,7 +568,7 @@ function rebuildOrderProductList(){
 
 async function loadStock(){
   const tb = $('stockTable').querySelector('tbody');
-  tb.innerHTML = '<tr><td colspan="4">Ładowanie...</td></tr>';
+  tb.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
 
   const [productsRes, stockRes, packagesRes, pricingRes] = await Promise.all([
     sbPublic.from('products').select('id,sku,model,name').order('sku', { ascending:true }).limit(5000),
@@ -571,10 +577,10 @@ async function loadStock(){
     sbPublic.from('pricing').select('model,net_price,gross_price').limit(5000)
   ]);
 
-  if(productsRes.error){ tb.innerHTML = `<tr><td colspan="4">Błąd: ${productsRes.error.message}</td></tr>`; return; }
-  if(stockRes.error){ tb.innerHTML = `<tr><td colspan="4">Błąd: ${stockRes.error.message}</td></tr>`; return; }
-  if(packagesRes.error){ tb.innerHTML = `<tr><td colspan="4">Błąd: ${packagesRes.error.message}</td></tr>`; return; }
-  if(pricingRes.error){ tb.innerHTML = `<tr><td colspan="4">Błąd: ${pricingRes.error.message}</td></tr>`; return; }
+  if(productsRes.error){ tb.innerHTML = `<tr><td colspan="6">Błąd: ${productsRes.error.message}</td></tr>`; return; }
+  if(stockRes.error){ tb.innerHTML = `<tr><td colspan="6">Błąd: ${stockRes.error.message}</td></tr>`; return; }
+  if(packagesRes.error){ tb.innerHTML = `<tr><td colspan="6">Błąd: ${packagesRes.error.message}</td></tr>`; return; }
+  if(pricingRes.error){ tb.innerHTML = `<tr><td colspan="6">Błąd: ${pricingRes.error.message}</td></tr>`; return; }
 
   PRICE_BY_MODEL = new Map();
   PRICE_BY_SKU = new Map();
@@ -596,7 +602,7 @@ async function loadStock(){
   let chinaItems = [];
   if(packageIds.length){
     const ciRes = await sbPublic.from('china_items').select('package_id,product_id,qty').in('package_id', packageIds).limit(10000);
-    if(ciRes.error){ tb.innerHTML = `<tr><td colspan="4">Błąd: ${ciRes.error.message}</td></tr>`; return; }
+    if(ciRes.error){ tb.innerHTML = `<tr><td colspan="6">Błąd: ${ciRes.error.message}</td></tr>`; return; }
     chinaItems = ciRes.data || [];
   }
 
