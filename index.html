@@ -16,7 +16,7 @@
     .who{color:#a3a3a3;font-size:13px}
     .client-nav{display:flex;gap:12px;flex-wrap:wrap;margin-top:14px}
     .client-nav a{color:#fff;text-decoration:none;padding:12px 18px;border:1px solid rgba(255,255,255,.22);border-radius:18px;background:rgba(255,255,255,.02);display:inline-block}
-    .client-nav a:hover{background:rgba(255,255,255,.08)}
+    .client-nav a:hover,.client-nav a.active{background:rgba(255,255,255,.12)}
     .wrap{max-width:1100px;margin:16px auto;padding:0 12px}
     .card{background:#fff;border:1px solid #e8e8ef;border-radius:18px;padding:14px;margin-bottom:14px;box-shadow:0 6px 18px rgba(0,0,0,.03)}
     .btn{padding:10px 14px;border:1px solid #ddd;border-radius:14px;background:#fff;cursor:pointer}
@@ -48,11 +48,19 @@
       <span id="who" class="who"></span>
     </div>
     <div id="clientNav" class="client-nav hidden">
-      <a href="#stockSection">Stany magazynowe</a>
-      <a href="#orderSection">Złóż zamówienie</a>
-      <a href="#ordersSection">Moje zamówienia</a>
-      <a href="#settingsSection">Ustawienia</a>
-      <a href="#scanSection">Skan QR</a>
+      <a href="#" data-target="stockSection">Stany magazynowe</a>
+      <a href="#" data-target="orderSection">Złóż zamówienie</a>
+      <a href="#" data-target="ordersSection">Moje zamówienia</a>
+      <a href="#" data-target="settingsSection">Ustawienia</a>
+      <a href="#" data-target="scanSection">Skan QR</a>
+    </div>
+    <div id="orderSummaryBar" class="hidden" style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+      <span class="badge" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18);color:#fff;padding:8px 12px;">
+        Zamówienia w toku: <b id="ordersInProgressCount">0</b>
+      </span>
+      <span class="badge" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18);color:#fff;padding:8px 12px;">
+        Zamówienia zrealizowane: <b id="ordersDoneCount">0</b>
+      </span>
     </div>
   </div>
 
@@ -79,7 +87,7 @@
     </div>
 
     <div id="appArea" class="hidden">
-      <div class="card" id="stockSection">
+      <div class="card section-block hidden" id="stockSection">
         <h3>Stany magazynowe</h3>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <button id="btnLoadStock" class="btn" type="button">Odśwież stany</button>
@@ -104,7 +112,7 @@
         </div>
       </div>
 
-      <div class="card" id="orderSection">
+      <div class="card section-block hidden" id="orderSection">
         <h3>Złóż zamówienie</h3>
 
         <div class="row3">
@@ -140,7 +148,7 @@
         <div id="orderMsg" class="muted" style="margin-top:8px"></div>
       </div>
 
-      <div class="card" id="ordersSection">
+      <div class="card section-block hidden" id="ordersSection">
         <h3>Moje zamówienia</h3>
         <div class="muted">Statusy synchronizują się z główną aplikacją: <b>niepotwierdzone</b>, <b>potwierdzone</b>, <b>w dostawie</b>, <b>wydane</b>.</div>
         <button id="btnLoadOrders" class="btn" type="button" style="margin-top:8px">Odśwież zamówienia</button>
@@ -154,7 +162,7 @@
         </div>
       </div>
 
-      <div class="card" id="settingsSection">
+      <div class="card section-block hidden" id="settingsSection">
         <h3>Ustawienia</h3>
         <div class="muted">Tutaj zmienisz hasło do logowania w panelu klienta.</div>
         <div class="row" style="margin-top:10px;">
@@ -173,7 +181,7 @@
         <div id="passwordMsg" class="muted" style="margin-top:8px"></div>
       </div>
 
-      <div class="card" id="scanSection">
+      <div class="card section-block hidden" id="scanSection">
         <h3 id="openQrScanner" style="cursor:pointer;text-decoration:underline;">Skanuj QR zamówienia</h3>
         <div>
           <input id="orderCodeInput" placeholder="Wklej kod zamówienia ZAM-... albo kliknij „Skanuj QR zamówienia”" />
@@ -236,6 +244,23 @@ function orderStatusMeta(statusRaw) {
     return { label: STATUS_LABELS[key], cls: 'status-in-delivery' };
   }
   return { label: STATUS_LABELS[key] || statusRaw || '-', cls: 'status-other' };
+}
+
+function updateOrderSummaryBar(orders){
+  const rows = Array.isArray(orders) ? orders : [];
+  const inProgressStatuses = new Set(['new','pending','unconfirmed','confirmed','packed','in_delivery','shipped']);
+  const doneStatuses = new Set(['issued']);
+  let inProgress = 0;
+  let done = 0;
+
+  rows.forEach(o => {
+    const st = String(o?.status || '').toLowerCase();
+    if (inProgressStatuses.has(st)) inProgress += 1;
+    if (doneStatuses.has(st)) done += 1;
+  });
+
+  $('ordersInProgressCount').textContent = String(inProgress);
+  $('ordersDoneCount').textContent = String(done);
 }
 
 const $ = (id)=>document.getElementById(id);
@@ -447,6 +472,8 @@ function showAuth(msg='') {
   appArea.classList.add('hidden');
   btnLogout.classList.add('hidden');
   $('clientNav').classList.add('hidden');
+  $('orderSummaryBar').classList.add('hidden');
+  hideAllSections();
   who.textContent='';
   $('authMsg').textContent=msg;
 }
@@ -456,6 +483,8 @@ function showApp(email) {
   appArea.classList.remove('hidden');
   btnLogout.classList.remove('hidden');
   $('clientNav').classList.remove('hidden');
+  $('orderSummaryBar').classList.remove('hidden');
+  hideAllSections();
   who.textContent=email;
 }
 
@@ -463,6 +492,20 @@ async function getSession(){
   const { data:{ session }, error } = await sbAuth.auth.getSession();
   if(error) throw error;
   return session;
+}
+
+function hideAllSections(){
+  document.querySelectorAll('.section-block').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('#clientNav [data-target]').forEach(el => el.classList.remove('active'));
+}
+
+function openSection(sectionId){
+  hideAllSections();
+  const el = document.getElementById(sectionId);
+  const btn = document.querySelector(`#clientNav [data-target="${sectionId}"]`);
+  if(el) el.classList.remove('hidden');
+  if(btn) btn.classList.add('active');
+  if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 async function loadSession() {
@@ -618,6 +661,7 @@ async function loadStock(){
     renderStockTable();
     rebuildOrderProductList();
   } catch(error){
+    updateOrderSummaryBar([]);
     tb.innerHTML = `<tr><td colspan="5">Błąd: ${esc(error.message)}</td></tr>`;
   }
 }
@@ -779,6 +823,7 @@ async function loadOrders(){
   try {
     const bundle = await fetchOrdersBundle();
     const orders = bundle.orders || [];
+    updateOrderSummaryBar(orders);
 
     if(!orders.length){
       tb.innerHTML = '<tr><td colspan="5">Brak zamówień</td></tr>';
@@ -819,6 +864,13 @@ async function loadOrders(){
 $('btnLoadOrders').onclick = loadOrders;
 $('btnShowOrderByCode').onclick = () => showOrderByCode();
 
+
+document.querySelectorAll('#clientNav [data-target]').forEach(link => {
+  link.onclick = (e) => {
+    e.preventDefault();
+    openSection(link.dataset.target);
+  };
+});
 
 $('btnChangePassword').onclick = async () => {
   const p1 = ($('newPassword').value || '').trim();
