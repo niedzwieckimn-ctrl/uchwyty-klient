@@ -172,6 +172,7 @@ const sbPublic = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 
 window.sb = sbAuth;
 window.sbPublic = sbPublic;
+const MAGAZYN_API_BASE = "https://uchwyty.onrender.com";
 
 const STATUS_LABELS = {
   new: 'Niepotwierdzone',
@@ -261,6 +262,14 @@ function calcClientGrossFromNet(netB2B){
   return Number(netB2B || 0) * 1.45 * 1.23;
 }
 
+async function fetchMagazynJson(path){
+  const res = await fetch(`${MAGAZYN_API_BASE}${path}`);
+  if(!res.ok){
+    throw new Error(`Magazyn API: ${res.status}`);
+  }
+  return await res.json();
+}
+
 function renderOrderDetailsHtml(order, items, totals){
   const rows = (items || []).map(it => `
     <tr>
@@ -311,77 +320,37 @@ async function fetchOrdersBundle(){
   if(ordersRes.error) throw ordersRes.error;
 
   const orders = ordersRes.data || [];
-  const orderIds = orders.map(x => x.id);
-
-  let items = [];
-  if(orderIds.length){
-    const itemsRes = await sbAuth
-      .from('order_items')
-      .select('order_id,product_id,qty,sku')
-      .in('order_id', orderIds)
-      .limit(10000);
-    if(itemsRes.error) throw itemsRes.error;
-    items = itemsRes.data || [];
-  }
-
-  const productIds = [...new Set(items.map(x => Number(x.product_id)).filter(Boolean))];
-  let products = [];
-  if(productIds.length){
-    const prodRes = await sbPublic
-      .from('products')
-      .select('id,sku,model,name')
-      .in('id', productIds)
-      .limit(5000);
-    if(prodRes.error) throw prodRes.error;
-    products = prodRes.data || [];
-  }
-
-  const pricingRes = await sbAuth.from('pricing').select('model,net_price,gross_price').limit(5000);
-  if(pricingRes.error) throw pricingRes.error;
-
-  const productMap = new Map(products.map(p => [Number(p.id), p]));
-  const priceByModel = new Map();
-  const priceBySku = new Map();
-  (pricingRes.data || []).forEach(p => {
-    const k = String(p.model || '').trim().toLowerCase();
-    if(k){
-      priceByModel.set(k, p);
-      priceBySku.set(k, p);
-    }
-  });
-
   const itemsByOrder = new Map();
   const totalsByOrder = new Map();
 
-  items.forEach(it => {
-    const product = productMap.get(Number(it.product_id)) || {};
-    const modelKey = String(product.model || '').trim().toLowerCase();
-    const skuKey = String(product.sku || it.sku || '').trim().toLowerCase();
-    const price = priceByModel.get(modelKey) || priceBySku.get(skuKey) || {};
-    const net = Number(price.net_price || 0);
-    const gross = Number(price.gross_price || 0);
-
-    const row = {
-      order_id: Number(it.order_id),
-      product_id: Number(it.product_id),
-      sku: it.sku || product.sku || '',
-      model: product.model || '',
-      name: product.name || '',
-      qty: Number(it.qty || 0),
-      net_price: net,
-      gross_price: gross,
-      line_net: net * Number(it.qty || 0),
-      line_gross: gross * Number(it.qty || 0)
-    };
-
-    if(!itemsByOrder.has(row.order_id)) itemsByOrder.set(row.order_id, []);
-    itemsByOrder.get(row.order_id).push(row);
-
-    const prev = totalsByOrder.get(row.order_id) || { net:0, gross:0 };
-    prev.net += row.line_net;
-    prev.gross += row.line_gross;
-    totalsByOrder.set(row.order_id, prev);
-  });
+  await Promise.all(
+    orders.map(async (order) => {
+      try {
+        const code = displayOrderNo(order);
+        const payload = await fetchMagazynJson(`/api/order_lookup?token=${encodeURIComponent(code)}`);
+        const items = (payload.items || []).map(it => ({
+          order_id: Number(order.id),
+          product_id: Number(it.product_id || 0),
+          sku: it.sku || '',
+          model: it.model || '',
+          name: it.name || '',
+          qty: Number(it.qty || 0),
+          net_price: Number(it.net_price || 0),
+          gross_price: Number(it.gross_price || 0),
+          line_net: Number(it.line_value_net || 0),
+          line_gross: Number(it.line_value_gross || 0)
+        }));
+        itemsByOrder.set(Number(order.id), items);
+        totalsByOrder.set(Number(order.id), {
+          net: Number(payload.total_net || 0),
+          gross: Number(payload.total_gross || 0)
+        });
+      } catch(error) {
+        itemsByOrder.set(Number(order.id), []);
+        totalsByOrder.set(Number(order.id), { net:0, gross:0 });
+      }
+    })
+  );
 
   return { orders, itemsByOrder, totalsByOrder };
 }
@@ -544,15 +513,18 @@ function renderStockTable(){
     return;
   }
 
-  tb.innerHTML = rows.map(r => `
+  tb.innerHTML = rows.map(r => {
+    const hasPrice = Number(r.net_price || 0) > 0;
+    return `
     <tr>
       <td>${esc(r.sku)}</td>
       <td>${esc(r.name)}</td>
-      <td>${formatMoney(r.net_price)}</td>
-      <td>${formatMoney(calcClientGrossFromNet(r.net_price))}</td>
+      <td>${hasPrice ? formatMoney(r.net_price) : '—'}</td>
+      <td>${hasPrice ? formatMoney(calcClientGrossFromNet(r.net_price)) : '—'}</td>
       <td>${r.qty_on_stock}</td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }
 
 function rebuildOrderProductList(){
@@ -569,72 +541,28 @@ async function loadStock(){
   const tb = $('stockTable').querySelector('tbody');
   tb.innerHTML = '<tr><td colspan="5">Ładowanie...</td></tr>';
 
-  const [productsRes, stockRes, packagesRes, pricingRes] = await Promise.all([
-    sbPublic.from('products').select('id,sku,model,name').order('sku', { ascending:true }).limit(5000),
-    sbPublic.from('stock').select('product_id,qty').limit(5000),
-    sbPublic.from('china_packages').select('id,status').in('status', ['planned','ordered','shipped']).limit(5000),
-    sbAuth.from('pricing').select('model,net_price,gross_price').limit(5000)
-  ]);
+  try {
+    const payload = await fetchMagazynJson('/api/client_stock_catalog');
+    const rows = payload.rows || [];
 
-  if(productsRes.error){ tb.innerHTML = `<tr><td colspan="5">Błąd: ${productsRes.error.message}</td></tr>`; return; }
-  if(stockRes.error){ tb.innerHTML = `<tr><td colspan="5">Błąd: ${stockRes.error.message}</td></tr>`; return; }
-  if(packagesRes.error){ tb.innerHTML = `<tr><td colspan="5">Błąd: ${packagesRes.error.message}</td></tr>`; return; }
-  if(pricingRes.error){ tb.innerHTML = `<tr><td colspan="5">Błąd: ${pricingRes.error.message}</td></tr>`; return; }
+    STOCK_RAW = rows.map(r => ({
+      product_id: Number(r.product_id),
+      sku: r.sku || '',
+      model: r.model || '',
+      name: r.name || '',
+      net_price: Number(r.net_price || 0),
+      gross_price: Number(r.gross_price || 0),
+      qty_on_stock: Number(r.qty_on_stock || 0),
+      qty_in_delivery: 0,
+      qty_total_visible: Number(r.qty_on_stock || 0)
+    }));
 
-  PRICE_BY_MODEL = new Map();
-  PRICE_BY_SKU = new Map();
-  (pricingRes.data || []).forEach(p => {
-    const key = String(p.model || '').trim().toLowerCase();
-    if(key){
-      PRICE_BY_MODEL.set(key, {
-        net: Number(p.net_price || 0),
-        gross: Number(p.gross_price || 0)
-      });
-      PRICE_BY_SKU.set(key, {
-        net: Number(p.net_price || 0),
-        gross: Number(p.gross_price || 0)
-      });
-    }
-  });
-
-  const packageIds = (packagesRes.data || []).map(x => x.id);
-  let chinaItems = [];
-  if(packageIds.length){
-    const ciRes = await sbPublic.from('china_items').select('package_id,product_id,qty').in('package_id', packageIds).limit(10000);
-    if(ciRes.error){ tb.innerHTML = `<tr><td colspan="5">Błąd: ${ciRes.error.message}</td></tr>`; return; }
-    chinaItems = ciRes.data || [];
+    STOCK_VIEW = STOCK_RAW.map(normalizeStockRow);
+    renderStockTable();
+    rebuildOrderProductList();
+  } catch(error){
+    tb.innerHTML = `<tr><td colspan="5">Błąd: ${esc(error.message)}</td></tr>`;
   }
-
-  const stockMap = new Map();
-  (stockRes.data || []).forEach(r => stockMap.set(Number(r.product_id), Number(r.qty || 0)));
-
-  const inDeliveryMap = new Map();
-  chinaItems.forEach(r => {
-    const pid = Number(r.product_id);
-    inDeliveryMap.set(pid, (inDeliveryMap.get(pid) || 0) + Number(r.qty || 0));
-  });
-
-  STOCK_RAW = (productsRes.data || []).map(p => {
-    const modelKey = String(p.model || '').trim().toLowerCase();
-    const skuKey = String(p.sku || '').trim().toLowerCase();
-    const price = PRICE_BY_MODEL.get(modelKey) || PRICE_BY_SKU.get(skuKey) || { net:0, gross:0 };
-
-    return {
-      product_id: Number(p.id),
-      sku: p.sku || '',
-      model: p.model || '',
-      name: p.name || '',
-      net_price: Number(price.net || 0),
-      gross_price: Number(price.gross || 0),
-      qty_on_stock: Number(stockMap.get(Number(p.id)) || 0),
-      qty_in_delivery: Number(inDeliveryMap.get(Number(p.id)) || 0),
-      qty_total_visible: Number(stockMap.get(Number(p.id)) || 0) + Number(inDeliveryMap.get(Number(p.id)) || 0)
-    };
-  });
-  STOCK_VIEW = STOCK_RAW.map(normalizeStockRow);
-
-  renderStockTable();
-  rebuildOrderProductList();
 }
 
 $('btnLoadStock').onclick = loadStock;
