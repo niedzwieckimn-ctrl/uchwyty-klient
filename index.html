@@ -132,7 +132,7 @@
         <div style="overflow:auto;margin-top:10px">
           <table id="orderDraftTable">
             <thead>
-              <tr><th>SKU</th><th>Model</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Ilość</th><th>Wartość brutto</th><th></th></tr>
+              <tr><th>Model</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Ilość</th><th>Wartość brutto</th><th></th></tr>
             </thead>
             <tbody></tbody>
           </table>
@@ -336,7 +336,6 @@ function renderOrderDetailsHtml(order, items, totals){
   const rows = (items || []).map(it => `
     <tr>
       <td>${esc(it.sku)}</td>
-      <td>${esc(it.model || '')}</td>
       <td>${esc(it.name || '')}</td>
       <td>${formatMoney(it.net_price)}</td>
       <td>${formatMoney(it.gross_price)}</td>
@@ -344,7 +343,7 @@ function renderOrderDetailsHtml(order, items, totals){
       <td>${formatMoney(it.line_net)}</td>
       <td>${formatMoney(it.line_gross)}</td>
     </tr>
-  `).join('') || '<tr><td colspan="8">Brak pozycji</td></tr>';
+  `).join('') || '<tr><td colspan="7">Brak pozycji</td></tr>';
 
   return `
     <div class="card" style="margin:8px 0 0 0">
@@ -359,7 +358,7 @@ function renderOrderDetailsHtml(order, items, totals){
       <div style="overflow:auto;margin-top:10px">
         <table>
           <thead>
-            <tr><th>SKU</th><th>Model</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Ilość</th><th>Wartość netto</th><th>Wartość brutto</th></tr>
+            <tr><th>Model</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Ilość</th><th>Wartość netto</th><th>Wartość brutto</th></tr>
           </thead>
           <tbody>${rows}</tbody>
         </table>
@@ -673,14 +672,13 @@ function renderOrderDraft(){
   const tb = $('orderDraftTable').querySelector('tbody');
 
   if(!ORDER_DRAFT.length){
-    tb.innerHTML = '<tr><td colspan="8">Brak pozycji</td></tr>';
+    tb.innerHTML = '<tr><td colspan="7">Brak pozycji</td></tr>';
   } else {
     tb.innerHTML = ORDER_DRAFT.map((it, idx) => {
       const grossLine = Number(it.gross_price || 0) * Number(it.qty || 0);
       return `
       <tr>
         <td>${esc(it.sku)}</td>
-        <td>${esc(it.model)}</td>
         <td>${esc(it.name)}</td>
         <td>${Number(it.net_price || 0).toFixed(2)}</td>
         <td>${Number(it.gross_price || 0).toFixed(2)}</td>
