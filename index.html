@@ -51,6 +51,7 @@
       <a href="#" data-target="stockSection">Stany magazynowe</a>
       <a href="#" data-target="orderSection">Złóż zamówienie</a>
       <a href="#" data-target="ordersSection">Moje zamówienia</a>
+      <a href="#" data-target="invoicesSection">Faktury</a>
       <a href="#" data-target="settingsSection">Ustawienia</a>
       <a href="#" data-target="scanSection">Skan QR</a>
     </div>
@@ -430,6 +431,36 @@ function parseOrderCode(value){
   } catch(e) {}
 
   return raw.toUpperCase();
+}
+
+async function loadInvoices(){
+  const tb = $('invoicesTable').querySelector('tbody');
+  tb.innerHTML = '<tr><td colspan="5">Ładowanie...</td></tr>';
+
+  try {
+    const session = await getSession();
+    if(!session?.user?.email) throw new Error('Brak sesji.');
+    const email = encodeURIComponent(session.user.email.trim().toLowerCase());
+    const payload = await fetchMagazynJson(`/api/client_invoices?email=${email}`);
+    const rows = payload.invoices || [];
+
+    if(!rows.length){
+      tb.innerHTML = '<tr><td colspan="5">Brak faktur</td></tr>';
+      return;
+    }
+
+    tb.innerHTML = rows.map(r => `
+      <tr>
+        <td><b>${esc(r.invoice_no || '')}</b></td>
+        <td>${esc(r.issue_date || '')}</td>
+        <td>${formatMoney(r.total_net)}</td>
+        <td>${formatMoney(r.total_gross)}</td>
+        <td><a class="btn" href="${MAGAZYN_API_BASE}/api/invoices/${r.id}/download?email=${email}" target="_blank">Pobierz PDF</a></td>
+      </tr>
+    `).join('');
+  } catch(error){
+    tb.innerHTML = `<tr><td colspan="5">Błąd: ${esc(error.message)}</td></tr>`;
+  }
 }
 
 async function showOrderByCode(rawCode){
@@ -859,6 +890,7 @@ async function loadOrders(){
   }
 }
 $('btnLoadOrders').onclick = loadOrders;
+$('btnLoadInvoices').onclick = loadInvoices;
 $('btnShowOrderByCode').onclick = () => showOrderByCode();
 
 
@@ -866,6 +898,8 @@ document.querySelectorAll('#clientNav [data-target]').forEach(link => {
   link.onclick = (e) => {
     e.preventDefault();
     openSection(link.dataset.target);
+    if(link.dataset.target === 'ordersSection'){ loadOrders(); }
+    if(link.dataset.target === 'invoicesSection'){ loadInvoices(); }
   };
 });
 
