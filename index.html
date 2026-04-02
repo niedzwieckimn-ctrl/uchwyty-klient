@@ -169,7 +169,7 @@
         <div style="overflow:auto;margin-top:10px">
           <table id="invoicesTable">
             <thead>
-              <tr><th>Nr faktury</th><th>Nr zamówienia</th><th>Data</th><th>Kwota</th><th>PDF</th></tr>
+              <tr><th>Nr faktury</th><th>Nr zamówienia</th><th>Data</th><th>Netto</th><th>Brutto</th><th>PDF</th></tr>
             </thead>
             <tbody></tbody>
           </table>
@@ -449,31 +449,34 @@ function parseOrderCode(value){
 
 async function loadInvoices(){
   const tb = $('invoicesTable').querySelector('tbody');
-  tb.innerHTML = '<tr><td colspan="5">Ładowanie...</td></tr>';
+  const oldHtml = tb.innerHTML;
+  tb.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
 
   try {
     const session = await getSession();
     if(!session?.user?.email) throw new Error('Brak sesji.');
-    const email = encodeURIComponent(session.user.email.trim().toLowerCase());
+    const emailRaw = session.user.email.trim().toLowerCase();
+    const email = encodeURIComponent(emailRaw);
     const payload = await fetchMagazynJson(`/api/client_invoices?email=${email}`);
     const rows = payload.invoices || [];
 
     if(!rows.length){
-      tb.innerHTML = '<tr><td colspan="5">Brak faktur</td></tr>';
+      tb.innerHTML = oldHtml || '<tr><td colspan="6">Brak faktur</td></tr>';
       return;
     }
 
     tb.innerHTML = rows.map(r => `
       <tr>
         <td><b>${esc(r.invoice_no || '')}</b></td>
+        <td>${esc(r.order_no || '')}</td>
         <td>${esc(r.issue_date || '')}</td>
         <td>${formatMoney(r.total_net)}</td>
         <td>${formatMoney(r.total_gross)}</td>
-        <td><a class="btn" href="${MAGAZYN_API_BASE}/api/invoices/${r.id}/download?email=${email}" target="_blank">Pobierz PDF</a></td>
+        <td><a class="btn" href="${MAGAZYN_API_BASE}/api/invoices/${r.id}/download?email=${email}" target="_blank" rel="noopener">Pobierz PDF</a></td>
       </tr>
     `).join('');
   } catch(error){
-    tb.innerHTML = `<tr><td colspan="5">Błąd: ${esc(error.message)}</td></tr>`;
+    tb.innerHTML = oldHtml || `<tr><td colspan="6">Błąd: ${esc(error.message)}</td></tr>`;
   }
 }
 
@@ -558,8 +561,9 @@ async function loadSession() {
 
     showApp(session.user?.email || 'zalogowany');
     $('authMsg').textContent = '';
-    await loadStock();
-    await loadOrders();
+
+    try { await loadStock(); } catch(e) {}
+    try { await loadOrders(); } catch(e) {}
   } catch(error){
     showAuth('Błąd sesji: ' + error.message);
   }
@@ -682,7 +686,7 @@ function rebuildOrderProductList(){
 
 async function loadStock(){
   const tb = $('stockTable').querySelector('tbody');
-  tb.innerHTML = '<tr><td colspan="5">Ładowanie...</td></tr>';
+  tb.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
 
   try {
     const payload = await fetchMagazynJson('/api/client_stock_catalog');
@@ -705,7 +709,7 @@ async function loadStock(){
     rebuildOrderProductList();
   } catch(error){
     updateOrderSummaryBar([]);
-    tb.innerHTML = `<tr><td colspan="5">Błąd: ${esc(error.message)}</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="6">Błąd: ${esc(error.message)}</td></tr>`;
   }
 }
 
@@ -860,7 +864,7 @@ $('btnCreateOrder').onclick = async () => {
 
 async function loadOrders(){
   const tb = $('ordersTable').querySelector('tbody');
-  tb.innerHTML = '<tr><td colspan="5">Ładowanie...</td></tr>';
+  tb.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
 
   try {
     const bundle = await fetchOrdersBundle();
@@ -900,7 +904,7 @@ async function loadOrders(){
       };
     });
   } catch(error){
-    tb.innerHTML = `<tr><td colspan="5">Błąd: ${esc(error.message)}</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="6">Błąd: ${esc(error.message)}</td></tr>`;
   }
 }
 $('btnLoadOrders').onclick = loadOrders;
@@ -909,11 +913,23 @@ $('btnShowOrderByCode').onclick = () => showOrderByCode();
 
 
 document.querySelectorAll('#clientNav [data-target]').forEach(link => {
-  link.onclick = (e) => {
+  link.onclick = async (e) => {
     e.preventDefault();
     openSection(link.dataset.target);
-    if(link.dataset.target === 'ordersSection'){ loadOrders(); }
-    if(link.dataset.target === 'invoicesSection'){ loadInvoices(); }
+
+    if(link.dataset.target === 'stockSection'){
+      await loadStock();
+    }
+    if(link.dataset.target === 'orderSection'){
+      await loadStock();
+      renderOrderDraft();
+    }
+    if(link.dataset.target === 'ordersSection'){
+      await loadOrders();
+    }
+    if(link.dataset.target === 'invoicesSection'){
+      await loadInvoices();
+    }
   };
 });
 
