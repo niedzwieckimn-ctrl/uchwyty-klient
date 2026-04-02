@@ -162,6 +162,20 @@
         </div>
       </div>
 
+      <div class="card section-block hidden" id="invoicesSection">
+        <h3>Faktury</h3>
+        <div class="muted">Tutaj widzisz faktury, które zostały udostępnione klientowi z panelu magazynu.</div>
+        <button id="btnLoadInvoices" class="btn" type="button" style="margin-top:8px">Odśwież faktury</button>
+        <div style="overflow:auto;margin-top:10px">
+          <table id="invoicesTable">
+            <thead>
+              <tr><th>Nr faktury</th><th>Nr zamówienia</th><th>Data</th><th>Kwota</th><th>PDF</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
       <div class="card section-block hidden" id="settingsSection">
         <h3>Ustawienia</h3>
         <div class="muted">Tutaj zmienisz hasło do logowania w panelu klienta.</div>
@@ -890,7 +904,7 @@ async function loadOrders(){
   }
 }
 $('btnLoadOrders').onclick = loadOrders;
-$('btnLoadInvoices').onclick = loadInvoices;
+if ($('btnLoadInvoices')) $('btnLoadInvoices').onclick = loadInvoices;
 $('btnShowOrderByCode').onclick = () => showOrderByCode();
 
 
