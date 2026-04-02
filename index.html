@@ -36,6 +36,7 @@
     .status-in-delivery{background:#2563eb}
     .status-other{background:#6b7280}
     #qrScannerModal.hidden{display:none}
+    #newInvoiceModal.hidden{display:none}
     h3{font-size:22px;margin:4px 0 10px}
     @media(max-width:900px){.row,.row3{grid-template-columns:1fr}}
   </style>
@@ -215,7 +216,19 @@
         </div>
       </div>
 
-    </div>
+    
+      <div id="newInvoiceModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:10000;padding:16px;box-sizing:border-box;">
+        <div style="max-width:430px;margin:8vh auto;background:#e9f9ee;border:2px solid #16a34a;border-radius:18px;padding:16px;">
+          <div style="font-size:24px;font-weight:700;color:#166534;">Masz nową fakturę</div>
+          <div id="newInvoiceText" style="margin-top:8px;color:#166534;"></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
+            <button id="btnNewInvoiceDownload" class="btn primary" type="button">Pobierz PDF</button>
+            <button id="btnNewInvoiceLater" class="btn" type="button">Później</button>
+          </div>
+        </div>
+      </div>
+
+</div>
   </div>
 
 <script>
@@ -285,6 +298,7 @@ let STOCK_VIEW = [];
 let ORDER_DRAFT = [];
 let CURRENT_CUSTOMER = null;
 let PRICE_BY_MODEL = new Map();
+let CURRENT_NEW_INVOICE = null;
 let PRICE_BY_SKU = new Map();
 
 function nowIso(){
@@ -447,9 +461,27 @@ function parseOrderCode(value){
   return raw.toUpperCase();
 }
 
-async function loadInvoices(){
+async function markInvoiceSeenAndOpenPdf(inv){
+  const session = await getSession();
+  if(!session?.user?.email) throw new Error('Brak sesji.');
+  const emailRaw = session.user.email.trim().toLowerCase();
+  const email = encodeURIComponent(emailRaw);
+
+  await fetch(`${MAGAZYN_API_BASE}/api/invoices/${inv.id}/seen?email=${email}`, { method:'POST' });
+  CURRENT_NEW_INVOICE = null;
+  $('newInvoiceModal').classList.add('hidden');
+  window.open(`${MAGAZYN_API_BASE}/api/invoices/${inv.id}/download?email=${email}`, '_blank', 'noopener');
+  await loadInvoices(false);
+}
+
+function showNewInvoiceModal(inv){
+  CURRENT_NEW_INVOICE = inv;
+  $('newInvoiceText').innerHTML = `Faktura <b>${esc(inv.invoice_no || '')}</b> do zamówienia <b>${esc(inv.order_no || '')}</b> jest gotowa.`;
+  $('newInvoiceModal').classList.remove('hidden');
+}
+
+async function loadInvoices(showModal = true){
   const tb = $('invoicesTable').querySelector('tbody');
-  const oldHtml = tb.innerHTML;
   tb.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
 
   try {
@@ -461,22 +493,34 @@ async function loadInvoices(){
     const rows = payload.invoices || [];
 
     if(!rows.length){
-      tb.innerHTML = oldHtml || '<tr><td colspan="6">Brak faktur</td></tr>';
+      tb.innerHTML = '<tr><td colspan="6">Brak faktur</td></tr>';
       return;
     }
 
     tb.innerHTML = rows.map(r => `
       <tr>
-        <td><b>${esc(r.invoice_no || '')}</b></td>
+        <td><b>${esc(r.invoice_no || '')}</b>${Number(r.seen_by_client || 0) === 0 ? ' <span class="badge">Nowa</span>' : ''}</td>
         <td>${esc(r.order_no || '')}</td>
         <td>${esc(r.issue_date || '')}</td>
         <td>${formatMoney(r.total_net)}</td>
         <td>${formatMoney(r.total_gross)}</td>
-        <td><a class="btn" href="${MAGAZYN_API_BASE}/api/invoices/${r.id}/download?email=${email}" target="_blank" rel="noopener">Pobierz PDF</a></td>
+        <td><button class="btn" type="button" data-open-invoice="${r.id}">Pobierz PDF</button></td>
       </tr>
     `).join('');
+
+    tb.querySelectorAll('[data-open-invoice]').forEach(btn => {
+      btn.onclick = async () => {
+        const inv = rows.find(x => Number(x.id) === Number(btn.dataset.openInvoice));
+        if(inv) await markInvoiceSeenAndOpenPdf(inv);
+      };
+    });
+
+    const unseen = rows.find(r => Number(r.seen_by_client || 0) === 0);
+    if(showModal && unseen){
+      showNewInvoiceModal(unseen);
+    }
   } catch(error){
-    tb.innerHTML = oldHtml || `<tr><td colspan="6">Błąd: ${esc(error.message)}</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="6">Błąd: ${esc(error.message)}</td></tr>`;
   }
 }
 
@@ -564,6 +608,7 @@ async function loadSession() {
 
     try { await loadStock(); } catch(e) {}
     try { await loadOrders(); } catch(e) {}
+    try { await loadInvoices(true); } catch(e) {}
   } catch(error){
     showAuth('Błąd sesji: ' + error.message);
   }
@@ -959,6 +1004,17 @@ $('btnChangePassword').onclick = async () => {
   } catch(error){
     $('passwordMsg').textContent = 'Błąd: ' + error.message;
   }
+};
+
+
+$('btnNewInvoiceDownload').onclick = async () => {
+  if(CURRENT_NEW_INVOICE){
+    await markInvoiceSeenAndOpenPdf(CURRENT_NEW_INVOICE);
+  }
+};
+$('btnNewInvoiceLater').onclick = () => {
+  CURRENT_NEW_INVOICE = null;
+  $('newInvoiceModal').classList.add('hidden');
 };
 
 renderOrderDraft();
