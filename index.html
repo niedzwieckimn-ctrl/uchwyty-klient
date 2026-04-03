@@ -515,7 +515,10 @@ async function loadInvoices(showModal = true){
       };
     });
 
-    const unseen = rows.find(r => Number(r.seen_by_client || 0) === 0);
+    const unseen = rows.find(r =>
+      Number(r.seen_by_client || 0) === 0 &&
+      !['gotowka','cash'].includes(String(r.payment_type || '').toLowerCase())
+    );
     if(showModal && unseen){
       showNewInvoiceModal(unseen);
     }
