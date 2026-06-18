@@ -94,10 +94,6 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
           <button id="btnLoadStock" class="btn" type="button">Odśwież stany</button>
           <input id="stockSearch" placeholder="Szukaj: model / nazwa..." style="max-width:360px" />
-          <label class="btn" style="display:flex;align-items:center;gap:6px;cursor:pointer">
-            <input id="onlyAvailable" type="checkbox" />
-            Na stanie
-          </label>
           <span id="stockCount" class="badge">Pozycji: 0</span>
         </div>
 
@@ -460,17 +456,39 @@ function parseOrderCode(value){
   return raw.toUpperCase();
 }
 
-async function markInvoiceSeenAndOpenPdf(inv){
-  const session = await getSession();
-  if(!session?.user?.email) throw new Error('Brak sesji.');
-  const emailRaw = session.user.email.trim().toLowerCase();
-  const email = encodeURIComponent(emailRaw);
+function markInvoiceSeenAndOpenPdf(inv){
+  // Okno musi powstać bezpośrednio po kliknięciu. Inaczej blokada popupów
+  // może zatrzymać PDF po oczekiwaniu na sesję lub odpowiedź serwera.
+  const pdfWindow = window.open('about:blank', '_blank');
+  if(pdfWindow) pdfWindow.opener = null;
 
-  await fetch(`${MAGAZYN_API_BASE}/api/invoices/${inv.id}/seen?email=${email}`, { method:'POST' });
-  CURRENT_NEW_INVOICE = null;
-  $('newInvoiceModal').classList.add('hidden');
-  window.open(`${MAGAZYN_API_BASE}/api/invoices/${inv.id}/download?email=${email}`, '_blank', 'noopener');
-  await loadInvoices(false, true);
+  return (async () => {
+    try {
+      const session = await getSession();
+      if(!session?.user?.email) throw new Error('Brak sesji.');
+      const emailRaw = session.user.email.trim().toLowerCase();
+      const email = encodeURIComponent(emailRaw);
+      const downloadUrl = `${MAGAZYN_API_BASE}/api/invoices/${inv.id}/download?email=${email}`;
+
+      if(pdfWindow){
+        pdfWindow.location.replace(downloadUrl);
+      } else {
+        window.location.href = downloadUrl;
+      }
+
+      CURRENT_NEW_INVOICE = null;
+      $('newInvoiceModal').classList.add('hidden');
+
+      // Oznaczenie jako przeczytana nie opóźnia już otwarcia pliku.
+      fetch(`${MAGAZYN_API_BASE}/api/invoices/${inv.id}/seen?email=${email}`, {
+        method:'POST'
+      }).catch(() => {});
+      LAST_LOADED.invoices = 0;
+    } catch(error){
+      if(pdfWindow) pdfWindow.close();
+      throw error;
+    }
+  })();
 }
 
 function showNewInvoiceModal(inv){
@@ -514,7 +532,12 @@ async function loadInvoices(showModal = true, force = false){
     tb.querySelectorAll('[data-open-invoice]').forEach(btn => {
       btn.onclick = async () => {
         const inv = rows.find(x => Number(x.id) === Number(btn.dataset.openInvoice));
-        if(inv) await markInvoiceSeenAndOpenPdf(inv);
+        if(!inv) return;
+        try {
+          await markInvoiceSeenAndOpenPdf(inv);
+        } catch(error){
+          alert('Nie udało się otworzyć faktury: ' + error.message);
+        }
       };
     });
 
@@ -708,11 +731,10 @@ function normalizeStockRow(r){
 function renderStockTable(){
   const tb = $('stockTable').querySelector('tbody');
   const q = ($('stockSearch')?.value || '').trim().toLowerCase();
-  const onlyAvail = !!$('onlyAvailable')?.checked;
 
-  if (!q && !onlyAvail) {
+  if (!q) {
     $('stockCount').textContent = 'Pozycji: 0';
-    tb.innerHTML = '<tr><td colspan="5">Wpisz model / SKU / nazwę albo zaznacz „Na stanie”.</td></tr>';
+    tb.innerHTML = '<tr><td colspan="5">Wpisz model, SKU lub nazwę produktu.</td></tr>';
     return;
   }
 
@@ -724,10 +746,6 @@ function renderStockTable(){
       r.model.toLowerCase().includes(q) ||
       r.name.toLowerCase().includes(q)
     );
-  }
-
-  if (onlyAvail) {
-    rows = rows.filter(r => Number(r.qty_on_stock) > 0);
   }
 
   $('stockCount').textContent = `Pozycji: ${rows.length}`;
@@ -803,7 +821,6 @@ async function loadStock(force = false){
 
 $('btnLoadStock').onclick = () => loadStock(true);
 $('stockSearch').oninput = renderStockTable;
-$('onlyAvailable').onchange = renderStockTable;
 
 function renderOrderDraft(){
   const tb = $('orderDraftTable').querySelector('tbody');
@@ -1084,7 +1101,11 @@ $('btnChangePassword').onclick = async () => {
 
 $('btnNewInvoiceDownload').onclick = async () => {
   if(CURRENT_NEW_INVOICE){
-    await markInvoiceSeenAndOpenPdf(CURRENT_NEW_INVOICE);
+    try {
+      await markInvoiceSeenAndOpenPdf(CURRENT_NEW_INVOICE);
+    } catch(error){
+      alert('Nie udało się otworzyć faktury: ' + error.message);
+    }
   }
 };
 $('btnNewInvoiceLater').onclick = () => {
