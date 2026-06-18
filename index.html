@@ -300,6 +300,15 @@ let CURRENT_CUSTOMER = null;
 let PRICE_BY_MODEL = new Map();
 let CURRENT_NEW_INVOICE = null;
 let PRICE_BY_SKU = new Map();
+const DATA_CACHE_MS = 60 * 1000;
+const LAST_LOADED = { stock: 0, orders: 0, invoices: 0 };
+const LOAD_IN_FLIGHT = { stock: null, orders: null, invoices: null };
+let SESSION_LOAD_IN_FLIGHT = null;
+let LOADED_USER_ID = null;
+
+function cacheIsFresh(key){
+  return Date.now() - LAST_LOADED[key] < DATA_CACHE_MS;
+}
 
 function nowIso(){
   return new Date().toISOString().replace('T',' ').slice(0,19);
@@ -410,39 +419,29 @@ async function fetchOrdersBundle(){
   if(ordersRes.error) throw ordersRes.error;
 
   const orders = ordersRes.data || [];
-  const itemsByOrder = new Map();
-  const totalsByOrder = new Map();
+  return { orders };
+}
 
-  await Promise.all(
-    orders.map(async (order) => {
-      try {
-        const code = displayOrderNo(order);
-        const payload = await fetchMagazynJson(`/api/order_lookup?token=${encodeURIComponent(code)}`);
-        const items = (payload.items || []).map(it => ({
-          order_id: Number(order.id),
-          product_id: Number(it.product_id || 0),
-          sku: it.sku || '',
-          model: it.model || '',
-          name: it.name || '',
-          qty: Number(it.qty || 0),
-          net_price: Number(it.net_price || 0),
-          gross_price: Number(it.gross_price || 0),
-          line_net: Number(it.line_value_net || 0),
-          line_gross: Number(it.line_value_gross || 0)
-        }));
-        itemsByOrder.set(Number(order.id), items);
-        totalsByOrder.set(Number(order.id), {
-          net: Number(payload.order?.total_net ?? payload.total_net ?? 0),
-          gross: Number(payload.order?.total_gross ?? payload.total_gross ?? 0)
-        });
-      } catch(error) {
-        itemsByOrder.set(Number(order.id), []);
-        totalsByOrder.set(Number(order.id), { net:0, gross:0 });
-      }
-    })
-  );
-
-  return { orders, itemsByOrder, totalsByOrder };
+async function fetchOrderDetails(order){
+  const code = displayOrderNo(order);
+  const payload = await fetchMagazynJson(`/api/order_lookup?token=${encodeURIComponent(code)}`);
+  const items = (payload.items || []).map(it => ({
+    order_id: Number(order.id),
+    product_id: Number(it.product_id || 0),
+    sku: it.sku || '',
+    model: it.model || '',
+    name: it.name || '',
+    qty: Number(it.qty || 0),
+    net_price: Number(it.net_price || 0),
+    gross_price: Number(it.gross_price || 0),
+    line_net: Number(it.line_value_net || 0),
+    line_gross: Number(it.line_value_gross || 0)
+  }));
+  const totals = {
+    net: Number(payload.order?.total_net ?? payload.total_net ?? 0),
+    gross: Number(payload.order?.total_gross ?? payload.total_gross ?? 0)
+  };
+  return { items, totals };
 }
 
 function parseOrderCode(value){
@@ -471,7 +470,7 @@ async function markInvoiceSeenAndOpenPdf(inv){
   CURRENT_NEW_INVOICE = null;
   $('newInvoiceModal').classList.add('hidden');
   window.open(`${MAGAZYN_API_BASE}/api/invoices/${inv.id}/download?email=${email}`, '_blank', 'noopener');
-  await loadInvoices(false);
+  await loadInvoices(false, true);
 }
 
 function showNewInvoiceModal(inv){
@@ -480,7 +479,11 @@ function showNewInvoiceModal(inv){
   $('newInvoiceModal').classList.remove('hidden');
 }
 
-async function loadInvoices(showModal = true){
+async function loadInvoices(showModal = true, force = false){
+  if(!force && cacheIsFresh('invoices')) return;
+  if(LOAD_IN_FLIGHT.invoices) return LOAD_IN_FLIGHT.invoices;
+
+  LOAD_IN_FLIGHT.invoices = (async () => {
   const tb = $('invoicesTable').querySelector('tbody');
   tb.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
 
@@ -516,15 +519,22 @@ async function loadInvoices(showModal = true){
     });
 
     const unseen = rows.find(r =>
-  Number(r.sent_to_client || 0) === 1 &&
-  Number(r.seen_by_client || 0) === 0 &&
-  !['gotowka','cash'].includes(String(r.payment_type || '').toLowerCase())
-);
+      Number(r.seen_by_client || 0) === 0 &&
+      !['gotowka','cash'].includes(String(r.payment_type || '').toLowerCase())
+    );
     if(showModal && unseen){
       showNewInvoiceModal(unseen);
     }
+    LAST_LOADED.invoices = Date.now();
   } catch(error){
     tb.innerHTML = `<tr><td colspan="6">Błąd: ${esc(error.message)}</td></tr>`;
+  }
+  })();
+
+  try {
+    await LOAD_IN_FLIGHT.invoices;
+  } finally {
+    LOAD_IN_FLIGHT.invoices = null;
   }
 }
 
@@ -602,19 +612,33 @@ function openSection(sectionId){
   if(el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-async function loadSession() {
-  try {
+async function loadSession(force = false) {
+  if(SESSION_LOAD_IN_FLIGHT) return SESSION_LOAD_IN_FLIGHT;
+
+  SESSION_LOAD_IN_FLIGHT = (async () => {
+   try {
     const session = await getSession();
     if(!session){ showAuth(); return; }
+    if(!force && LOADED_USER_ID === session.user?.id) return;
 
     showApp(session.user?.email || 'zalogowany');
     $('authMsg').textContent = '';
+    LOADED_USER_ID = session.user?.id || session.user?.email || 'session';
 
-    try { await loadStock(); } catch(e) {}
-    try { await loadOrders(); } catch(e) {}
-    try { await loadInvoices(true); } catch(e) {}
+    await Promise.allSettled([
+      loadStock(false),
+      loadOrders(false),
+      loadInvoices(true, false)
+    ]);
   } catch(error){
     showAuth('Błąd sesji: ' + error.message);
+  }
+  })();
+
+  try {
+    await SESSION_LOAD_IN_FLIGHT;
+  } finally {
+    SESSION_LOAD_IN_FLIGHT = null;
   }
 }
 
@@ -645,15 +669,19 @@ $('btnRegister').onclick = async () => {
 btnLogout.onclick = async () => {
   await sbAuth.auth.signOut();
   CURRENT_CUSTOMER = null;
+  LOADED_USER_ID = null;
+  LAST_LOADED.stock = LAST_LOADED.orders = LAST_LOADED.invoices = 0;
   showAuth('Wylogowano.');
 };
 
-sbAuth.auth.onAuthStateChange((_event, session) => {
-  if(session){
-    loadSession();
-  } else {
+sbAuth.auth.onAuthStateChange((event, session) => {
+  if(event === 'SIGNED_OUT' || !session){
+    LOADED_USER_ID = null;
     showAuth();
+  } else if(event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'USER_UPDATED'){
+    loadSession();
   }
+  // TOKEN_REFRESHED jest celowo ignorowane. Powrót do karty nie przeładowuje danych.
 });
 
 function normalizeStockRow(r){
@@ -733,7 +761,11 @@ function rebuildOrderProductList(){
   });
 }
 
-async function loadStock(){
+async function loadStock(force = false){
+  if(!force && cacheIsFresh('stock') && STOCK_VIEW.length) return;
+  if(LOAD_IN_FLIGHT.stock) return LOAD_IN_FLIGHT.stock;
+
+  LOAD_IN_FLIGHT.stock = (async () => {
   const tb = $('stockTable').querySelector('tbody');
   tb.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
 
@@ -756,13 +788,20 @@ async function loadStock(){
     STOCK_VIEW = STOCK_RAW.map(normalizeStockRow);
     renderStockTable();
     rebuildOrderProductList();
+    LAST_LOADED.stock = Date.now();
   } catch(error){
-    updateOrderSummaryBar([]);
     tb.innerHTML = `<tr><td colspan="6">Błąd: ${esc(error.message)}</td></tr>`;
+  }
+  })();
+
+  try {
+    await LOAD_IN_FLIGHT.stock;
+  } finally {
+    LOAD_IN_FLIGHT.stock = null;
   }
 }
 
-$('btnLoadStock').onclick = loadStock;
+$('btnLoadStock').onclick = () => loadStock(true);
 $('stockSearch').oninput = renderStockTable;
 $('onlyAvailable').onchange = renderStockTable;
 
@@ -905,13 +944,17 @@ $('btnCreateOrder').onclick = async () => {
     ORDER_DRAFT = [];
     $('orderNote').value = '';
     renderOrderDraft();
-    await loadOrders();
+    await loadOrders(true);
   } catch(error){
     $('orderMsg').textContent = 'Błąd: ' + error.message;
   }
 };
 
-async function loadOrders(){
+async function loadOrders(force = false){
+  if(!force && cacheIsFresh('orders')) return;
+  if(LOAD_IN_FLIGHT.orders) return LOAD_IN_FLIGHT.orders;
+
+  LOAD_IN_FLIGHT.orders = (async () => {
   const tb = $('ordersTable').querySelector('tbody');
   tb.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
 
@@ -927,37 +970,65 @@ async function loadOrders(){
 
     tb.innerHTML = orders.map(r => {
       const st = orderStatusMeta(r.status);
-      const totals = bundle.totalsByOrder.get(Number(r.id)) || { net:0, gross:0 };
-      const items = bundle.itemsByOrder.get(Number(r.id)) || [];
-      const detailsHtml = renderOrderDetailsHtml(r, items, totals);
       return `
         <tr>
           <td>${esc(displayOrderNo(r))}</td>
           <td><span class="status-chip ${st.cls}">${esc(st.label)}</span></td>
-          <td>${formatMoney(totals.net)}</td>
-          <td>${formatMoney(totals.gross)}</td>
+          <td id="order-net-${r.id}">—</td>
+          <td id="order-gross-${r.id}">—</td>
           <td>${esc((r.created_at || '').replace('T',' ').slice(0,19))}</td>
           <td><button class="btn" type="button" data-open-order="${r.id}">Szczegóły</button></td>
         </tr>
         <tr id="order-detail-${r.id}" class="hidden">
-          <td colspan="5">${detailsHtml}</td>
+          <td colspan="6"><div class="muted">Kliknij „Szczegóły”, aby pobrać pozycje zamówienia.</div></td>
         </tr>
       `;
     }).join('');
 
     tb.querySelectorAll('[data-open-order]').forEach(btn => {
-      btn.onclick = () => {
+      btn.onclick = async () => {
         const id = btn.getAttribute('data-open-order');
         const row = document.getElementById(`order-detail-${id}`);
-        if(row) row.classList.toggle('hidden');
+        if(!row) return;
+        if(!row.classList.contains('hidden')){
+          row.classList.add('hidden');
+          return;
+        }
+        row.classList.remove('hidden');
+        if(btn.dataset.loaded === '1') return;
+
+        row.children[0].innerHTML = '<div class="muted">Ładowanie szczegółów...</div>';
+        btn.disabled = true;
+        try {
+          const order = orders.find(x => Number(x.id) === Number(id));
+          const { items, totals } = await fetchOrderDetails(order);
+          row.children[0].innerHTML = renderOrderDetailsHtml(order, items, totals);
+          const netCell = document.getElementById(`order-net-${id}`);
+          const grossCell = document.getElementById(`order-gross-${id}`);
+          if(netCell) netCell.textContent = formatMoney(totals.net);
+          if(grossCell) grossCell.textContent = formatMoney(totals.gross);
+          btn.dataset.loaded = '1';
+        } catch(error){
+          row.children[0].innerHTML = `<div class="muted">Błąd: ${esc(error.message)}</div>`;
+        } finally {
+          btn.disabled = false;
+        }
       };
     });
+    LAST_LOADED.orders = Date.now();
   } catch(error){
     tb.innerHTML = `<tr><td colspan="6">Błąd: ${esc(error.message)}</td></tr>`;
   }
+  })();
+
+  try {
+    await LOAD_IN_FLIGHT.orders;
+  } finally {
+    LOAD_IN_FLIGHT.orders = null;
+  }
 }
-$('btnLoadOrders').onclick = loadOrders;
-if ($('btnLoadInvoices')) $('btnLoadInvoices').onclick = loadInvoices;
+$('btnLoadOrders').onclick = () => loadOrders(true);
+if ($('btnLoadInvoices')) $('btnLoadInvoices').onclick = () => loadInvoices(true, true);
 $('btnShowOrderByCode').onclick = () => showOrderByCode();
 
 
@@ -967,17 +1038,17 @@ document.querySelectorAll('#clientNav [data-target]').forEach(link => {
     openSection(link.dataset.target);
 
     if(link.dataset.target === 'stockSection'){
-      await loadStock();
+      await loadStock(false);
     }
     if(link.dataset.target === 'orderSection'){
-      await loadStock();
+      await loadStock(false);
       renderOrderDraft();
     }
     if(link.dataset.target === 'ordersSection'){
-      await loadOrders();
+      await loadOrders(false);
     }
     if(link.dataset.target === 'invoicesSection'){
-      await loadInvoices();
+      await loadInvoices(true, false);
     }
   };
 });
