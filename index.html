@@ -704,9 +704,17 @@ function setInvoiceModalStyle(title, textHtml, mode){
   const text = $('newInvoiceText');
   const titleEl = $('newInvoiceTitle');
   if(!modal || !text) return false;
+  const box = modal.querySelector(':scope > div') || modal.querySelector('div');
+  const isDebt = mode === 'debt';
+  if(box){
+    box.style.background = isDebt ? '#fff1f2' : '#e9f9ee';
+    box.style.borderColor = isDebt ? '#e11d48' : '#16a34a';
+  }
   if(titleEl){
     titleEl.textContent = title;
+    titleEl.style.color = isDebt ? '#9f1239' : '#166534';
   }
+  text.style.color = isDebt ? '#9f1239' : '#166534';
   text.innerHTML = textHtml;
   modal.classList.remove('hidden');
   return true;
