@@ -713,9 +713,6 @@ async function getInvoicePdfUrl(inv, emailRaw){
 function markInvoiceSeenAndOpenPdf(inv){
   // Okno musi powstać bezpośrednio po kliknięciu. Inaczej blokada popupów
   // może zatrzymać PDF po oczekiwaniu na sesję lub odpowiedź serwera.
-  const pdfWindow = window.open('about:blank', '_blank');
-  if(pdfWindow) pdfWindow.opener = null;
-
   return (async () => {
     try {
       const session = await getSession();
@@ -723,12 +720,6 @@ function markInvoiceSeenAndOpenPdf(inv){
       const emailRaw = session.user.email.trim().toLowerCase();
       const email = encodeURIComponent(emailRaw);
       const downloadUrl = await getInvoicePdfUrl(inv, emailRaw);
-
-      if(pdfWindow){
-        pdfWindow.location.replace(downloadUrl);
-      } else {
-        window.location.href = downloadUrl;
-      }
 
       CURRENT_NEW_INVOICE = null;
       $('newInvoiceModal').classList.add('hidden');
@@ -738,8 +729,8 @@ function markInvoiceSeenAndOpenPdf(inv){
         method:'POST'
       }).catch(() => {});
       LAST_LOADED.invoices = 0;
+      window.location.href = downloadUrl;
     } catch(error){
-      if(pdfWindow) pdfWindow.close();
       throw error;
     }
   })();
