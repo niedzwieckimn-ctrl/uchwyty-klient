@@ -519,7 +519,7 @@ async function fetchInvoicesFromSupabase(email){
 
   const ordersRes = await sbAuth
     .from('orders')
-    .select('id,order_no,customer_email')
+    .select('id,order_no,customer_email,note,created_at')
     .ilike('customer_email', normalizedEmail)
     .limit(500);
   if(ordersRes.error) throw ordersRes.error;
@@ -575,6 +575,9 @@ async function fetchInvoicesFromSupabase(email){
       return {
         ...inv,
         order_no: order.order_no || '',
+        source_order_note: order.note || '',
+        note: order.note || '',
+        created_at: inv.created_at || order.created_at || '',
         sent_to_client: Number(meta.sent_to_client || 0),
         seen_by_client: Number(meta.seen_by_client || 0),
         seen_at: meta.seen_at || ''
@@ -597,8 +600,20 @@ async function loadInvoices(showModal = true, force = false){
     if(!session?.user?.email) throw new Error('Brak sesji.');
     const emailRaw = session.user.email.trim().toLowerCase();
     const email = encodeURIComponent(emailRaw);
-    const payload = await fetchMagazynJson(`/api/client_invoices?email=${email}`);
-    const rows = payload.invoices || [];
+    let rows = [];
+    try {
+      const payload = await fetchMagazynJson(`/api/client_invoices?email=${email}`);
+      rows = payload.invoices || [];
+    } catch(apiError) {
+      rows = [];
+    }
+    if(!rows.length){
+      try {
+        rows = await fetchInvoicesFromSupabase(emailRaw);
+      } catch(fallbackError) {
+        rows = [];
+      }
+    }
 
     if(!rows.length){
       tb.innerHTML = '<tr><td colspan="6">Brak faktur</td></tr>';
@@ -672,8 +687,24 @@ async function showOrderByCode(rawCode){
   }
 }
 
+const MOJIBAKE_REPLACEMENTS = {
+  'Ä…':'ą','Ä‡':'ć','Ä™':'ę','Ĺ‚':'ł','Ĺ„':'ń','Ăł':'ó','Ĺ›':'ś','Ĺş':'ź','ĹĽ':'ż',
+  'Ä„':'Ą','Ä†':'Ć','Ä':'Ę','Ĺ':'Ł','Ĺƒ':'Ń','Ă“':'Ó','Ĺš':'Ś','Ĺą':'Ź','Ĺ»':'Ż',
+  'Å‚':'ł','Å„':'ń','Å›':'ś','Åº':'ź','Å¼':'ż','Å':'Ł','Åƒ':'Ń','Åš':'Ś','Å¹':'Ź','Å»':'Ż',
+  'Ä':'ą','Ä':'ć','Ä':'ę','â€”':'—','â€“':'–','â€ž':'„','â€ť':'”','â€™':'’'
+};
+
+function fixPolishText(v){
+  let text = String(v ?? '');
+  if(!/[ÄĹĂÅâ]/.test(text)) return text;
+  Object.entries(MOJIBAKE_REPLACEMENTS).forEach(([bad, good]) => {
+    text = text.split(bad).join(good);
+  });
+  return text;
+}
+
 function esc(v){
-  return String(v ?? '')
+  return fixPolishText(v)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
