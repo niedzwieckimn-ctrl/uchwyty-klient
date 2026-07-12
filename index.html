@@ -408,17 +408,29 @@ function formatMoney(v){
   return Number(v || 0).toFixed(2);
 }
 
+function stockMatchKey(value){
+  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
 function findCatalogStockForItem(item){
   const productId = Number(item?.product_id || 0);
-  const sku = String(item?.sku || '').trim().toLowerCase();
-  const model = String(item?.model || '').trim().toLowerCase();
+  const sku = stockMatchKey(item?.sku);
+  const model = stockMatchKey(item?.model);
   const row = STOCK_VIEW.find(r =>
     (productId && Number(r.product_id) === productId) ||
-    (sku && String(r.sku || '').trim().toLowerCase() === sku) ||
-    (model && String(r.model || '').trim().toLowerCase() === model)
+    (sku && stockMatchKey(r.sku) === sku) ||
+    (sku && stockMatchKey(r.model) === sku) ||
+    (model && stockMatchKey(r.model) === model) ||
+    (model && stockMatchKey(r.sku) === model)
   );
   if(!row) return null;
   return Number(row.qty_on_stock || row.qty_total_visible || 0);
+}
+
+function orderItemAvailabilityLabel(item){
+  const catalogQty = findCatalogStockForItem(item);
+  const stockQty = catalogQty === null ? Number(item?.stock_qty || 0) : catalogQty;
+  return stockQty >= Number(item?.qty || 0) ? 'dostępne' : '10/20 dni';
 }
 
 function calcClientGrossFromNet(netB2B){
@@ -441,7 +453,7 @@ function renderOrderDetailsHtml(order, items, totals){
       <td>${formatMoney(it.net_price)}</td>
       <td>${formatMoney(it.gross_price)}</td>
       <td>${Number(it.qty || 0)}</td>
-      <td>${esc(it.availability_label || (Number(it.stock_qty || 0) >= Number(it.qty || 0) ? 'dostępne' : '10/20 dni'))}</td>
+      <td>${esc(orderItemAvailabilityLabel(it))}</td>
       <td>${esc(it.realization_label || (Number(it.invoiced_qty || 0) >= Number(it.qty || 0) && Number(it.qty || 0) > 0 ? 'w całości' : `${Number(it.invoiced_qty || 0)} szt.`))}</td>
       <td>${formatMoney(it.line_net)}</td>
       <td>${formatMoney(it.line_gross)}</td>
