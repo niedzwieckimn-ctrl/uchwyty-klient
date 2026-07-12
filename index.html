@@ -437,12 +437,18 @@ function calcClientGrossFromNet(netB2B){
   return Number(netB2B || 0) * 1.45 * 1.23;
 }
 
-async function fetchMagazynJson(path){
-  const res = await fetch(`${MAGAZYN_API_BASE}${path}`);
-  if(!res.ok){
-    throw new Error(`Magazyn API: ${res.status}`);
+async function fetchMagazynJson(path, timeoutMs = 12000){
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${MAGAZYN_API_BASE}${path}`, { signal: controller.signal });
+    if(!res.ok){
+      throw new Error(`Magazyn API: ${res.status}`);
+    }
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
   }
-  return await res.json();
 }
 
 function renderOrderDetailsHtml(order, items, totals){
@@ -820,6 +826,28 @@ async function fetchInvoicesFromSupabase(email){
     .sort((a, b) => Number(b.id) - Number(a.id));
 }
 
+async function fetchInvoicesFast(emailRaw){
+  const email = encodeURIComponent(emailRaw);
+  const timeout = (promise, ms) => new Promise((resolve) => {
+    const timer = setTimeout(() => resolve([]), ms);
+    promise.then(
+      value => { clearTimeout(timer); resolve(value); },
+      () => { clearTimeout(timer); resolve([]); }
+    );
+  });
+  const apiPromise = fetchMagazynJson(`/api/client_invoices?email=${email}`, 4500)
+    .then(payload => payload.invoices || [])
+    .catch(() => []);
+  const supabasePromise = fetchInvoicesFromSupabase(emailRaw)
+    .catch(() => []);
+
+  const [apiRows, supabaseRows] = await Promise.all([
+    timeout(apiPromise, 4500),
+    timeout(supabasePromise, 4500)
+  ]);
+  return apiRows.length ? apiRows : supabaseRows;
+}
+
 async function loadInvoices(showModal = true, force = false){
   if(!force && cacheIsFresh('invoices')) return;
   if(LOAD_IN_FLIGHT.invoices) return LOAD_IN_FLIGHT.invoices;
@@ -832,21 +860,7 @@ async function loadInvoices(showModal = true, force = false){
     const session = await getSession();
     if(!session?.user?.email) throw new Error('Brak sesji.');
     const emailRaw = session.user.email.trim().toLowerCase();
-    const email = encodeURIComponent(emailRaw);
-    let rows = [];
-    try {
-      const payload = await fetchMagazynJson(`/api/client_invoices?email=${email}`);
-      rows = payload.invoices || [];
-    } catch(apiError) {
-      rows = [];
-    }
-    if(!rows.length){
-      try {
-        rows = await fetchInvoicesFromSupabase(emailRaw);
-      } catch(fallbackError) {
-        rows = [];
-      }
-    }
+    const rows = await fetchInvoicesFast(emailRaw);
 
     if(!rows.length){
       tb.innerHTML = '<tr><td colspan="6">Brak faktur</td></tr>';
