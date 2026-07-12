@@ -408,6 +408,19 @@ function formatMoney(v){
   return Number(v || 0).toFixed(2);
 }
 
+function findCatalogStockForItem(item){
+  const productId = Number(item?.product_id || 0);
+  const sku = String(item?.sku || '').trim().toLowerCase();
+  const model = String(item?.model || '').trim().toLowerCase();
+  const row = STOCK_VIEW.find(r =>
+    (productId && Number(r.product_id) === productId) ||
+    (sku && String(r.sku || '').trim().toLowerCase() === sku) ||
+    (model && String(r.model || '').trim().toLowerCase() === model)
+  );
+  if(!row) return null;
+  return Number(row.qty_on_stock || row.qty_total_visible || 0);
+}
+
 function calcClientGrossFromNet(netB2B){
   return Number(netB2B || 0) * 1.45 * 1.23;
 }
@@ -490,7 +503,15 @@ function mapMagazynOrderPayload(order, payload){
     gross_price: Number(it.gross_price || 0),
     line_net: Number(it.line_value_net || 0),
     line_gross: Number(it.line_value_gross || 0)
-  }));
+  })).map(it => {
+    const catalogQty = findCatalogStockForItem(it);
+    const stockQty = catalogQty === null ? Number(it.stock_qty || 0) : catalogQty;
+    return {
+      ...it,
+      stock_qty: stockQty,
+      availability_label: stockQty >= Number(it.qty || 0) ? 'dostępne' : '10/20 dni'
+    };
+  });
   const totals = {
     net: Number(payload.order?.total_net ?? payload.total_net ?? 0),
     gross: Number(payload.order?.total_gross ?? payload.total_gross ?? 0)
@@ -559,7 +580,12 @@ async function fetchOrderDetailsFromSupabase(order){
     const price = pricingByKey.get(model.toLowerCase()) || pricingByKey.get(sku.toLowerCase()) || {};
     const netPrice = Number(price.net_price || 0);
     const grossPrice = Number(price.gross_price || (netPrice ? netPrice * 1.23 : 0));
-    const stockQty = Number(stockById.get(Number(it.product_id)) || 0);
+    const catalogQty = findCatalogStockForItem({
+      product_id: Number(it.product_id || 0),
+      sku,
+      model
+    });
+    const stockQty = catalogQty === null ? Number(stockById.get(Number(it.product_id)) || 0) : catalogQty;
     return {
       order_id: orderId,
       product_id: Number(it.product_id || 0),
@@ -588,6 +614,9 @@ async function fetchOrderDetailsFromSupabase(order){
 }
 
 async function fetchOrderDetails(order){
+  try {
+    await loadStock(false);
+  } catch(e) {}
   const tokens = [...new Set([rawOrderNo(order), displayOrderNo(order)].map(x => String(x || '').trim()).filter(Boolean))];
   let lastError = null;
   for(const code of tokens){
