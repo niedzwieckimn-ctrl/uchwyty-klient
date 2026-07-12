@@ -242,6 +242,7 @@ const sbPublic = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 window.sb = sbAuth;
 window.sbPublic = sbPublic;
 const MAGAZYN_API_BASE = "https://uchwyty.onrender.com";
+const INVOICE_STORAGE_BUCKET = "invoice-pdfs";
 
 const STATUS_LABELS = {
   new: 'Niepotwierdzone',
@@ -670,6 +671,45 @@ function parseOrderCode(value){
   return raw.toUpperCase();
 }
 
+function parseSupabaseStorageRef(value){
+  const raw = String(value || '').trim();
+  if(!raw) return null;
+  if(raw.startsWith('supabase://')){
+    const rest = raw.slice('supabase://'.length);
+    const slash = rest.indexOf('/');
+    if(slash > 0){
+      return {
+        bucket: rest.slice(0, slash),
+        path: rest.slice(slash + 1)
+      };
+    }
+  }
+  if(raw.startsWith('invoices/')){
+    return { bucket: INVOICE_STORAGE_BUCKET, path: raw };
+  }
+  return null;
+}
+
+async function getInvoicePdfUrl(inv, emailRaw){
+  const directUrl = String(inv?.pdf_url || inv?.download_url || '').trim();
+  if(directUrl) return directUrl;
+
+  const parsed = parseSupabaseStorageRef(inv?.pdf_path);
+  if(parsed?.path){
+    try {
+      const signed = await sbAuth.storage
+        .from(parsed.bucket || INVOICE_STORAGE_BUCKET)
+        .createSignedUrl(parsed.path, 10 * 60);
+      if(!signed.error && signed.data?.signedUrl){
+        return signed.data.signedUrl;
+      }
+    } catch(e) {}
+  }
+
+  const email = encodeURIComponent(String(emailRaw || '').trim().toLowerCase());
+  return `${MAGAZYN_API_BASE}/api/invoices/${inv.id}/download?email=${email}`;
+}
+
 function markInvoiceSeenAndOpenPdf(inv){
   // Okno musi powstać bezpośrednio po kliknięciu. Inaczej blokada popupów
   // może zatrzymać PDF po oczekiwaniu na sesję lub odpowiedź serwera.
@@ -682,7 +722,7 @@ function markInvoiceSeenAndOpenPdf(inv){
       if(!session?.user?.email) throw new Error('Brak sesji.');
       const emailRaw = session.user.email.trim().toLowerCase();
       const email = encodeURIComponent(emailRaw);
-      const downloadUrl = `${MAGAZYN_API_BASE}/api/invoices/${inv.id}/download?email=${email}`;
+      const downloadUrl = await getInvoicePdfUrl(inv, emailRaw);
 
       if(pdfWindow){
         pdfWindow.location.replace(downloadUrl);
@@ -796,7 +836,7 @@ async function fetchInvoicesFromSupabase(email){
   try {
     const metaRes = await sbAuth
       .from('invoice_meta')
-      .select('invoice_id,sent_to_client,seen_by_client,payment_reminder,paid,paid_at,seen_at')
+      .select('invoice_id,pdf_path,sent_to_client,seen_by_client,payment_reminder,paid,paid_at,seen_at')
       .in('invoice_id', invoiceIds);
     if(!metaRes.error){
       metaById = new Map((metaRes.data || []).map(m => [Number(m.invoice_id), m]));
@@ -815,6 +855,7 @@ async function fetchInvoicesFromSupabase(email){
         note: order.note || '',
         created_at: inv.created_at || order.created_at || '',
         sent_to_client: hasMeta ? Number(meta.sent_to_client || 0) : 1,
+        pdf_path: meta.pdf_path || inv.pdf_path || '',
         seen_by_client: Number(meta.seen_by_client || 0),
         payment_reminder: Number(meta.payment_reminder || 0),
         paid: Number(meta.paid || 0),
