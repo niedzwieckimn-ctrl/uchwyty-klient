@@ -101,7 +101,7 @@
           <table id="stockTable">
             <thead>
               <tr>
-                <th>Model</th><th>Nazwa</th><th>Netto B2B</th><th>Brutto klient</th><th>Na stanie</th>
+                <th>SKU</th><th>Nazwa</th><th>Netto B2B</th><th>Brutto klient</th><th>Dostępne</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -130,7 +130,7 @@
         <div style="overflow:auto;margin-top:10px">
           <table id="orderDraftTable">
             <thead>
-              <tr><th>Model</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Ilość</th><th>Wartość brutto</th><th></th></tr>
+              <tr><th>SKU</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Ilość</th><th>Wartość brutto</th><th></th></tr>
             </thead>
             <tbody></tbody>
           </table>
@@ -342,6 +342,20 @@ function displayOrderNo(order){
   return `ZAM-${datePart}-${id}`;
 }
 
+function displayOrderLabel(order){
+  const base = displayOrderNo(order);
+  const note = String(order?.note || order?.source_order_note || '').trim();
+  return note ? `${base} ${note}` : base;
+}
+
+function productDisplayName(row){
+  const name = String(row?.name || '').trim();
+  const model = String(row?.model || '').trim();
+  const sku = String(row?.sku || '').trim();
+  if(name && model && name.toLowerCase() !== model.toLowerCase()) return `${name} / ${model}`;
+  return name || model || sku || '-';
+}
+
 async function makeQrDataUrl(value){
   try {
     return await QRCode.toDataURL(String(value || '').trim(), { width: 220, margin: 1 });
@@ -370,19 +384,20 @@ function renderOrderDetailsHtml(order, items, totals){
   const rows = (items || []).map(it => `
     <tr>
       <td>${esc(it.sku)}</td>
-      <td>${esc(it.name || '')}</td>
+      <td>${esc(productDisplayName(it))}</td>
       <td>${formatMoney(it.net_price)}</td>
       <td>${formatMoney(it.gross_price)}</td>
       <td>${Number(it.qty || 0)}</td>
+      <td>${esc(it.realization_label || (Number(it.invoiced_qty || 0) >= Number(it.qty || 0) && Number(it.qty || 0) > 0 ? 'w całości' : `${Number(it.invoiced_qty || 0)} szt.`))}</td>
       <td>${formatMoney(it.line_net)}</td>
       <td>${formatMoney(it.line_gross)}</td>
     </tr>
-  `).join('') || '<tr><td colspan="7">Brak pozycji</td></tr>';
+  `).join('') || '<tr><td colspan="8">Brak pozycji</td></tr>';
 
   return `
     <div class="card" style="margin:8px 0 0 0">
       <div>
-        <div><b>${esc(displayOrderNo(order))}</b></div>
+        <div><b>${esc(displayOrderLabel(order))}</b></div>
         <div class="muted" style="margin-top:6px">Klient: ${esc(order.customer_name || '-')}</div>
         <div class="muted">Email: ${esc(order.customer_email || '-')}</div>
         <div class="muted">Data: ${esc(String(order.created_at || '').replace('T',' ').slice(0,19))}</div>
@@ -392,7 +407,7 @@ function renderOrderDetailsHtml(order, items, totals){
       <div style="overflow:auto;margin-top:10px">
         <table>
           <thead>
-            <tr><th>Model</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Ilość</th><th>Wartość netto</th><th>Wartość brutto</th></tr>
+            <tr><th>Model</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Zamówiono</th><th>Zrealizowane</th><th>Wartość netto</th><th>Wartość brutto</th></tr>
           </thead>
           <tbody>${rows}</tbody>
         </table>
@@ -409,7 +424,7 @@ async function fetchOrdersBundle(){
   const ordersRes = await sbAuth
     .from('orders')
     .select('id,order_no,qr_data_url,status,created_at,customer_name,customer_email,note')
-    .eq('customer_email', email)
+    .ilike('customer_email', email)
     .order('created_at', { ascending:false })
     .limit(200);
   if(ordersRes.error) throw ordersRes.error;
@@ -428,6 +443,8 @@ async function fetchOrderDetails(order){
     model: it.model || '',
     name: it.name || '',
     qty: Number(it.qty || 0),
+    invoiced_qty: Number(it.invoiced_qty || 0),
+    realization_label: it.realization_label || '',
     net_price: Number(it.net_price || 0),
     gross_price: Number(it.gross_price || 0),
     line_net: Number(it.line_value_net || 0),
@@ -497,6 +514,76 @@ function showNewInvoiceModal(inv){
   $('newInvoiceModal').classList.remove('hidden');
 }
 
+async function fetchInvoicesFromSupabase(email){
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+
+  const ordersRes = await sbAuth
+    .from('orders')
+    .select('id,order_no,customer_email')
+    .ilike('customer_email', normalizedEmail)
+    .limit(500);
+  if(ordersRes.error) throw ordersRes.error;
+
+  const orders = ordersRes.data || [];
+  const orderById = new Map(orders.map(o => [Number(o.id), o]));
+  const orderIds = orders.map(o => Number(o.id)).filter(Number.isFinite);
+
+  const invoiceQueries = [
+    sbAuth
+      .from('invoices')
+      .select('id,order_id,invoice_no,issue_date,payment_type,buyer_email,total_net,total_gross,created_at')
+      .ilike('buyer_email', normalizedEmail)
+      .order('id', { ascending:false })
+      .limit(500)
+  ];
+
+  if(orderIds.length){
+    invoiceQueries.push(
+      sbAuth
+        .from('invoices')
+        .select('id,order_id,invoice_no,issue_date,payment_type,buyer_email,total_net,total_gross,created_at')
+        .in('order_id', orderIds)
+        .order('id', { ascending:false })
+        .limit(500)
+    );
+  }
+
+  const invoiceResults = await Promise.all(invoiceQueries);
+  const invoiceError = invoiceResults.find(r => r.error)?.error;
+  if(invoiceError) throw invoiceError;
+
+  const invoiceMap = new Map();
+  invoiceResults.forEach(result => {
+    (result.data || []).forEach(inv => invoiceMap.set(Number(inv.id), inv));
+  });
+  const invoices = [...invoiceMap.values()];
+  if(!invoices.length) return [];
+
+  const invoiceIds = invoices.map(inv => Number(inv.id));
+  const metaRes = await sbAuth
+    .from('invoice_meta')
+    .select('invoice_id,sent_to_client,seen_by_client,seen_at')
+    .in('invoice_id', invoiceIds);
+  if(metaRes.error) throw metaRes.error;
+
+  const metaById = new Map((metaRes.data || []).map(m => [Number(m.invoice_id), m]));
+
+  return invoices
+    .map(inv => {
+      const meta = metaById.get(Number(inv.id)) || {};
+      const order = orderById.get(Number(inv.order_id)) || {};
+      return {
+        ...inv,
+        order_no: order.order_no || '',
+        sent_to_client: Number(meta.sent_to_client || 0),
+        seen_by_client: Number(meta.seen_by_client || 0),
+        seen_at: meta.seen_at || ''
+      };
+    })
+    .filter(inv => inv.sent_to_client === 1)
+    .sort((a, b) => Number(b.id) - Number(a.id));
+}
+
 async function loadInvoices(showModal = true, force = false){
   if(!force && cacheIsFresh('invoices')) return;
   if(LOAD_IN_FLIGHT.invoices) return LOAD_IN_FLIGHT.invoices;
@@ -521,7 +608,7 @@ async function loadInvoices(showModal = true, force = false){
     tb.innerHTML = rows.map(r => `
       <tr>
         <td><b>${esc(r.invoice_no || '')}</b>${Number(r.seen_by_client || 0) === 0 ? ' <span class="badge">Nowa</span>' : ''}</td>
-        <td>${esc(r.order_no || '')}</td>
+        <td>${esc(r.order_display || displayOrderLabel(r) || r.order_no || '')}</td>
         <td>${esc(r.issue_date || '')}</td>
         <td>${formatMoney(r.total_net)}</td>
         <td>${formatMoney(r.total_gross)}</td>
@@ -760,7 +847,7 @@ function renderStockTable(){
     return `
     <tr>
       <td>${esc(r.sku)}</td>
-      <td>${esc(r.name)}</td>
+      <td>${esc(productDisplayName(r))}</td>
       <td>${hasPrice ? formatMoney(r.net_price) : '—'}</td>
       <td>${hasPrice ? formatMoney(calcClientGrossFromNet(r.net_price)) : '—'}</td>
       <td>${r.qty_on_stock}</td>
@@ -833,7 +920,7 @@ function renderOrderDraft(){
       return `
       <tr>
         <td>${esc(it.sku)}</td>
-        <td>${esc(it.name)}</td>
+        <td>${esc(productDisplayName(it))}</td>
         <td>${Number(it.net_price || 0).toFixed(2)}</td>
         <td>${Number(it.gross_price || 0).toFixed(2)}</td>
         <td><input type="number" min="1" value="${it.qty}" data-qty-idx="${idx}" style="width:90px" /></td>
@@ -989,7 +1076,7 @@ async function loadOrders(force = false){
       const st = orderStatusMeta(r.status);
       return `
         <tr>
-          <td>${esc(displayOrderNo(r))}</td>
+          <td>${esc(displayOrderLabel(r))}</td>
           <td><span class="status-chip ${st.cls}">${esc(st.label)}</span></td>
           <td id="order-net-${r.id}">—</td>
           <td id="order-gross-${r.id}">—</td>
