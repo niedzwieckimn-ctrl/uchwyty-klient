@@ -215,7 +215,7 @@
     
       <div id="newInvoiceModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:10000;padding:16px;box-sizing:border-box;">
         <div style="max-width:430px;margin:8vh auto;background:#e9f9ee;border:2px solid #16a34a;border-radius:18px;padding:16px;">
-          <div style="font-size:24px;font-weight:700;color:#166534;">Masz nową fakturę</div>
+          <div id="newInvoiceTitle" style="font-size:24px;font-weight:700;color:#166534;">Masz nową fakturę</div>
           <div id="newInvoiceText" style="margin-top:8px;color:#166534;"></div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
             <button id="btnNewInvoiceDownload" class="btn primary" type="button">Pobierz PDF</button>
@@ -699,34 +699,37 @@ function markInvoiceSeenAndOpenPdf(inv){
   })();
 }
 
+function setInvoiceModalStyle(title, textHtml, mode){
+  const modal = $('newInvoiceModal');
+  const text = $('newInvoiceText');
+  const titleEl = $('newInvoiceTitle');
+  if(!modal || !text) return false;
+  if(titleEl){
+    titleEl.textContent = title;
+  }
+  text.innerHTML = textHtml;
+  modal.classList.remove('hidden');
+  return true;
+}
+
 function showNewInvoiceModal(inv){
   CURRENT_NEW_INVOICE = inv;
-  const box = $('newInvoiceModal').querySelector('div');
-  if(box){
-    box.style.background = '#e9f9ee';
-    box.style.borderColor = '#16a34a';
-  }
-  $('newInvoiceModal').querySelector('div div').textContent = 'Masz nową fakturę';
-  $('newInvoiceModal').querySelector('div div').style.color = '#166534';
-  $('newInvoiceText').style.color = '#166534';
-  $('newInvoiceText').innerHTML = `Faktura <b>${esc(inv.invoice_no || '')}</b> do zamówienia <b>${esc(inv.order_no || '')}</b> jest gotowa.`;
-  $('newInvoiceModal').classList.remove('hidden');
+  setInvoiceModalStyle(
+    'Masz nową fakturę',
+    `Faktura <b>${esc(inv.invoice_no || '')}</b> do zamówienia <b>${esc(inv.order_no || '')}</b> jest gotowa.`,
+    'new'
+  );
 }
 
 function showPaymentReminderModal(inv){
   CURRENT_NEW_INVOICE = inv;
-  const box = $('newInvoiceModal').querySelector('div');
-  if(box){
-    box.style.background = '#fff1f2';
-    box.style.borderColor = '#e11d48';
-  }
-  $('newInvoiceModal').querySelector('div div').textContent = 'Masz zaległe płatności';
-  $('newInvoiceModal').querySelector('div div').style.color = '#9f1239';
-  $('newInvoiceText').style.color = '#9f1239';
   const amount = Number(inv.total_gross || 0) ? ` na kwotę <b>${formatMoney(inv.total_gross)} PLN</b>` : '';
   const due = inv.payment_to ? ` Termin płatności: <b>${esc(inv.payment_to)}</b>.` : '';
-  $('newInvoiceText').innerHTML = `Faktura <b>${esc(inv.invoice_no || '')}</b>${amount} jest oznaczona jako nieopłacona.${due}<br>Prosimy o uregulowanie zaległej płatności.`;
-  $('newInvoiceModal').classList.remove('hidden');
+  setInvoiceModalStyle(
+    'Masz zaległe płatności',
+    `Faktura <b>${esc(inv.invoice_no || '')}</b>${amount} jest oznaczona jako nieopłacona.${due}<br>Prosimy o uregulowanie zaległej płatności.`,
+    'debt'
+  );
 }
 
 async function fetchInvoicesFromSupabase(email){
