@@ -320,26 +320,66 @@ function makeOrderNo(id){
 
 function makeClientOrderNo(){
   const d = new Date();
-  const yyyy = d.getFullYear();
+  const yy = String(d.getFullYear()).slice(-2);
   const mm = String(d.getMonth()+1).padStart(2,'0');
   const dd = String(d.getDate()).padStart(2,'0');
   const hh = String(d.getHours()).padStart(2,'0');
   const mi = String(d.getMinutes()).padStart(2,'0');
   const ss = String(d.getSeconds()).padStart(2,'0');
   const rand = Math.random().toString(36).slice(2,6).toUpperCase();
-  return `ZAM-${yyyy}${mm}${dd}-${hh}${mi}${ss}-${rand}`;
+  return `ZAM-${yy}${mm}${dd}${hh}${mi}${ss}${rand}`;
+}
+
+function rawOrderNo(order){
+  return String(order?.order_no || '').trim().replace(/^ORD-/i, 'ZAM-');
+}
+
+function normalizeOrderDisplayNo(raw, order){
+  const code = String(raw || '').trim().replace(/^ORD-/i, 'ZAM-');
+  if(!code || code.toUpperCase() === 'TEMP') return '';
+  if(/^ZAM-\d{7,}$/i.test(code)) return code;
+  const longMatch = code.match(/^ZAM-(20\d{2})(\d{2})(\d{2})-\d{6}-[A-Z0-9]+$/i);
+  if(longMatch){
+    const idTail = String(order?.id || '1').replace(/\D/g, '').slice(-1) || '1';
+    return `ZAM-${longMatch[1].slice(-2)}${longMatch[2]}${longMatch[3]}${idTail}`;
+  }
+  return code;
+}
+
+function assignFriendlyOrderNumbers(orders){
+  const counters = new Map();
+  [...(orders || [])]
+    .sort((a, b) => {
+      const da = String(a.created_at || '');
+      const db = String(b.created_at || '');
+      if(da !== db) return da.localeCompare(db);
+      return Number(a.id || 0) - Number(b.id || 0);
+    })
+    .forEach(order => {
+      const raw = rawOrderNo(order);
+      const m = raw.match(/^ZAM-(20\d{2})(\d{2})(\d{2})-\d{6}-[A-Z0-9]+$/i);
+      if(m){
+        const day = `${m[1].slice(-2)}${m[2]}${m[3]}`;
+        const next = (counters.get(day) || 0) + 1;
+        counters.set(day, next);
+        order._display_order_no = `ZAM-${day}${next}`;
+      } else {
+        order._display_order_no = normalizeOrderDisplayNo(raw, order);
+      }
+    });
+  return orders || [];
 }
 
 function displayOrderNo(order){
-  const raw = String(order?.order_no || '').trim();
-  if(raw && raw.toUpperCase() !== 'TEMP'){
-    return raw.replace(/^ORD-/, 'ZAM-');
-  }
+  const friendly = String(order?._display_order_no || '').trim();
+  if(friendly) return friendly;
+  const normalized = normalizeOrderDisplayNo(rawOrderNo(order), order);
+  if(normalized) return normalized;
 
   const id = String(order?.id || '').padStart(6, '0');
   const created = String(order?.created_at || '');
-  const datePart = created ? created.slice(0,10).replace(/-/g,'') : new Date().toISOString().slice(0,10).replace(/-/g,'');
-  return `ZAM-${datePart}-${id}`;
+  const datePart = created ? created.slice(2,10).replace(/-/g,'') : new Date().toISOString().slice(2,10).replace(/-/g,'');
+  return `ZAM-${datePart}${id.slice(-1)}`;
 }
 
 function displayOrderLabel(order){
@@ -430,13 +470,11 @@ async function fetchOrdersBundle(){
     .limit(200);
   if(ordersRes.error) throw ordersRes.error;
 
-  const orders = ordersRes.data || [];
+  const orders = assignFriendlyOrderNumbers(ordersRes.data || []);
   return { orders };
 }
 
-async function fetchOrderDetails(order){
-  const code = displayOrderNo(order);
-  const payload = await fetchMagazynJson(`/api/order_lookup?token=${encodeURIComponent(code)}`);
+function mapMagazynOrderPayload(order, payload){
   const items = (payload.items || []).map(it => ({
     order_id: Number(order.id),
     product_id: Number(it.product_id || 0),
@@ -460,12 +498,121 @@ async function fetchOrderDetails(order){
   return { items, totals };
 }
 
+async function fetchOrderDetailsFromSupabase(order){
+  const orderId = Number(order?.id || 0);
+  if(!orderId) throw new Error('Brak ID zamówienia.');
+
+  const itemsRes = await sbAuth
+    .from('order_items')
+    .select('id,order_id,product_id,sku,qty')
+    .eq('order_id', orderId)
+    .order('id', { ascending:true });
+  if(itemsRes.error) throw itemsRes.error;
+
+  const rawItems = itemsRes.data || [];
+  const productIds = [...new Set(rawItems.map(it => Number(it.product_id)).filter(Number.isFinite))];
+  let products = [];
+  if(productIds.length){
+    const productsRes = await sbAuth
+      .from('products')
+      .select('id,sku,model,name')
+      .in('id', productIds);
+    if(!productsRes.error) products = productsRes.data || [];
+  }
+  const productsById = new Map(products.map(p => [Number(p.id), p]));
+
+  let stockById = new Map();
+  if(productIds.length){
+    try {
+      const stockRes = await sbAuth
+        .from('stock')
+        .select('product_id,qty')
+        .in('product_id', productIds);
+      if(!stockRes.error){
+        stockById = new Map((stockRes.data || []).map(s => [Number(s.product_id), Number(s.qty || 0)]));
+      }
+    } catch(e) {}
+  }
+
+  const priceKeys = [...new Set(rawItems.flatMap(it => {
+    const p = productsById.get(Number(it.product_id)) || {};
+    return [p.model, p.sku, it.sku].map(x => String(x || '').trim()).filter(Boolean);
+  }))];
+  let pricingByKey = new Map();
+  if(priceKeys.length){
+    try {
+      const priceRes = await sbAuth
+        .from('pricing')
+        .select('model,net_price,gross_price')
+        .in('model', priceKeys);
+      if(!priceRes.error){
+        pricingByKey = new Map((priceRes.data || []).map(pr => [String(pr.model || '').trim().toLowerCase(), pr]));
+      }
+    } catch(e) {}
+  }
+
+  const items = rawItems.map(it => {
+    const product = productsById.get(Number(it.product_id)) || {};
+    const qty = Number(it.qty || 0);
+    const sku = String(product.sku || it.sku || '').trim();
+    const model = String(product.model || sku).trim();
+    const price = pricingByKey.get(model.toLowerCase()) || pricingByKey.get(sku.toLowerCase()) || {};
+    const netPrice = Number(price.net_price || 0);
+    const grossPrice = Number(price.gross_price || (netPrice ? netPrice * 1.23 : 0));
+    const stockQty = Number(stockById.get(Number(it.product_id)) || 0);
+    return {
+      order_id: orderId,
+      product_id: Number(it.product_id || 0),
+      sku,
+      model,
+      name: product.name || '',
+      qty,
+      stock_qty: stockQty,
+      availability_label: stockQty >= qty ? 'dostępne' : '10/20 dni',
+      invoiced_qty: 0,
+      realization_label: '0 szt.',
+      net_price: netPrice,
+      gross_price: grossPrice,
+      line_net: netPrice * qty,
+      line_gross: grossPrice * qty
+    };
+  });
+
+  const totals = items.reduce((acc, it) => {
+    acc.net += Number(it.line_net || 0);
+    acc.gross += Number(it.line_gross || 0);
+    return acc;
+  }, { net:0, gross:0 });
+
+  return { items, totals };
+}
+
+async function fetchOrderDetails(order){
+  const tokens = [...new Set([rawOrderNo(order), displayOrderNo(order)].map(x => String(x || '').trim()).filter(Boolean))];
+  let lastError = null;
+  for(const code of tokens){
+    try {
+      const payload = await fetchMagazynJson(`/api/order_lookup?token=${encodeURIComponent(code)}`);
+      return mapMagazynOrderPayload(order, payload);
+    } catch(error){
+      lastError = error;
+    }
+  }
+  try {
+    return await fetchOrderDetailsFromSupabase(order);
+  } catch(error){
+    throw lastError || error;
+  }
+}
+
 function parseOrderCode(value){
   const raw = String(value || '').trim();
   if(!raw) return '';
 
   const match = raw.match(/ZAM-[0-9]{8}-[A-Z0-9-]+/i);
   if(match) return match[0].toUpperCase();
+  const shortMatch = raw.match(/ZAM-[0-9]{7,}/i);
+  if(shortMatch) return shortMatch[0].toUpperCase();
 
   try {
     const url = new URL(raw);
@@ -563,16 +710,20 @@ async function fetchInvoicesFromSupabase(email){
   if(!invoices.length) return [];
 
   const invoiceIds = invoices.map(inv => Number(inv.id));
-  const metaRes = await sbAuth
-    .from('invoice_meta')
-    .select('invoice_id,sent_to_client,seen_by_client,seen_at')
-    .in('invoice_id', invoiceIds);
-  if(metaRes.error) throw metaRes.error;
-
-  const metaById = new Map((metaRes.data || []).map(m => [Number(m.invoice_id), m]));
+  let metaById = new Map();
+  try {
+    const metaRes = await sbAuth
+      .from('invoice_meta')
+      .select('invoice_id,sent_to_client,seen_by_client,seen_at')
+      .in('invoice_id', invoiceIds);
+    if(!metaRes.error){
+      metaById = new Map((metaRes.data || []).map(m => [Number(m.invoice_id), m]));
+    }
+  } catch(e) {}
 
   return invoices
     .map(inv => {
+      const hasMeta = metaById.has(Number(inv.id));
       const meta = metaById.get(Number(inv.id)) || {};
       const order = orderById.get(Number(inv.order_id)) || {};
       return {
@@ -581,7 +732,7 @@ async function fetchInvoicesFromSupabase(email){
         source_order_note: order.note || '',
         note: order.note || '',
         created_at: inv.created_at || order.created_at || '',
-        sent_to_client: Number(meta.sent_to_client || 0),
+        sent_to_client: hasMeta ? Number(meta.sent_to_client || 0) : 1,
         seen_by_client: Number(meta.seen_by_client || 0),
         seen_at: meta.seen_at || ''
       };
@@ -676,13 +827,12 @@ async function showOrderByCode(rawCode){
 
   try {
     const bundle = await fetchOrdersBundle();
-    const order = (bundle.orders || []).find(o => displayOrderNo(o) === code || String(o.order_no || '').trim() === code);
+    const order = (bundle.orders || []).find(o => displayOrderNo(o).toUpperCase() === code || rawOrderNo(o).toUpperCase() === code);
     if(!order){
       out.innerHTML = '<div class="muted">Nie znaleziono Twojego zamówienia o takim kodzie.</div>';
       return;
     }
-    const items = bundle.itemsByOrder.get(Number(order.id)) || [];
-    const totals = bundle.totalsByOrder.get(Number(order.id)) || { net:0, gross:0 };
+    const { items, totals } = await fetchOrderDetails(order);
     out.innerHTML = renderOrderDetailsHtml(order, items, totals);
     out.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch(error){
