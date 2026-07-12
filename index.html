@@ -720,12 +720,12 @@ function showPaymentReminderModal(inv){
     box.style.background = '#fff1f2';
     box.style.borderColor = '#e11d48';
   }
-  $('newInvoiceModal').querySelector('div div').textContent = 'Przypomnienie o płatności';
+  $('newInvoiceModal').querySelector('div div').textContent = 'Masz zaległe płatności';
   $('newInvoiceModal').querySelector('div div').style.color = '#9f1239';
   $('newInvoiceText').style.color = '#9f1239';
   const amount = Number(inv.total_gross || 0) ? ` na kwotę <b>${formatMoney(inv.total_gross)} PLN</b>` : '';
   const due = inv.payment_to ? ` Termin płatności: <b>${esc(inv.payment_to)}</b>.` : '';
-  $('newInvoiceText').innerHTML = `Masz nieopłaconą fakturę <b>${esc(inv.invoice_no || '')}</b>${amount}.${due}<br>Prosimy o uregulowanie płatności.`;
+  $('newInvoiceText').innerHTML = `Faktura <b>${esc(inv.invoice_no || '')}</b>${amount} jest oznaczona jako nieopłacona.${due}<br>Prosimy o uregulowanie zaległej płatności.`;
   $('newInvoiceModal').classList.remove('hidden');
 }
 
@@ -867,12 +867,11 @@ async function loadInvoices(showModal = true, force = false){
 
     const paymentReminder = rows.find(r =>
       Number(r.payment_reminder || 0) === 1 &&
-      Number(r.paid || 0) !== 1 &&
-      !['gotowka','cash'].includes(String(r.payment_type || '').toLowerCase())
+      Number(r.paid || 0) !== 1
     );
     const unseen = rows.find(r =>
       Number(r.seen_by_client || 0) === 0 &&
-      !['gotowka','cash'].includes(String(r.payment_type || '').toLowerCase())
+      Number(r.paid || 0) !== 1
     );
     if(showModal && paymentReminder){
       showPaymentReminderModal(paymentReminder);
