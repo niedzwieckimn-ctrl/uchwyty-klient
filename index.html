@@ -701,7 +701,31 @@ function markInvoiceSeenAndOpenPdf(inv){
 
 function showNewInvoiceModal(inv){
   CURRENT_NEW_INVOICE = inv;
+  const box = $('newInvoiceModal').querySelector('div');
+  if(box){
+    box.style.background = '#e9f9ee';
+    box.style.borderColor = '#16a34a';
+  }
+  $('newInvoiceModal').querySelector('div div').textContent = 'Masz nową fakturę';
+  $('newInvoiceModal').querySelector('div div').style.color = '#166534';
+  $('newInvoiceText').style.color = '#166534';
   $('newInvoiceText').innerHTML = `Faktura <b>${esc(inv.invoice_no || '')}</b> do zamówienia <b>${esc(inv.order_no || '')}</b> jest gotowa.`;
+  $('newInvoiceModal').classList.remove('hidden');
+}
+
+function showPaymentReminderModal(inv){
+  CURRENT_NEW_INVOICE = inv;
+  const box = $('newInvoiceModal').querySelector('div');
+  if(box){
+    box.style.background = '#fff1f2';
+    box.style.borderColor = '#e11d48';
+  }
+  $('newInvoiceModal').querySelector('div div').textContent = 'Przypomnienie o płatności';
+  $('newInvoiceModal').querySelector('div div').style.color = '#9f1239';
+  $('newInvoiceText').style.color = '#9f1239';
+  const amount = Number(inv.total_gross || 0) ? ` na kwotę <b>${formatMoney(inv.total_gross)} PLN</b>` : '';
+  const due = inv.payment_to ? ` Termin płatności: <b>${esc(inv.payment_to)}</b>.` : '';
+  $('newInvoiceText').innerHTML = `Masz nieopłaconą fakturę <b>${esc(inv.invoice_no || '')}</b>${amount}.${due}<br>Prosimy o uregulowanie płatności.`;
   $('newInvoiceModal').classList.remove('hidden');
 }
 
@@ -722,7 +746,7 @@ async function fetchInvoicesFromSupabase(email){
   const invoiceQueries = [
     sbAuth
       .from('invoices')
-      .select('id,order_id,invoice_no,issue_date,payment_type,buyer_email,total_net,total_gross,created_at')
+      .select('id,order_id,invoice_no,issue_date,payment_type,payment_to,buyer_email,total_net,total_gross,created_at')
       .ilike('buyer_email', normalizedEmail)
       .order('id', { ascending:false })
       .limit(500)
@@ -732,7 +756,7 @@ async function fetchInvoicesFromSupabase(email){
     invoiceQueries.push(
       sbAuth
         .from('invoices')
-        .select('id,order_id,invoice_no,issue_date,payment_type,buyer_email,total_net,total_gross,created_at')
+        .select('id,order_id,invoice_no,issue_date,payment_type,payment_to,buyer_email,total_net,total_gross,created_at')
         .in('order_id', orderIds)
         .order('id', { ascending:false })
         .limit(500)
@@ -755,7 +779,7 @@ async function fetchInvoicesFromSupabase(email){
   try {
     const metaRes = await sbAuth
       .from('invoice_meta')
-      .select('invoice_id,sent_to_client,seen_by_client,seen_at')
+      .select('invoice_id,sent_to_client,seen_by_client,payment_reminder,paid,paid_at,seen_at')
       .in('invoice_id', invoiceIds);
     if(!metaRes.error){
       metaById = new Map((metaRes.data || []).map(m => [Number(m.invoice_id), m]));
@@ -775,6 +799,9 @@ async function fetchInvoicesFromSupabase(email){
         created_at: inv.created_at || order.created_at || '',
         sent_to_client: hasMeta ? Number(meta.sent_to_client || 0) : 1,
         seen_by_client: Number(meta.seen_by_client || 0),
+        payment_reminder: Number(meta.payment_reminder || 0),
+        paid: Number(meta.paid || 0),
+        paid_at: meta.paid_at || '',
         seen_at: meta.seen_at || ''
       };
     })
@@ -817,7 +844,7 @@ async function loadInvoices(showModal = true, force = false){
 
     tb.innerHTML = rows.map(r => `
       <tr>
-        <td><b>${esc(r.invoice_no || '')}</b>${Number(r.seen_by_client || 0) === 0 ? ' <span class="badge">Nowa</span>' : ''}</td>
+        <td><b>${esc(r.invoice_no || '')}</b>${Number(r.seen_by_client || 0) === 0 ? ' <span class="badge">Nowa</span>' : ''}${Number(r.paid || 0) === 1 ? ' <span class="badge">Opłacona</span>' : ''}${Number(r.payment_reminder || 0) === 1 && Number(r.paid || 0) !== 1 ? ' <span class="badge">Do opłacenia</span>' : ''}</td>
         <td>${esc(r.order_display || displayOrderLabel(r) || r.order_no || '')}</td>
         <td>${esc(r.issue_date || '')}</td>
         <td>${formatMoney(r.total_net)}</td>
@@ -838,11 +865,18 @@ async function loadInvoices(showModal = true, force = false){
       };
     });
 
+    const paymentReminder = rows.find(r =>
+      Number(r.payment_reminder || 0) === 1 &&
+      Number(r.paid || 0) !== 1 &&
+      !['gotowka','cash'].includes(String(r.payment_type || '').toLowerCase())
+    );
     const unseen = rows.find(r =>
       Number(r.seen_by_client || 0) === 0 &&
       !['gotowka','cash'].includes(String(r.payment_type || '').toLowerCase())
     );
-    if(showModal && unseen){
+    if(showModal && paymentReminder){
+      showPaymentReminderModal(paymentReminder);
+    } else if(showModal && unseen){
       showNewInvoiceModal(unseen);
     }
     LAST_LOADED.invoices = Date.now();
