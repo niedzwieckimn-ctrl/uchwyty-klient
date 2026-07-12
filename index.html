@@ -388,11 +388,12 @@ function renderOrderDetailsHtml(order, items, totals){
       <td>${formatMoney(it.net_price)}</td>
       <td>${formatMoney(it.gross_price)}</td>
       <td>${Number(it.qty || 0)}</td>
+      <td>${esc(it.availability_label || (Number(it.stock_qty || 0) >= Number(it.qty || 0) ? 'dostępne' : '10/20 dni'))}</td>
       <td>${esc(it.realization_label || (Number(it.invoiced_qty || 0) >= Number(it.qty || 0) && Number(it.qty || 0) > 0 ? 'w całości' : `${Number(it.invoiced_qty || 0)} szt.`))}</td>
       <td>${formatMoney(it.line_net)}</td>
       <td>${formatMoney(it.line_gross)}</td>
     </tr>
-  `).join('') || '<tr><td colspan="8">Brak pozycji</td></tr>';
+  `).join('') || '<tr><td colspan="9">Brak pozycji</td></tr>';
 
   return `
     <div class="card" style="margin:8px 0 0 0">
@@ -407,7 +408,7 @@ function renderOrderDetailsHtml(order, items, totals){
       <div style="overflow:auto;margin-top:10px">
         <table>
           <thead>
-            <tr><th>Model</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Zamówiono</th><th>Zrealizowane</th><th>Wartość netto</th><th>Wartość brutto</th></tr>
+            <tr><th>Model</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Zamówiono</th><th>Dostawa</th><th>Zrealizowane</th><th>Wartość netto</th><th>Wartość brutto</th></tr>
           </thead>
           <tbody>${rows}</tbody>
         </table>
@@ -443,6 +444,8 @@ async function fetchOrderDetails(order){
     model: it.model || '',
     name: it.name || '',
     qty: Number(it.qty || 0),
+    stock_qty: Number(it.stock_qty || 0),
+    availability_label: it.availability_label || '',
     invoiced_qty: Number(it.invoiced_qty || 0),
     realization_label: it.realization_label || '',
     net_price: Number(it.net_price || 0),
