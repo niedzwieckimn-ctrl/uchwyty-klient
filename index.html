@@ -147,7 +147,7 @@
 
       <div class="card section-block hidden" id="ordersSection">
         <h3>Moje zamówienia</h3>
-        <div class="muted">Statusy synchronizują się z główną aplikacją: <b>niepotwierdzone</b>, <b>potwierdzone</b>, <b>w dostawie</b>, <b>zrealizowane</b>.</div>
+        <div class="muted">Tutaj sprawdzisz aktualny status swoich zamówień.</div>
         <button id="btnLoadOrders" class="btn" type="button" style="margin-top:8px">Odśwież zamówienia</button>
         <div style="overflow:auto;margin-top:10px">
           <table id="ordersTable">
@@ -161,7 +161,7 @@
 
       <div class="card section-block hidden" id="invoicesSection">
         <h3>Faktury</h3>
-        <div class="muted">Tutaj widzisz faktury, które zostały udostępnione klientowi z panelu magazynu.</div>
+        <div class="muted">Tutaj znajdziesz faktury udostępnione do pobrania.</div>
         <button id="btnLoadInvoices" class="btn" type="button" style="margin-top:8px">Odśwież faktury</button>
         <div style="overflow:auto;margin-top:10px">
           <table id="invoicesTable">
@@ -175,7 +175,7 @@
 
       <div class="card section-block hidden" id="settingsSection">
         <h3>Ustawienia</h3>
-        <div class="muted">Tutaj zmienisz hasło do logowania w panelu klienta.</div>
+        <div class="muted">Tutaj możesz zmienić hasło do swojego konta.</div>
         <div class="row" style="margin-top:10px;">
           <div>
             <label>Nowe hasło</label>
@@ -195,7 +195,7 @@
       <div class="card section-block hidden" id="scanSection">
         <h3 id="openQrScanner" style="cursor:pointer;text-decoration:underline;">Skanuj QR zamówienia</h3>
         <div>
-          <input id="orderCodeInput" placeholder="Wklej kod zamówienia ZAM-... albo kliknij „Skanuj QR zamówienia”" />
+          <input id="orderCodeInput" placeholder="Wklej numer zamówienia albo kliknij „Skanuj QR zamówienia”" />
           <button id="btnShowOrderByCode" class="btn" type="button" style="margin-top:8px">Pokaż zamówienie</button>
         </div>
         <div id="orderScanOut" style="margin-top:10px"></div>
@@ -207,7 +207,7 @@
             <b>Skanuj QR</b>
             <button id="closeQrScanner" class="btn" type="button">Zamknij</button>
           </div>
-          <div class="muted" style="margin-bottom:8px;">Uruchamia się tylko tylny aparat.</div>
+          <div class="muted" style="margin-bottom:8px;">Skieruj aparat na kod QR zamówienia.</div>
           <div id="orderQrReader" style="width:100%;min-height:280px;"></div>
         </div>
       </div>
@@ -452,7 +452,7 @@ async function fetchMagazynJson(path, timeoutMs = 12000){
   try {
     const res = await fetch(`${MAGAZYN_API_BASE}${path}`, { signal: controller.signal });
     if(!res.ok){
-      throw new Error(`Magazyn API: ${res.status}`);
+      throw new Error(`Nie udało się pobrać danych: ${res.status}`);
     }
     return await res.json();
   } finally {
@@ -502,7 +502,7 @@ function renderOrderDetailsHtml(order, items, totals){
 
 async function fetchOrdersBundle(){
   const session = await getSession();
-  if(!session?.user?.email) throw new Error('Brak sesji.');
+  if(!session?.user?.email) throw new Error('Zaloguj się ponownie.');
   const email = session.user.email.trim().toLowerCase();
 
   const ordersRes = await sbAuth
@@ -722,7 +722,7 @@ function markInvoiceSeenAndOpenPdf(inv){
   return (async () => {
     try {
       const session = await getSession();
-      if(!session?.user?.email) throw new Error('Brak sesji.');
+      if(!session?.user?.email) throw new Error('Zaloguj się ponownie.');
       const emailRaw = session.user.email.trim().toLowerCase();
       const email = encodeURIComponent(emailRaw);
       const downloadUrl = await getInvoicePdfUrl(inv, emailRaw);
@@ -896,7 +896,7 @@ async function loadInvoices(showModal = true, force = false){
 
   try {
     const session = await getSession();
-    if(!session?.user?.email) throw new Error('Brak sesji.');
+    if(!session?.user?.email) throw new Error('Zaloguj się ponownie.');
     const emailRaw = session.user.email.trim().toLowerCase();
     const rows = await fetchInvoicesFast(emailRaw);
 
@@ -1408,7 +1408,7 @@ async function loadOrders(force = false){
           <td><button class="btn" type="button" data-open-order="${r.id}">Szczegóły</button></td>
         </tr>
         <tr id="order-detail-${r.id}" class="hidden">
-          <td colspan="6"><div class="muted">Kliknij „Szczegóły”, aby pobrać pozycje zamówienia.</div></td>
+      <td colspan="6"><div class="muted">Kliknij „Szczegóły”, aby zobaczyć pozycje zamówienia.</div></td>
         </tr>
       `;
     }).join('');
