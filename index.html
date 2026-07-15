@@ -147,7 +147,7 @@
 
       <div class="card section-block hidden" id="ordersSection">
         <h3>Moje zamówienia</h3>
-        <div class="muted">Statusy: <b>niepotwierdzone</b>, <b>potwierdzone</b>, <b>w dostawie</b>, <b>zrealizowane</b>.</div>
+        <div class="muted">Statusy synchronizują się z główną aplikacją: <b>niepotwierdzone</b>, <b>potwierdzone</b>, <b>w dostawie</b>, <b>zrealizowane</b>.</div>
         <button id="btnLoadOrders" class="btn" type="button" style="margin-top:8px">Odśwież zamówienia</button>
         <div style="overflow:auto;margin-top:10px">
           <table id="ordersTable">
@@ -161,7 +161,7 @@
 
       <div class="card section-block hidden" id="invoicesSection">
         <h3>Faktury</h3>
-        <div class="muted">Faktury, które zostały udostępnione przez Administratora.</div>
+        <div class="muted">Tutaj widzisz faktury, które zostały udostępnione klientowi z panelu magazynu.</div>
         <button id="btnLoadInvoices" class="btn" type="button" style="margin-top:8px">Odśwież faktury</button>
         <div style="overflow:auto;margin-top:10px">
           <table id="invoicesTable">
@@ -429,8 +429,9 @@ function findCatalogStockForItem(item){
 }
 
 function orderItemAvailabilityLabel(item){
-  const catalogQty = findCatalogStockForItem(item);
-  const stockQty = catalogQty === null ? Number(item?.stock_qty || 0) : catalogQty;
+  const hasOrderStock = item && Object.prototype.hasOwnProperty.call(item, 'stock_qty');
+  const catalogQty = hasOrderStock ? null : findCatalogStockForItem(item);
+  const stockQty = hasOrderStock ? Number(item?.stock_qty || 0) : Number(catalogQty || 0);
   return stockQty >= Number(item?.qty || 0) ? 'dostępne' : '10/20 dni';
 }
 
@@ -523,8 +524,7 @@ function mapMagazynOrderPayload(order, payload){
     line_net: Number(it.line_value_net || 0),
     line_gross: Number(it.line_value_gross || 0)
   })).map(it => {
-    const catalogQty = findCatalogStockForItem(it);
-    const stockQty = catalogQty === null ? Number(it.stock_qty || 0) : catalogQty;
+    const stockQty = Number(it.stock_qty || 0);
     const serverLabel = String(it.availability_label || '').trim();
     return {
       ...it,
@@ -600,12 +600,7 @@ async function fetchOrderDetailsFromSupabase(order){
     const price = pricingByKey.get(model.toLowerCase()) || pricingByKey.get(sku.toLowerCase()) || {};
     const netPrice = Number(price.net_price || 0);
     const grossPrice = Number(price.gross_price || (netPrice ? netPrice * 1.23 : 0));
-    const catalogQty = findCatalogStockForItem({
-      product_id: Number(it.product_id || 0),
-      sku,
-      model
-    });
-    const stockQty = catalogQty === null ? Number(stockById.get(Number(it.product_id)) || 0) : catalogQty;
+    const stockQty = Number(stockById.get(Number(it.product_id)) || 0);
     return {
       order_id: orderId,
       product_id: Number(it.product_id || 0),
