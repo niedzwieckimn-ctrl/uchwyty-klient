@@ -302,6 +302,10 @@ const LAST_LOADED = { stock: 0, orders: 0, invoices: 0 };
 const LOAD_IN_FLIGHT = { stock: null, orders: null, invoices: null };
 let SESSION_LOAD_IN_FLIGHT = null;
 let LOADED_USER_ID = null;
+let SEARCH_TRACK_TIMER = null;
+let LAST_STOCK_RESULT_COUNT = 0;
+let LAST_STOCK_MATCHES = [];
+const SEARCH_TRACK_LAST = new Map();
 
 function cacheIsFresh(key){
   return Date.now() - LAST_LOADED[key] < DATA_CACHE_MS;
@@ -458,6 +462,45 @@ async function fetchMagazynJson(path, timeoutMs = 12000){
   } finally {
     clearTimeout(timer);
   }
+}
+
+function scheduleStockSearchLog(){
+  clearTimeout(SEARCH_TRACK_TIMER);
+  SEARCH_TRACK_TIMER = setTimeout(() => {
+    trackStockSearch().catch(() => {});
+  }, 1000);
+}
+
+async function trackStockSearch(){
+  const query = ($('stockSearch')?.value || '').trim();
+  if(query.length < 2) return;
+
+  const key = query.toLowerCase();
+  const lastAt = SEARCH_TRACK_LAST.get(key) || 0;
+  if(Date.now() - lastAt < 5 * 60 * 1000) return;
+  SEARCH_TRACK_LAST.set(key, Date.now());
+
+  const session = await getSession();
+  const email = session?.user?.email ? session.user.email.trim().toLowerCase() : '';
+  const name =
+    session?.user?.user_metadata?.company_name ||
+    session?.user?.user_metadata?.name ||
+    session?.user?.user_metadata?.full_name ||
+    (email ? email.split('@')[0] : '');
+
+  fetch(`${MAGAZYN_API_BASE}/api/client_search_log`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    keepalive: true,
+    body: JSON.stringify({
+      email,
+      name,
+      query,
+      results_count: LAST_STOCK_RESULT_COUNT,
+      matches: LAST_STOCK_MATCHES,
+      source: 'stock'
+    })
+  }).catch(() => {});
 }
 
 function renderOrderDetailsHtml(order, items, totals){
@@ -1142,8 +1185,10 @@ function renderStockTable(){
 
   if (!q) {
     $('stockCount').textContent = 'Pozycji: 0';
+    LAST_STOCK_RESULT_COUNT = 0;
+    LAST_STOCK_MATCHES = [];
     tb.innerHTML = '<tr><td colspan="5">Wpisz model, SKU lub nazwę produktu.</td></tr>';
-    return;
+    return 0;
   }
 
   let rows = [...STOCK_VIEW];
@@ -1157,10 +1202,17 @@ function renderStockTable(){
   }
 
   $('stockCount').textContent = `Pozycji: ${rows.length}`;
+  LAST_STOCK_RESULT_COUNT = rows.length;
+  LAST_STOCK_MATCHES = rows.slice(0, 30).map(r => ({
+    sku: r.sku || '',
+    model: r.model || r.sku || '',
+    name: r.name || ''
+  }));
 
   if (!rows.length) {
+    LAST_STOCK_MATCHES = [];
     tb.innerHTML = '<tr><td colspan="5">Brak danych</td></tr>';
-    return;
+    return 0;
   }
 
   tb.innerHTML = rows.map(r => {
@@ -1175,6 +1227,7 @@ function renderStockTable(){
     </tr>
   `;
   }).join('');
+  return rows.length;
 }
 
 function rebuildOrderProductList(){
@@ -1228,7 +1281,10 @@ async function loadStock(force = false){
 }
 
 $('btnLoadStock').onclick = () => loadStock(true);
-$('stockSearch').oninput = renderStockTable;
+$('stockSearch').oninput = () => {
+  renderStockTable();
+  scheduleStockSearchLog();
+};
 
 function renderOrderDraft(){
   const tb = $('orderDraftTable').querySelector('tbody');
