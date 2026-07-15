@@ -101,7 +101,7 @@
           <table id="stockTable">
             <thead>
               <tr>
-                <th>SKU</th><th>Nazwa</th><th>Netto B2B</th><th>Brutto klient</th><th>Dostępne</th>
+                <th>SKU</th><th>Nazwa</th><th>Netto B2B</th><th>Detal brutto</th><th>Dostępne</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -130,7 +130,7 @@
         <div style="overflow:auto;margin-top:10px">
           <table id="orderDraftTable">
             <thead>
-              <tr><th>SKU</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Ilość</th><th>Wartość brutto</th><th>Brutto klient końcowy</th><th></th></tr>
+              <tr><th>SKU</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Ilość</th><th>Wartość brutto</th><th>Detal brutto</th><th></th></tr>
             </thead>
             <tbody></tbody>
           </table>
@@ -455,19 +455,21 @@ async function fetchMagazynJson(path, timeoutMs = 12000){
 
 function renderOrderDetailsHtml(order, items, totals){
   const clientFinalGross = calcClientGrossFromNet(totals.net);
-  const rows = (items || []).map(it => `
+  const rows = (items || []).map(it => {
+    const detailGrossEach = calcClientGrossFromNet(Number(it.net_price || 0));
+    return `
     <tr>
       <td>${esc(it.sku)}</td>
       <td>${esc(productDisplayName(it))}</td>
       <td>${formatMoney(it.net_price)}</td>
       <td>${formatMoney(it.gross_price)}</td>
+      <td>${formatMoney(detailGrossEach)}</td>
       <td>${Number(it.qty || 0)}</td>
       <td>${esc(it.availability_label || orderItemAvailabilityLabel(it))}</td>
       <td>${esc(it.realization_label || (Number(it.invoiced_qty || 0) >= Number(it.qty || 0) && Number(it.qty || 0) > 0 ? 'w całości' : `${Number(it.invoiced_qty || 0)} szt.`))}</td>
-      <td>${formatMoney(it.line_net)}</td>
       <td>${formatMoney(it.line_gross)}</td>
     </tr>
-  `).join('') || '<tr><td colspan="9">Brak pozycji</td></tr>';
+  `}).join('') || '<tr><td colspan="9">Brak pozycji</td></tr>';
 
   return `
     <div class="card" style="margin:8px 0 0 0">
@@ -477,12 +479,12 @@ function renderOrderDetailsHtml(order, items, totals){
         <div class="muted">Email: ${esc(order.customer_email || '-')}</div>
         <div class="muted">Data: ${esc(String(order.created_at || '').replace('T',' ').slice(0,19))}</div>
         <div class="muted">Notatka: ${esc(order.note || '-')}</div>
-        <div style="margin-top:8px"><span class="badge">Netto: ${formatMoney(totals.net)}</span> <span class="badge">Brutto: ${formatMoney(totals.gross)}</span> <span class="badge">Brutto klient końcowy: ${formatMoney(clientFinalGross)}</span></div>
+        <div style="margin-top:8px"><span class="badge">Netto: ${formatMoney(totals.net)}</span> <span class="badge">Brutto: ${formatMoney(totals.gross)}</span> <span class="badge">Detal brutto: ${formatMoney(clientFinalGross)}</span></div>
       </div>
       <div style="overflow:auto;margin-top:10px">
         <table>
           <thead>
-            <tr><th>Model</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Zamówiono</th><th>Dostawa</th><th>Zrealizowane</th><th>Wartość netto</th><th>Wartość brutto</th></tr>
+            <tr><th>Model</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Detal brutto/szt</th><th>Zamówiono</th><th>Dostawa</th><th>Zrealizowane</th><th>Wartość brutto</th></tr>
           </thead>
           <tbody>${rows}</tbody>
         </table>
@@ -1248,7 +1250,7 @@ function renderOrderDraft(){
   const totalNet = ORDER_DRAFT.reduce((sum, it) => sum + Number(it.net_price || 0) * Number(it.qty || 0), 0);
   const totalGross = ORDER_DRAFT.reduce((sum, it) => sum + Number(it.gross_price || 0) * Number(it.qty || 0), 0);
   const totalClientGross = calcClientGrossFromNet(totalNet);
-  $('orderDraftSummary').textContent = `Pozycji: ${ORDER_DRAFT.length} | Netto: ${totalNet.toFixed(2)} | Brutto: ${totalGross.toFixed(2)} | Brutto klient końcowy: ${totalClientGross.toFixed(2)}`;
+  $('orderDraftSummary').textContent = `Pozycji: ${ORDER_DRAFT.length} | Netto: ${totalNet.toFixed(2)} | Brutto: ${totalGross.toFixed(2)} | Detal brutto: ${totalClientGross.toFixed(2)}`;
 }
 
 function parseProductInputToId(txt){
