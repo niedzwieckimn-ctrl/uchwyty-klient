@@ -736,6 +736,9 @@ function parseSupabaseStorageRef(value){
   if(raw.startsWith('invoices/')){
     return { bucket: INVOICE_STORAGE_BUCKET, path: raw };
   }
+  if(raw.startsWith(`${INVOICE_STORAGE_BUCKET}/invoices/`)){
+    return { bucket: INVOICE_STORAGE_BUCKET, path: raw.slice(`${INVOICE_STORAGE_BUCKET}/`.length) };
+  }
   return null;
 }
 
@@ -746,9 +749,10 @@ async function getInvoicePdfUrl(inv, emailRaw){
   const parsed = parseSupabaseStorageRef(inv?.pdf_path);
   if(parsed?.path){
     try {
+      const filename = (parsed.path.split('/').pop() || `${inv?.invoice_no || 'faktura'}.pdf`).replace(/[^\w.\-ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]+/g, '_');
       const signed = await sbAuth.storage
         .from(parsed.bucket || INVOICE_STORAGE_BUCKET)
-        .createSignedUrl(parsed.path, 10 * 60);
+        .createSignedUrl(parsed.path, 10 * 60, { download: filename });
       if(!signed.error && signed.data?.signedUrl){
         return signed.data.signedUrl;
       }
@@ -757,6 +761,22 @@ async function getInvoicePdfUrl(inv, emailRaw){
 
   const email = encodeURIComponent(String(emailRaw || '').trim().toLowerCase());
   return `${MAGAZYN_API_BASE}/api/invoices/${inv.id}/download?email=${email}`;
+}
+
+function downloadFileInBackground(url){
+  const oldFrame = document.getElementById('invoiceDownloadFrame');
+  if(oldFrame) oldFrame.remove();
+
+  const frame = document.createElement('iframe');
+  frame.id = 'invoiceDownloadFrame';
+  frame.name = 'invoiceDownloadFrame';
+  frame.style.display = 'none';
+  frame.src = url;
+  document.body.appendChild(frame);
+
+  setTimeout(() => {
+    if(frame.parentNode) frame.remove();
+  }, 2 * 60 * 1000);
 }
 
 function markInvoiceSeenAndOpenPdf(inv){
@@ -778,7 +798,7 @@ function markInvoiceSeenAndOpenPdf(inv){
         method:'POST'
       }).catch(() => {});
       LAST_LOADED.invoices = 0;
-      window.location.href = downloadUrl;
+      downloadFileInBackground(downloadUrl);
     } catch(error){
       throw error;
     }
