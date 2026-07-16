@@ -746,6 +746,11 @@ async function getInvoicePdfUrl(inv, emailRaw){
   const directUrl = String(inv?.pdf_url || inv?.download_url || '').trim();
   if(directUrl) return directUrl;
 
+  const email = encodeURIComponent(String(emailRaw || '').trim().toLowerCase());
+  if(inv?.id){
+    return `${MAGAZYN_API_BASE}/api/invoices/${inv.id}/download?email=${email}`;
+  }
+
   const parsed = parseSupabaseStorageRef(inv?.pdf_path);
   if(parsed?.path){
     try {
@@ -759,8 +764,7 @@ async function getInvoicePdfUrl(inv, emailRaw){
     } catch(e) {}
   }
 
-  const email = encodeURIComponent(String(emailRaw || '').trim().toLowerCase());
-  return `${MAGAZYN_API_BASE}/api/invoices/${inv.id}/download?email=${email}`;
+  throw new Error('Brak linku do pliku PDF faktury.');
 }
 
 function downloadFileInBackground(url){
@@ -936,14 +940,14 @@ async function fetchInvoicesFast(emailRaw){
       () => { clearTimeout(timer); resolve([]); }
     );
   });
-  const apiPromise = fetchMagazynJson(`/api/client_invoices?email=${email}`, 4500)
+  const apiPromise = fetchMagazynJson(`/api/client_invoices?email=${email}`, 12000)
     .then(payload => payload.invoices || [])
     .catch(() => []);
   const supabasePromise = fetchInvoicesFromSupabase(emailRaw)
     .catch(() => []);
 
   const [apiRows, supabaseRows] = await Promise.all([
-    timeout(apiPromise, 4500),
+    timeout(apiPromise, 12000),
     timeout(supabasePromise, 4500)
   ]);
   return apiRows.length ? apiRows : supabaseRows;
