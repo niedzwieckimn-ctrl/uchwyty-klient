@@ -1203,11 +1203,11 @@ function renderStockTable(){
 
   $('stockCount').textContent = `Pozycji: ${rows.length}`;
   LAST_STOCK_RESULT_COUNT = rows.length;
-  LAST_STOCK_MATCHES = rows.slice(0, 30).map(r => ({
+  LAST_STOCK_MATCHES = rows.length <= 20 ? rows.map(r => ({
     sku: r.sku || '',
     model: r.model || r.sku || '',
     name: r.name || ''
-  }));
+  })) : [];
 
   if (!rows.length) {
     LAST_STOCK_MATCHES = [];
