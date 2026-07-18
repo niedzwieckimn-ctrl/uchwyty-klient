@@ -101,7 +101,7 @@
           <table id="stockTable">
             <thead>
               <tr>
-                <th>SKU</th><th>Nazwa</th><th>Netto B2B</th><th>Detal brutto</th><th>Dostępne</th>
+                <th>SKU</th><th>Nazwa</th><th>Netto B2B</th><th>Brutto klient</th><th>Dostępne</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -130,7 +130,7 @@
         <div style="overflow:auto;margin-top:10px">
           <table id="orderDraftTable">
             <thead>
-              <tr><th>SKU</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Ilość</th><th>Wartość brutto</th><th>Detal brutto</th><th></th></tr>
+              <tr><th>SKU</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Ilość</th><th>Wartość brutto</th><th></th></tr>
             </thead>
             <tbody></tbody>
           </table>
@@ -147,7 +147,7 @@
 
       <div class="card section-block hidden" id="ordersSection">
         <h3>Moje zamówienia</h3>
-        <div class="muted">Tutaj sprawdzisz aktualny status swoich zamówień.</div>
+        <div class="muted">Statusy synchronizują się z główną aplikacją: <b>niepotwierdzone</b>, <b>potwierdzone</b>, <b>w dostawie</b>, <b>zrealizowane</b>.</div>
         <button id="btnLoadOrders" class="btn" type="button" style="margin-top:8px">Odśwież zamówienia</button>
         <div style="overflow:auto;margin-top:10px">
           <table id="ordersTable">
@@ -161,7 +161,7 @@
 
       <div class="card section-block hidden" id="invoicesSection">
         <h3>Faktury</h3>
-        <div class="muted">Tutaj znajdziesz faktury udostępnione do pobrania.</div>
+        <div class="muted">Tutaj widzisz faktury, które zostały udostępnione klientowi z panelu magazynu.</div>
         <button id="btnLoadInvoices" class="btn" type="button" style="margin-top:8px">Odśwież faktury</button>
         <div style="overflow:auto;margin-top:10px">
           <table id="invoicesTable">
@@ -175,7 +175,7 @@
 
       <div class="card section-block hidden" id="settingsSection">
         <h3>Ustawienia</h3>
-        <div class="muted">Tutaj możesz zmienić hasło do swojego konta.</div>
+        <div class="muted">Tutaj zmienisz hasło do logowania w panelu klienta.</div>
         <div class="row" style="margin-top:10px;">
           <div>
             <label>Nowe hasło</label>
@@ -195,7 +195,7 @@
       <div class="card section-block hidden" id="scanSection">
         <h3 id="openQrScanner" style="cursor:pointer;text-decoration:underline;">Skanuj QR zamówienia</h3>
         <div>
-          <input id="orderCodeInput" placeholder="Wklej numer zamówienia albo kliknij „Skanuj QR zamówienia”" />
+          <input id="orderCodeInput" placeholder="Wklej kod zamówienia ZAM-... albo kliknij „Skanuj QR zamówienia”" />
           <button id="btnShowOrderByCode" class="btn" type="button" style="margin-top:8px">Pokaż zamówienie</button>
         </div>
         <div id="orderScanOut" style="margin-top:10px"></div>
@@ -207,7 +207,7 @@
             <b>Skanuj QR</b>
             <button id="closeQrScanner" class="btn" type="button">Zamknij</button>
           </div>
-          <div class="muted" style="margin-bottom:8px;">Skieruj aparat na kod QR zamówienia.</div>
+          <div class="muted" style="margin-bottom:8px;">Uruchamia się tylko tylny aparat.</div>
           <div id="orderQrReader" style="width:100%;min-height:280px;"></div>
         </div>
       </div>
@@ -215,7 +215,7 @@
     
       <div id="newInvoiceModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:10000;padding:16px;box-sizing:border-box;">
         <div style="max-width:430px;margin:8vh auto;background:#e9f9ee;border:2px solid #16a34a;border-radius:18px;padding:16px;">
-          <div id="newInvoiceTitle" style="font-size:24px;font-weight:700;color:#166534;">Masz nową fakturę</div>
+          <div style="font-size:24px;font-weight:700;color:#166534;">Masz nową fakturę</div>
           <div id="newInvoiceText" style="margin-top:8px;color:#166534;"></div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
             <button id="btnNewInvoiceDownload" class="btn primary" type="button">Pobierz PDF</button>
@@ -242,7 +242,6 @@ const sbPublic = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 window.sb = sbAuth;
 window.sbPublic = sbPublic;
 const MAGAZYN_API_BASE = "https://uchwyty.onrender.com";
-const INVOICE_STORAGE_BUCKET = "invoice-pdfs";
 
 const STATUS_LABELS = {
   new: 'Niepotwierdzone',
@@ -302,19 +301,25 @@ const LAST_LOADED = { stock: 0, orders: 0, invoices: 0 };
 const LOAD_IN_FLIGHT = { stock: null, orders: null, invoices: null };
 let SESSION_LOAD_IN_FLIGHT = null;
 let LOADED_USER_ID = null;
-let SEARCH_TRACK_TIMER = null;
-let LAST_STOCK_RESULT_COUNT = 0;
-let LAST_STOCK_MATCHES = [];
-const SEARCH_TRACK_LAST = new Map();
 
 function cacheIsFresh(key){
   return Date.now() - LAST_LOADED[key] < DATA_CACHE_MS;
 }
 
+function isAbortLikeError(error){
+  const msg = String(error?.message || error || '').toLowerCase();
+  return error?.name === 'AbortError' ||
+         msg.includes('aborted') ||
+         msg.includes('abort') ||
+         msg.includes('signal is aborted');
+}
+
+function sleep(ms){
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 function nowIso(){
-  const d = new Date();
-  const pad = n => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  return new Date().toISOString().replace('T',' ').slice(0,19);
 }
 
 function makeOrderNo(id){
@@ -327,66 +332,26 @@ function makeOrderNo(id){
 
 function makeClientOrderNo(){
   const d = new Date();
-  const yy = String(d.getFullYear()).slice(-2);
+  const yyyy = d.getFullYear();
   const mm = String(d.getMonth()+1).padStart(2,'0');
   const dd = String(d.getDate()).padStart(2,'0');
   const hh = String(d.getHours()).padStart(2,'0');
   const mi = String(d.getMinutes()).padStart(2,'0');
   const ss = String(d.getSeconds()).padStart(2,'0');
   const rand = Math.random().toString(36).slice(2,6).toUpperCase();
-  return `ZAM-${yy}${mm}${dd}${hh}${mi}${ss}${rand}`;
-}
-
-function rawOrderNo(order){
-  return String(order?.order_no || '').trim().replace(/^ORD-/i, 'ZAM-');
-}
-
-function normalizeOrderDisplayNo(raw, order){
-  const code = String(raw || '').trim().replace(/^ORD-/i, 'ZAM-');
-  if(!code || code.toUpperCase() === 'TEMP') return '';
-  if(/^ZAM-\d{7,}$/i.test(code)) return code;
-  const longMatch = code.match(/^ZAM-(20\d{2})(\d{2})(\d{2})-\d{6}-[A-Z0-9]+$/i);
-  if(longMatch){
-    const idTail = String(order?.id || '1').replace(/\D/g, '').slice(-1) || '1';
-    return `ZAM-${longMatch[1].slice(-2)}${longMatch[2]}${longMatch[3]}${idTail}`;
-  }
-  return code;
-}
-
-function assignFriendlyOrderNumbers(orders){
-  const counters = new Map();
-  [...(orders || [])]
-    .sort((a, b) => {
-      const da = String(a.created_at || '');
-      const db = String(b.created_at || '');
-      if(da !== db) return da.localeCompare(db);
-      return Number(a.id || 0) - Number(b.id || 0);
-    })
-    .forEach(order => {
-      const raw = rawOrderNo(order);
-      const m = raw.match(/^ZAM-(20\d{2})(\d{2})(\d{2})-\d{6}-[A-Z0-9]+$/i);
-      if(m){
-        const day = `${m[1].slice(-2)}${m[2]}${m[3]}`;
-        const next = (counters.get(day) || 0) + 1;
-        counters.set(day, next);
-        order._display_order_no = `ZAM-${day}${next}`;
-      } else {
-        order._display_order_no = normalizeOrderDisplayNo(raw, order);
-      }
-    });
-  return orders || [];
+  return `ZAM-${yyyy}${mm}${dd}-${hh}${mi}${ss}-${rand}`;
 }
 
 function displayOrderNo(order){
-  const friendly = String(order?._display_order_no || '').trim();
-  if(friendly) return friendly;
-  const normalized = normalizeOrderDisplayNo(rawOrderNo(order), order);
-  if(normalized) return normalized;
+  const raw = String(order?.order_no || '').trim();
+  if(raw && raw.toUpperCase() !== 'TEMP'){
+    return raw.replace(/^ORD-/, 'ZAM-');
+  }
 
   const id = String(order?.id || '').padStart(6, '0');
   const created = String(order?.created_at || '');
-  const datePart = created ? created.slice(2,10).replace(/-/g,'') : new Date().toISOString().slice(2,10).replace(/-/g,'');
-  return `ZAM-${datePart}${id.slice(-1)}`;
+  const datePart = created ? created.slice(0,10).replace(/-/g,'') : new Date().toISOString().slice(0,10).replace(/-/g,'');
+  return `ZAM-${datePart}-${id}`;
 }
 
 function displayOrderLabel(order){
@@ -415,111 +380,46 @@ function formatMoney(v){
   return Number(v || 0).toFixed(2);
 }
 
-function stockMatchKey(value){
-  return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
-}
-
-function findCatalogStockForItem(item){
-  const productId = Number(item?.product_id || 0);
-  const sku = stockMatchKey(item?.sku);
-  const model = stockMatchKey(item?.model);
-  const row = STOCK_VIEW.find(r =>
-    (productId && Number(r.product_id) === productId) ||
-    (sku && stockMatchKey(r.sku) === sku) ||
-    (sku && stockMatchKey(r.model) === sku) ||
-    (model && stockMatchKey(r.model) === model) ||
-    (model && stockMatchKey(r.sku) === model)
-  );
-  if(!row) return null;
-  return Number(row.qty_on_stock ?? 0);
-}
-
-function orderItemAvailabilityLabel(item){
-  const hasOrderStock = item && Object.prototype.hasOwnProperty.call(item, 'stock_qty');
-  const catalogQty = hasOrderStock ? null : findCatalogStockForItem(item);
-  const stockQty = hasOrderStock ? Number(item?.stock_qty || 0) : Number(catalogQty || 0);
-  return stockQty >= Number(item?.qty || 0) ? 'dostępne' : '10/20 dni';
-}
-
-function displayAvailabilityLabel(label){
-  const text = String(label || '').trim();
-  return text.toLowerCase() === 'dostępne' ? '1/3 dni' : text;
-}
-
 function calcClientGrossFromNet(netB2B){
   return Number(netB2B || 0) * 1.45 * 1.23;
 }
 
-async function fetchMagazynJson(path, timeoutMs = 12000){
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const res = await fetch(`${MAGAZYN_API_BASE}${path}`, { signal: controller.signal });
-    if(!res.ok){
-      throw new Error(`Nie udało się pobrać danych: ${res.status}`);
+async function fetchMagazynJson(path, options = {}){
+  const attempts = Number(options.attempts || 2);
+  let lastError = null;
+
+  for(let attempt = 1; attempt <= attempts; attempt++){
+    try {
+      const res = await fetch(`${MAGAZYN_API_BASE}${path}`, { cache: 'no-store' });
+      if(!res.ok){
+        throw new Error(`Magazyn API: ${res.status}`);
+      }
+      return await res.json();
+    } catch(error){
+      lastError = error;
+      if(!isAbortLikeError(error) || attempt >= attempts){
+        throw error;
+      }
+      await sleep(700 * attempt);
     }
-    return await res.json();
-  } finally {
-    clearTimeout(timer);
   }
-}
 
-function scheduleStockSearchLog(){
-  clearTimeout(SEARCH_TRACK_TIMER);
-  SEARCH_TRACK_TIMER = setTimeout(() => {
-    trackStockSearch().catch(() => {});
-  }, 1000);
-}
-
-async function trackStockSearch(){
-  const query = ($('stockSearch')?.value || '').trim();
-  if(query.length < 2) return;
-
-  const key = query.toLowerCase();
-  const lastAt = SEARCH_TRACK_LAST.get(key) || 0;
-  if(Date.now() - lastAt < 5 * 60 * 1000) return;
-  SEARCH_TRACK_LAST.set(key, Date.now());
-
-  const session = await getSession();
-  const email = session?.user?.email ? session.user.email.trim().toLowerCase() : '';
-  const name =
-    session?.user?.user_metadata?.company_name ||
-    session?.user?.user_metadata?.name ||
-    session?.user?.user_metadata?.full_name ||
-    (email ? email.split('@')[0] : '');
-
-  fetch(`${MAGAZYN_API_BASE}/api/client_search_log`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    keepalive: true,
-    body: JSON.stringify({
-      email,
-      name,
-      query,
-      results_count: LAST_STOCK_RESULT_COUNT,
-      matches: LAST_STOCK_MATCHES,
-      source: 'stock'
-    })
-  }).catch(() => {});
+  throw lastError || new Error('Nie udało się pobrać danych.');
 }
 
 function renderOrderDetailsHtml(order, items, totals){
-  const clientFinalGross = calcClientGrossFromNet(totals.net);
-  const rows = (items || []).map(it => {
-    const detailGrossEach = calcClientGrossFromNet(Number(it.net_price || 0));
-    return `
+  const rows = (items || []).map(it => `
     <tr>
       <td>${esc(it.sku)}</td>
       <td>${esc(productDisplayName(it))}</td>
       <td>${formatMoney(it.net_price)}</td>
       <td>${formatMoney(it.gross_price)}</td>
-      <td>${formatMoney(detailGrossEach)}</td>
       <td>${Number(it.qty || 0)}</td>
-      <td>${esc(displayAvailabilityLabel(it.availability_label || orderItemAvailabilityLabel(it)))}</td>
       <td>${esc(it.realization_label || (Number(it.invoiced_qty || 0) >= Number(it.qty || 0) && Number(it.qty || 0) > 0 ? 'w całości' : `${Number(it.invoiced_qty || 0)} szt.`))}</td>
+      <td>${formatMoney(it.line_net)}</td>
       <td>${formatMoney(it.line_gross)}</td>
     </tr>
-  `}).join('') || '<tr><td colspan="9">Brak pozycji</td></tr>';
+  `).join('') || '<tr><td colspan="8">Brak pozycji</td></tr>';
 
   return `
     <div class="card" style="margin:8px 0 0 0">
@@ -529,12 +429,12 @@ function renderOrderDetailsHtml(order, items, totals){
         <div class="muted">Email: ${esc(order.customer_email || '-')}</div>
         <div class="muted">Data: ${esc(String(order.created_at || '').replace('T',' ').slice(0,19))}</div>
         <div class="muted">Notatka: ${esc(order.note || '-')}</div>
-        <div style="margin-top:8px"><span class="badge">Netto: ${formatMoney(totals.net)}</span> <span class="badge">Brutto: ${formatMoney(totals.gross)}</span> <span class="badge">Detal brutto: ${formatMoney(clientFinalGross)}</span></div>
+        <div style="margin-top:8px"><span class="badge">Netto: ${formatMoney(totals.net)}</span> <span class="badge">Brutto: ${formatMoney(totals.gross)}</span></div>
       </div>
       <div style="overflow:auto;margin-top:10px">
         <table>
           <thead>
-            <tr><th>Model</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Detal brutto/szt</th><th>Zamówiono</th><th>Czas realizacji</th><th>Zrealizowane</th><th>Wartość brutto</th></tr>
+            <tr><th>Model</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Zamówiono</th><th>Zrealizowane</th><th>Wartość netto</th><th>Wartość brutto</th></tr>
           </thead>
           <tbody>${rows}</tbody>
         </table>
@@ -545,7 +445,7 @@ function renderOrderDetailsHtml(order, items, totals){
 
 async function fetchOrdersBundle(){
   const session = await getSession();
-  if(!session?.user?.email) throw new Error('Zaloguj się ponownie.');
+  if(!session?.user?.email) throw new Error('Brak sesji.');
   const email = session.user.email.trim().toLowerCase();
 
   const ordersRes = await sbAuth
@@ -556,11 +456,13 @@ async function fetchOrdersBundle(){
     .limit(200);
   if(ordersRes.error) throw ordersRes.error;
 
-  const orders = assignFriendlyOrderNumbers(ordersRes.data || []);
+  const orders = ordersRes.data || [];
   return { orders };
 }
 
-function mapMagazynOrderPayload(order, payload){
+async function fetchOrderDetails(order){
+  const code = displayOrderNo(order);
+  const payload = await fetchMagazynJson(`/api/order_lookup?token=${encodeURIComponent(code)}`);
   const items = (payload.items || []).map(it => ({
     order_id: Number(order.id),
     product_id: Number(it.product_id || 0),
@@ -568,138 +470,18 @@ function mapMagazynOrderPayload(order, payload){
     model: it.model || '',
     name: it.name || '',
     qty: Number(it.qty || 0),
-    stock_qty: Number(it.stock_qty || 0),
-    availability_label: it.availability_label || '',
     invoiced_qty: Number(it.invoiced_qty || 0),
     realization_label: it.realization_label || '',
     net_price: Number(it.net_price || 0),
     gross_price: Number(it.gross_price || 0),
     line_net: Number(it.line_value_net || 0),
     line_gross: Number(it.line_value_gross || 0)
-  })).map(it => {
-    const stockQty = Number(it.stock_qty || 0);
-    const serverLabel = String(it.availability_label || '').trim();
-    return {
-      ...it,
-      stock_qty: stockQty,
-      availability_label: serverLabel || (stockQty >= Number(it.qty || 0) ? 'dostępne' : '10/20 dni')
-    };
-  });
+  }));
   const totals = {
     net: Number(payload.order?.total_net ?? payload.total_net ?? 0),
     gross: Number(payload.order?.total_gross ?? payload.total_gross ?? 0)
   };
   return { items, totals };
-}
-
-async function fetchOrderDetailsFromSupabase(order){
-  const orderId = Number(order?.id || 0);
-  if(!orderId) throw new Error('Brak ID zamówienia.');
-
-  const itemsRes = await sbAuth
-    .from('order_items')
-    .select('id,order_id,product_id,sku,qty')
-    .eq('order_id', orderId)
-    .order('id', { ascending:true });
-  if(itemsRes.error) throw itemsRes.error;
-
-  const rawItems = itemsRes.data || [];
-  const productIds = [...new Set(rawItems.map(it => Number(it.product_id)).filter(Number.isFinite))];
-  let products = [];
-  if(productIds.length){
-    const productsRes = await sbAuth
-      .from('products')
-      .select('id,sku,model,name')
-      .in('id', productIds);
-    if(!productsRes.error) products = productsRes.data || [];
-  }
-  const productsById = new Map(products.map(p => [Number(p.id), p]));
-
-  let stockById = new Map();
-  if(productIds.length){
-    try {
-      const stockRes = await sbAuth
-        .from('stock')
-        .select('product_id,qty')
-        .in('product_id', productIds);
-      if(!stockRes.error){
-        stockById = new Map((stockRes.data || []).map(s => [Number(s.product_id), Number(s.qty || 0)]));
-      }
-    } catch(e) {}
-  }
-
-  const priceKeys = [...new Set(rawItems.flatMap(it => {
-    const p = productsById.get(Number(it.product_id)) || {};
-    return [p.model, p.sku, it.sku].map(x => String(x || '').trim()).filter(Boolean);
-  }))];
-  let pricingByKey = new Map();
-  if(priceKeys.length){
-    try {
-      const priceRes = await sbAuth
-        .from('pricing')
-        .select('model,net_price,gross_price')
-        .in('model', priceKeys);
-      if(!priceRes.error){
-        pricingByKey = new Map((priceRes.data || []).map(pr => [String(pr.model || '').trim().toLowerCase(), pr]));
-      }
-    } catch(e) {}
-  }
-
-  const items = rawItems.map(it => {
-    const product = productsById.get(Number(it.product_id)) || {};
-    const qty = Number(it.qty || 0);
-    const sku = String(product.sku || it.sku || '').trim();
-    const model = String(product.model || sku).trim();
-    const price = pricingByKey.get(model.toLowerCase()) || pricingByKey.get(sku.toLowerCase()) || {};
-    const netPrice = Number(price.net_price || 0);
-    const grossPrice = Number(price.gross_price || (netPrice ? netPrice * 1.23 : 0));
-    const stockQty = Number(stockById.get(Number(it.product_id)) || 0);
-    return {
-      order_id: orderId,
-      product_id: Number(it.product_id || 0),
-      sku,
-      model,
-      name: product.name || '',
-      qty,
-      stock_qty: stockQty,
-      availability_label: stockQty >= qty ? 'dostępne' : '10/20 dni',
-      invoiced_qty: 0,
-      realization_label: '0 szt.',
-      net_price: netPrice,
-      gross_price: grossPrice,
-      line_net: netPrice * qty,
-      line_gross: grossPrice * qty
-    };
-  });
-
-  const totals = items.reduce((acc, it) => {
-    acc.net += Number(it.line_net || 0);
-    acc.gross += Number(it.line_gross || 0);
-    return acc;
-  }, { net:0, gross:0 });
-
-  return { items, totals };
-}
-
-async function fetchOrderDetails(order){
-  try {
-    await loadStock(false);
-  } catch(e) {}
-  const tokens = [...new Set([rawOrderNo(order), displayOrderNo(order)].map(x => String(x || '').trim()).filter(Boolean))];
-  let lastError = null;
-  for(const code of tokens){
-    try {
-      const payload = await fetchMagazynJson(`/api/order_lookup?token=${encodeURIComponent(code)}`);
-      return mapMagazynOrderPayload(order, payload);
-    } catch(error){
-      lastError = error;
-    }
-  }
-  try {
-    return await fetchOrderDetailsFromSupabase(order);
-  } catch(error){
-    throw lastError || error;
-  }
 }
 
 function parseOrderCode(value){
@@ -708,8 +490,6 @@ function parseOrderCode(value){
 
   const match = raw.match(/ZAM-[0-9]{8}-[A-Z0-9-]+/i);
   if(match) return match[0].toUpperCase();
-  const shortMatch = raw.match(/ZAM-[0-9]{7,}/i);
-  if(shortMatch) return shortMatch[0].toUpperCase();
 
   try {
     const url = new URL(raw);
@@ -720,79 +500,25 @@ function parseOrderCode(value){
   return raw.toUpperCase();
 }
 
-function parseSupabaseStorageRef(value){
-  const raw = String(value || '').trim();
-  if(!raw) return null;
-  if(raw.startsWith('supabase://')){
-    const rest = raw.slice('supabase://'.length);
-    const slash = rest.indexOf('/');
-    if(slash > 0){
-      return {
-        bucket: rest.slice(0, slash),
-        path: rest.slice(slash + 1)
-      };
-    }
-  }
-  if(raw.startsWith('invoices/')){
-    return { bucket: INVOICE_STORAGE_BUCKET, path: raw };
-  }
-  if(raw.startsWith(`${INVOICE_STORAGE_BUCKET}/invoices/`)){
-    return { bucket: INVOICE_STORAGE_BUCKET, path: raw.slice(`${INVOICE_STORAGE_BUCKET}/`.length) };
-  }
-  return null;
-}
-
-async function getInvoicePdfUrl(inv, emailRaw){
-  const directUrl = String(inv?.pdf_url || inv?.download_url || '').trim();
-  if(directUrl) return directUrl;
-
-  const email = encodeURIComponent(String(emailRaw || '').trim().toLowerCase());
-  if(inv?.id){
-    return `${MAGAZYN_API_BASE}/api/invoices/${inv.id}/download?email=${email}`;
-  }
-
-  const parsed = parseSupabaseStorageRef(inv?.pdf_path);
-  if(parsed?.path){
-    try {
-      const filename = (parsed.path.split('/').pop() || `${inv?.invoice_no || 'faktura'}.pdf`).replace(/[^\w.\-ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]+/g, '_');
-      const signed = await sbAuth.storage
-        .from(parsed.bucket || INVOICE_STORAGE_BUCKET)
-        .createSignedUrl(parsed.path, 10 * 60, { download: filename });
-      if(!signed.error && signed.data?.signedUrl){
-        return signed.data.signedUrl;
-      }
-    } catch(e) {}
-  }
-
-  throw new Error('Brak linku do pliku PDF faktury.');
-}
-
-function downloadFileInBackground(url){
-  const oldFrame = document.getElementById('invoiceDownloadFrame');
-  if(oldFrame) oldFrame.remove();
-
-  const frame = document.createElement('iframe');
-  frame.id = 'invoiceDownloadFrame';
-  frame.name = 'invoiceDownloadFrame';
-  frame.style.display = 'none';
-  frame.src = url;
-  document.body.appendChild(frame);
-
-  setTimeout(() => {
-    if(frame.parentNode) frame.remove();
-  }, 2 * 60 * 1000);
-}
-
 function markInvoiceSeenAndOpenPdf(inv){
   // Okno musi powstać bezpośrednio po kliknięciu. Inaczej blokada popupów
   // może zatrzymać PDF po oczekiwaniu na sesję lub odpowiedź serwera.
+  const pdfWindow = window.open('about:blank', '_blank');
+  if(pdfWindow) pdfWindow.opener = null;
+
   return (async () => {
     try {
       const session = await getSession();
-      if(!session?.user?.email) throw new Error('Zaloguj się ponownie.');
+      if(!session?.user?.email) throw new Error('Brak sesji.');
       const emailRaw = session.user.email.trim().toLowerCase();
       const email = encodeURIComponent(emailRaw);
-      const downloadUrl = await getInvoicePdfUrl(inv, emailRaw);
+      const downloadUrl = `${MAGAZYN_API_BASE}/api/invoices/${inv.id}/download?email=${email}`;
+
+      if(pdfWindow){
+        pdfWindow.location.replace(downloadUrl);
+      } else {
+        window.location.href = downloadUrl;
+      }
 
       CURRENT_NEW_INVOICE = null;
       $('newInvoiceModal').classList.add('hidden');
@@ -802,52 +528,17 @@ function markInvoiceSeenAndOpenPdf(inv){
         method:'POST'
       }).catch(() => {});
       LAST_LOADED.invoices = 0;
-      downloadFileInBackground(downloadUrl);
     } catch(error){
+      if(pdfWindow) pdfWindow.close();
       throw error;
     }
   })();
 }
 
-function setInvoiceModalStyle(title, textHtml, mode){
-  const modal = $('newInvoiceModal');
-  const text = $('newInvoiceText');
-  const titleEl = $('newInvoiceTitle');
-  if(!modal || !text) return false;
-  const box = modal.querySelector(':scope > div') || modal.querySelector('div');
-  const isDebt = mode === 'debt';
-  if(box){
-    box.style.background = isDebt ? '#fff1f2' : '#e9f9ee';
-    box.style.borderColor = isDebt ? '#e11d48' : '#16a34a';
-  }
-  if(titleEl){
-    titleEl.textContent = title;
-    titleEl.style.color = isDebt ? '#9f1239' : '#166534';
-  }
-  text.style.color = isDebt ? '#9f1239' : '#166534';
-  text.innerHTML = textHtml;
-  modal.classList.remove('hidden');
-  return true;
-}
-
 function showNewInvoiceModal(inv){
   CURRENT_NEW_INVOICE = inv;
-  setInvoiceModalStyle(
-    'Masz nową fakturę',
-    `Faktura <b>${esc(inv.invoice_no || '')}</b> do zamówienia <b>${esc(inv.order_no || '')}</b> jest gotowa.`,
-    'new'
-  );
-}
-
-function showPaymentReminderModal(inv){
-  CURRENT_NEW_INVOICE = inv;
-  const amount = Number(inv.total_gross || 0) ? ` na kwotę <b>${formatMoney(inv.total_gross)} PLN</b>` : '';
-  const due = inv.payment_to ? ` Termin płatności: <b>${esc(inv.payment_to)}</b>.` : '';
-  setInvoiceModalStyle(
-    'Masz zaległe płatności',
-    `Faktura <b>${esc(inv.invoice_no || '')}</b>${amount} jest oznaczona jako nieopłacona.${due}<br>Prosimy o uregulowanie zaległej płatności.`,
-    'debt'
-  );
+  $('newInvoiceText').innerHTML = `Faktura <b>${esc(inv.invoice_no || '')}</b> do zamówienia <b>${esc(inv.order_no || '')}</b> jest gotowa.`;
+  $('newInvoiceModal').classList.remove('hidden');
 }
 
 async function fetchInvoicesFromSupabase(email){
@@ -855,7 +546,7 @@ async function fetchInvoicesFromSupabase(email){
 
   const ordersRes = await sbAuth
     .from('orders')
-    .select('id,order_no,customer_email,note,created_at')
+    .select('id,order_no,customer_email')
     .ilike('customer_email', normalizedEmail)
     .limit(500);
   if(ordersRes.error) throw ordersRes.error;
@@ -867,7 +558,7 @@ async function fetchInvoicesFromSupabase(email){
   const invoiceQueries = [
     sbAuth
       .from('invoices')
-      .select('id,order_id,invoice_no,issue_date,payment_type,payment_to,buyer_email,total_net,total_gross,created_at')
+      .select('id,order_id,invoice_no,issue_date,payment_type,buyer_email,total_net,total_gross,created_at')
       .ilike('buyer_email', normalizedEmail)
       .order('id', { ascending:false })
       .limit(500)
@@ -877,7 +568,7 @@ async function fetchInvoicesFromSupabase(email){
     invoiceQueries.push(
       sbAuth
         .from('invoices')
-        .select('id,order_id,invoice_no,issue_date,payment_type,payment_to,buyer_email,total_net,total_gross,created_at')
+        .select('id,order_id,invoice_no,issue_date,payment_type,buyer_email,total_net,total_gross,created_at')
         .in('order_id', orderIds)
         .order('id', { ascending:false })
         .limit(500)
@@ -896,61 +587,28 @@ async function fetchInvoicesFromSupabase(email){
   if(!invoices.length) return [];
 
   const invoiceIds = invoices.map(inv => Number(inv.id));
-  let metaById = new Map();
-  try {
-    const metaRes = await sbAuth
-      .from('invoice_meta')
-      .select('invoice_id,pdf_path,sent_to_client,seen_by_client,payment_reminder,paid,paid_at,seen_at')
-      .in('invoice_id', invoiceIds);
-    if(!metaRes.error){
-      metaById = new Map((metaRes.data || []).map(m => [Number(m.invoice_id), m]));
-    }
-  } catch(e) {}
+  const metaRes = await sbAuth
+    .from('invoice_meta')
+    .select('invoice_id,sent_to_client,seen_by_client,seen_at')
+    .in('invoice_id', invoiceIds);
+  if(metaRes.error) throw metaRes.error;
+
+  const metaById = new Map((metaRes.data || []).map(m => [Number(m.invoice_id), m]));
 
   return invoices
     .map(inv => {
-      const hasMeta = metaById.has(Number(inv.id));
       const meta = metaById.get(Number(inv.id)) || {};
       const order = orderById.get(Number(inv.order_id)) || {};
       return {
         ...inv,
         order_no: order.order_no || '',
-        source_order_note: order.note || '',
-        note: order.note || '',
-        created_at: inv.created_at || order.created_at || '',
-        sent_to_client: hasMeta ? Number(meta.sent_to_client || 0) : 1,
-        pdf_path: meta.pdf_path || inv.pdf_path || '',
+        sent_to_client: Number(meta.sent_to_client || 0),
         seen_by_client: Number(meta.seen_by_client || 0),
-        payment_reminder: Number(meta.payment_reminder || 0),
-        paid: Number(meta.paid || 0),
-        paid_at: meta.paid_at || '',
         seen_at: meta.seen_at || ''
       };
     })
     .filter(inv => inv.sent_to_client === 1)
     .sort((a, b) => Number(b.id) - Number(a.id));
-}
-
-async function fetchInvoicesFast(emailRaw){
-  const email = encodeURIComponent(emailRaw);
-  const timeout = (promise, ms) => new Promise((resolve) => {
-    const timer = setTimeout(() => resolve([]), ms);
-    promise.then(
-      value => { clearTimeout(timer); resolve(value); },
-      () => { clearTimeout(timer); resolve([]); }
-    );
-  });
-  const apiPromise = fetchMagazynJson(`/api/client_invoices?email=${email}`, 12000)
-    .then(payload => payload.invoices || [])
-    .catch(() => []);
-  const supabasePromise = fetchInvoicesFromSupabase(emailRaw)
-    .catch(() => []);
-
-  const [apiRows, supabaseRows] = await Promise.all([
-    timeout(apiPromise, 12000),
-    timeout(supabasePromise, 4500)
-  ]);
-  return apiRows.length ? apiRows : supabaseRows;
 }
 
 async function loadInvoices(showModal = true, force = false){
@@ -963,9 +621,11 @@ async function loadInvoices(showModal = true, force = false){
 
   try {
     const session = await getSession();
-    if(!session?.user?.email) throw new Error('Zaloguj się ponownie.');
+    if(!session?.user?.email) throw new Error('Brak sesji.');
     const emailRaw = session.user.email.trim().toLowerCase();
-    const rows = await fetchInvoicesFast(emailRaw);
+    const email = encodeURIComponent(emailRaw);
+    const payload = await fetchMagazynJson(`/api/client_invoices?email=${email}`);
+    const rows = payload.invoices || [];
 
     if(!rows.length){
       tb.innerHTML = '<tr><td colspan="6">Brak faktur</td></tr>';
@@ -974,7 +634,7 @@ async function loadInvoices(showModal = true, force = false){
 
     tb.innerHTML = rows.map(r => `
       <tr>
-        <td><b>${esc(r.invoice_no || '')}</b>${Number(r.seen_by_client || 0) === 0 ? ' <span class="badge">Nowa</span>' : ''}${Number(r.paid || 0) === 1 ? ' <span class="badge">Opłacona</span>' : ''}${Number(r.payment_reminder || 0) === 1 && Number(r.paid || 0) !== 1 ? ' <span class="badge">Do opłacenia</span>' : ''}</td>
+        <td><b>${esc(r.invoice_no || '')}</b>${Number(r.seen_by_client || 0) === 0 ? ' <span class="badge">Nowa</span>' : ''}</td>
         <td>${esc(r.order_display || displayOrderLabel(r) || r.order_no || '')}</td>
         <td>${esc(r.issue_date || '')}</td>
         <td>${formatMoney(r.total_net)}</td>
@@ -995,22 +655,24 @@ async function loadInvoices(showModal = true, force = false){
       };
     });
 
-    const paymentReminder = rows.find(r =>
-      Number(r.payment_reminder || 0) === 1 &&
-      Number(r.paid || 0) !== 1
-    );
     const unseen = rows.find(r =>
       Number(r.seen_by_client || 0) === 0 &&
-      Number(r.paid || 0) !== 1
+      !['gotowka','cash'].includes(String(r.payment_type || '').toLowerCase())
     );
-    if(showModal && paymentReminder){
-      showPaymentReminderModal(paymentReminder);
-    } else if(showModal && unseen){
+    if(showModal && unseen){
       showNewInvoiceModal(unseen);
     }
     LAST_LOADED.invoices = Date.now();
   } catch(error){
-    tb.innerHTML = `<tr><td colspan="6">Błąd: ${esc(error.message)}</td></tr>`;
+    if(isAbortLikeError(error)){
+      if(STOCK_VIEW.length){
+        renderStockTable();
+      } else {
+        tb.innerHTML = '<tr><td colspan="6">Dane są odświeżane. Spróbuj ponownie za chwilę.</td></tr>';
+      }
+      return;
+    }
+    tb.innerHTML = '<tr><td colspan="6">Nie udało się odświeżyć danych. Spróbuj ponownie za chwilę.</td></tr>';
   }
   })();
 
@@ -1031,12 +693,13 @@ async function showOrderByCode(rawCode){
 
   try {
     const bundle = await fetchOrdersBundle();
-    const order = (bundle.orders || []).find(o => displayOrderNo(o).toUpperCase() === code || rawOrderNo(o).toUpperCase() === code);
+    const order = (bundle.orders || []).find(o => displayOrderNo(o) === code || String(o.order_no || '').trim() === code);
     if(!order){
       out.innerHTML = '<div class="muted">Nie znaleziono Twojego zamówienia o takim kodzie.</div>';
       return;
     }
-    const { items, totals } = await fetchOrderDetails(order);
+    const items = bundle.itemsByOrder.get(Number(order.id)) || [];
+    const totals = bundle.totalsByOrder.get(Number(order.id)) || { net:0, gross:0 };
     out.innerHTML = renderOrderDetailsHtml(order, items, totals);
     out.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch(error){
@@ -1044,24 +707,8 @@ async function showOrderByCode(rawCode){
   }
 }
 
-const MOJIBAKE_REPLACEMENTS = {
-  'Ä…':'ą','Ä‡':'ć','Ä™':'ę','Ĺ‚':'ł','Ĺ„':'ń','Ăł':'ó','Ĺ›':'ś','Ĺş':'ź','ĹĽ':'ż',
-  'Ä„':'Ą','Ä†':'Ć','Ä':'Ę','Ĺ':'Ł','Ĺƒ':'Ń','Ă“':'Ó','Ĺš':'Ś','Ĺą':'Ź','Ĺ»':'Ż',
-  'Å‚':'ł','Å„':'ń','Å›':'ś','Åº':'ź','Å¼':'ż','Å':'Ł','Åƒ':'Ń','Åš':'Ś','Å¹':'Ź','Å»':'Ż',
-  'Ä':'ą','Ä':'ć','Ä':'ę','â€”':'—','â€“':'–','â€ž':'„','â€ť':'”','â€™':'’'
-};
-
-function fixPolishText(v){
-  let text = String(v ?? '');
-  if(!/[ÄĹĂÅâ]/.test(text)) return text;
-  Object.entries(MOJIBAKE_REPLACEMENTS).forEach(([bad, good]) => {
-    text = text.split(bad).join(good);
-  });
-  return text;
-}
-
 function esc(v){
-  return fixPolishText(v)
+  return String(v ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
@@ -1209,10 +856,8 @@ function renderStockTable(){
 
   if (!q) {
     $('stockCount').textContent = 'Pozycji: 0';
-    LAST_STOCK_RESULT_COUNT = 0;
-    LAST_STOCK_MATCHES = [];
     tb.innerHTML = '<tr><td colspan="5">Wpisz model, SKU lub nazwę produktu.</td></tr>';
-    return 0;
+    return;
   }
 
   let rows = [...STOCK_VIEW];
@@ -1226,17 +871,10 @@ function renderStockTable(){
   }
 
   $('stockCount').textContent = `Pozycji: ${rows.length}`;
-  LAST_STOCK_RESULT_COUNT = rows.length;
-  LAST_STOCK_MATCHES = rows.length <= 20 ? rows.map(r => ({
-    sku: r.sku || '',
-    model: r.model || r.sku || '',
-    name: r.name || ''
-  })) : [];
 
   if (!rows.length) {
-    LAST_STOCK_MATCHES = [];
     tb.innerHTML = '<tr><td colspan="5">Brak danych</td></tr>';
-    return 0;
+    return;
   }
 
   tb.innerHTML = rows.map(r => {
@@ -1251,7 +889,6 @@ function renderStockTable(){
     </tr>
   `;
   }).join('');
-  return rows.length;
 }
 
 function rebuildOrderProductList(){
@@ -1293,7 +930,15 @@ async function loadStock(force = false){
     rebuildOrderProductList();
     LAST_LOADED.stock = Date.now();
   } catch(error){
-    tb.innerHTML = `<tr><td colspan="6">Błąd: ${esc(error.message)}</td></tr>`;
+    if(isAbortLikeError(error)){
+      if(STOCK_VIEW.length){
+        renderStockTable();
+      } else {
+        tb.innerHTML = '<tr><td colspan="6">Dane są odświeżane. Spróbuj ponownie za chwilę.</td></tr>';
+      }
+      return;
+    }
+    tb.innerHTML = '<tr><td colspan="6">Nie udało się odświeżyć danych. Spróbuj ponownie za chwilę.</td></tr>';
   }
   })();
 
@@ -1305,20 +950,16 @@ async function loadStock(force = false){
 }
 
 $('btnLoadStock').onclick = () => loadStock(true);
-$('stockSearch').oninput = () => {
-  renderStockTable();
-  scheduleStockSearchLog();
-};
+$('stockSearch').oninput = renderStockTable;
 
 function renderOrderDraft(){
   const tb = $('orderDraftTable').querySelector('tbody');
 
   if(!ORDER_DRAFT.length){
-    tb.innerHTML = '<tr><td colspan="8">Brak pozycji</td></tr>';
+    tb.innerHTML = '<tr><td colspan="7">Brak pozycji</td></tr>';
   } else {
     tb.innerHTML = ORDER_DRAFT.map((it, idx) => {
       const grossLine = Number(it.gross_price || 0) * Number(it.qty || 0);
-      const clientGrossLine = calcClientGrossFromNet(Number(it.net_price || 0) * Number(it.qty || 0));
       return `
       <tr>
         <td>${esc(it.sku)}</td>
@@ -1327,7 +968,6 @@ function renderOrderDraft(){
         <td>${Number(it.gross_price || 0).toFixed(2)}</td>
         <td><input type="number" min="1" value="${it.qty}" data-qty-idx="${idx}" style="width:90px" /></td>
         <td>${grossLine.toFixed(2)}</td>
-        <td>${clientGrossLine.toFixed(2)}</td>
         <td><button class="btn" type="button" data-del-idx="${idx}">Usuń</button></td>
       </tr>
     `;
@@ -1336,8 +976,7 @@ function renderOrderDraft(){
 
   const totalNet = ORDER_DRAFT.reduce((sum, it) => sum + Number(it.net_price || 0) * Number(it.qty || 0), 0);
   const totalGross = ORDER_DRAFT.reduce((sum, it) => sum + Number(it.gross_price || 0) * Number(it.qty || 0), 0);
-  const totalClientGross = calcClientGrossFromNet(totalNet);
-  $('orderDraftSummary').textContent = `Pozycji: ${ORDER_DRAFT.length} | Netto: ${totalNet.toFixed(2)} | Brutto: ${totalGross.toFixed(2)} | Detal brutto: ${totalClientGross.toFixed(2)}`;
+  $('orderDraftSummary').textContent = `Pozycji: ${ORDER_DRAFT.length} | Netto: ${totalNet.toFixed(2)} | Brutto: ${totalGross.toFixed(2)}`;
 }
 
 function parseProductInputToId(txt){
@@ -1488,7 +1127,7 @@ async function loadOrders(force = false){
           <td><button class="btn" type="button" data-open-order="${r.id}">Szczegóły</button></td>
         </tr>
         <tr id="order-detail-${r.id}" class="hidden">
-      <td colspan="6"><div class="muted">Kliknij „Szczegóły”, aby zobaczyć pozycje zamówienia.</div></td>
+          <td colspan="6"><div class="muted">Kliknij „Szczegóły”, aby pobrać pozycje zamówienia.</div></td>
         </tr>
       `;
     }).join('');
