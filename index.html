@@ -299,6 +299,8 @@ const LAST_LOADED = { stock: 0, orders: 0, invoices: 0 };
 const LOAD_IN_FLIGHT = { stock: null, orders: null, invoices: null };
 let SESSION_LOAD_IN_FLIGHT = null;
 let LOADED_USER_ID = null;
+let STOCK_SEARCH_LOG_TIMER = null;
+let LAST_STOCK_SEARCH_LOG_KEY = '';
 
 function cacheIsFresh(key){
   return Date.now() - LAST_LOADED[key] < DATA_CACHE_MS;
@@ -860,7 +862,8 @@ function normalizeStockRow(r){
 
 function renderStockTable(){
   const tb = $('stockTable').querySelector('tbody');
-  const q = ($('stockSearch')?.value || '').trim().toLowerCase();
+  const queryRaw = ($('stockSearch')?.value || '').trim();
+  const q = queryRaw.toLowerCase();
 
   if (!q) {
     $('stockCount').textContent = 'Pozycji: 0';
@@ -879,6 +882,7 @@ function renderStockTable(){
   }
 
   $('stockCount').textContent = `Pozycji: ${rows.length}`;
+  scheduleStockSearchLog(queryRaw, rows);
 
   if (!rows.length) {
     tb.innerHTML = '<tr><td colspan="5">Brak danych</td></tr>';
@@ -897,6 +901,49 @@ function renderStockTable(){
     </tr>
   `;
   }).join('');
+}
+
+function scheduleStockSearchLog(query, rows){
+  clearTimeout(STOCK_SEARCH_LOG_TIMER);
+  const cleanQuery = String(query || '').trim();
+  if(cleanQuery.length < 2) return;
+
+  STOCK_SEARCH_LOG_TIMER = setTimeout(() => {
+    logStockSearch(cleanQuery, rows).catch(() => {});
+  }, 900);
+}
+
+async function logStockSearch(query, rows){
+  const cleanQuery = String(query || '').trim();
+  if(cleanQuery.length < 2) return;
+
+  const resultRows = Array.isArray(rows) ? rows : [];
+  const matches = resultRows.slice(0, 20).map(r => ({
+    sku: r.sku || '',
+    model: r.sku || r.model || '',
+    name: productDisplayName(r)
+  }));
+  const matchKey = matches.map(m => m.sku || m.model).join('|');
+  const logKey = `${cleanQuery.toLowerCase()}|${resultRows.length}|${matchKey}`;
+  if(logKey === LAST_STOCK_SEARCH_LOG_KEY) return;
+  LAST_STOCK_SEARCH_LOG_KEY = logKey;
+
+  const session = await getSession();
+  const email = String(session?.user?.email || '').trim().toLowerCase();
+  if(!email) return;
+
+  await fetch(`${MAGAZYN_API_BASE}/api/client_search_log`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      email,
+      name: email,
+      query: cleanQuery,
+      results_count: resultRows.length,
+      source: 'stock',
+      matches
+    })
+  });
 }
 
 function rebuildOrderProductList(){
