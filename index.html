@@ -147,7 +147,6 @@
 
       <div class="card section-block hidden" id="ordersSection">
         <h3>Moje zamówienia</h3>
-        <div class="muted">Statusy: <b>niepotwierdzone</b>, <b>potwierdzone</b>, <b>w dostawie</b>, <b>zrealizowane</b>.</div>
         <button id="btnLoadOrders" class="btn" type="button" style="margin-top:8px">Odśwież zamówienia</button>
         <div style="overflow:auto;margin-top:10px">
           <table id="ordersTable">
@@ -161,7 +160,6 @@
 
       <div class="card section-block hidden" id="invoicesSection">
         <h3>Faktury</h3>
-        <div class="muted">Tutaj widzisz udostępnione faktury.</div>
         <button id="btnLoadInvoices" class="btn" type="button" style="margin-top:8px">Odśwież faktury</button>
         <div style="overflow:auto;margin-top:10px">
           <table id="invoicesTable">
@@ -193,7 +191,7 @@
       </div>
 
       <div class="card section-block hidden" id="scanSection">
-        <h3 id="openQrScanner" style="cursor:pointer;text-decoration:underline;">Skanuj QR zamówienia Aparatem</h3>
+        <h3 id="openQrScanner" style="cursor:pointer;text-decoration:underline;">Skanuj QR zamówienia</h3>
         <div>
           <input id="orderCodeInput" placeholder="Wklej kod zamówienia ZAM-... albo kliknij „Skanuj QR zamówienia”" />
           <button id="btnShowOrderByCode" class="btn" type="button" style="margin-top:8px">Pokaż zamówienie</button>
@@ -632,9 +630,19 @@ async function loadInvoices(showModal = true, force = false){
       return;
     }
 
+    const paymentBadge = (r) => {
+      const paid = Number(r.paid ?? r.is_paid ?? r.invoice_paid ?? 0) === 1 ||
+        String(r.payment_status || '').toLowerCase() === 'paid' ||
+        String(r.status_payment || '').toLowerCase() === 'paid';
+      if(paid){
+        return ' <span class="badge">Opłacona</span>';
+      }
+      return ' <span class="badge">Do opłacenia</span>';
+    };
+
     tb.innerHTML = rows.map(r => `
       <tr>
-        <td><b>${esc(r.invoice_no || '')}</b>${Number(r.seen_by_client || 0) === 0 ? ' <span class="badge">Nowa</span>' : ''}</td>
+        <td><b>${esc(r.invoice_no || '')}</b>${Number(r.seen_by_client || 0) === 0 ? ' <span class="badge">Nowa</span>' : ''}${paymentBadge(r)}</td>
         <td>${esc(r.order_display || displayOrderLabel(r) || r.order_no || '')}</td>
         <td>${esc(r.issue_date || '')}</td>
         <td>${formatMoney(r.total_net)}</td>
