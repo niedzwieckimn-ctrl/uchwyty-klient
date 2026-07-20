@@ -906,11 +906,12 @@ function renderStockTable(){
 function scheduleStockSearchLog(query, rows){
   clearTimeout(STOCK_SEARCH_LOG_TIMER);
   const cleanQuery = String(query || '').trim();
+  const resultRows = Array.isArray(rows) ? rows : [];
   if(cleanQuery.length < 2) return;
 
   STOCK_SEARCH_LOG_TIMER = setTimeout(() => {
-    logStockSearch(cleanQuery, rows).catch(() => {});
-  }, 900);
+    logStockSearch(cleanQuery, resultRows).catch(() => {});
+  }, 10000);
 }
 
 async function logStockSearch(query, rows){
@@ -918,12 +919,20 @@ async function logStockSearch(query, rows){
   if(cleanQuery.length < 2) return;
 
   const resultRows = Array.isArray(rows) ? rows : [];
-  const matches = resultRows.slice(0, 20).map(r => ({
+  if(resultRows.length < 1) return;
+
+  const normalizedQuery = cleanQuery.toLowerCase().replace(/\s+/g, '');
+  const matches = resultRows
+    .filter(r => String(r.sku || r.model || '').toLowerCase().replace(/\s+/g, '').includes(normalizedQuery))
+    .slice(0, 20)
+    .map(r => ({
     sku: r.sku || '',
     model: r.sku || r.model || '',
     name: productDisplayName(r)
   }));
-  const matchKey = matches.map(m => m.sku || m.model).join('|');
+
+  const sentMatches = resultRows.length <= 20 ? matches : [];
+  const matchKey = sentMatches.map(m => m.sku || m.model).join('|');
   const logKey = `${cleanQuery.toLowerCase()}|${resultRows.length}|${matchKey}`;
   if(logKey === LAST_STOCK_SEARCH_LOG_KEY) return;
   LAST_STOCK_SEARCH_LOG_KEY = logKey;
@@ -941,7 +950,7 @@ async function logStockSearch(query, rows){
       query: cleanQuery,
       results_count: resultRows.length,
       source: 'stock',
-      matches
+      matches: sentMatches
     })
   });
 }
