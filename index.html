@@ -1,4 +1,4 @@
-<!doctype html>
+ <!doctype html>
 <html lang="pl">
 <head>
   <meta charset="utf-8" />
@@ -212,8 +212,8 @@
 
     
       <div id="newInvoiceModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:10000;padding:16px;box-sizing:border-box;">
-        <div style="max-width:430px;margin:8vh auto;background:#e9f9ee;border:2px solid #16a34a;border-radius:18px;padding:16px;">
-          <div style="font-size:24px;font-weight:700;color:#166534;">Masz nową fakturę</div>
+        <div id="newInvoiceBox" style="max-width:430px;margin:8vh auto;background:#e9f9ee;border:2px solid #16a34a;border-radius:18px;padding:16px;">
+          <div id="newInvoiceTitle" style="font-size:24px;font-weight:700;color:#166534;">Masz nową fakturę</div>
           <div id="newInvoiceText" style="margin-top:8px;color:#166534;"></div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
             <button id="btnNewInvoiceDownload" class="btn primary" type="button">Pobierz PDF</button>
@@ -293,6 +293,8 @@ let ORDER_DRAFT = [];
 let CURRENT_CUSTOMER = null;
 let PRICE_BY_MODEL = new Map();
 let CURRENT_NEW_INVOICE = null;
+let CURRENT_INVOICE_NOTICE = null;
+let INVOICE_NOTICE_QUEUE = [];
 let PRICE_BY_SKU = new Map();
 const DATA_CACHE_MS = 60 * 1000;
 const LAST_LOADED = { stock: 0, orders: 0, invoices: 0 };
@@ -521,6 +523,7 @@ function markInvoiceSeenAndOpenPdf(inv){
       }
 
       CURRENT_NEW_INVOICE = null;
+      CURRENT_INVOICE_NOTICE = null;
       $('newInvoiceModal').classList.add('hidden');
 
       // Oznaczenie jako przeczytana nie opóźnia już otwarcia pliku.
@@ -528,6 +531,7 @@ function markInvoiceSeenAndOpenPdf(inv){
         method:'POST'
       }).catch(() => {});
       LAST_LOADED.invoices = 0;
+      setTimeout(showNextInvoiceNotice, 300);
     } catch(error){
       if(pdfWindow) pdfWindow.close();
       throw error;
@@ -535,9 +539,85 @@ function markInvoiceSeenAndOpenPdf(inv){
   })();
 }
 
-function showNewInvoiceModal(inv){
+function isInvoicePaid(inv){
+  return Number(inv.paid ?? inv.is_paid ?? inv.invoice_paid ?? 0) === 1 ||
+    String(inv.payment_status || '').toLowerCase() === 'paid' ||
+    String(inv.status_payment || '').toLowerCase() === 'paid';
+}
+
+function invoiceNoticeKey(notice){
+  return `${notice.type}:${Number(notice.inv?.id || 0)}`;
+}
+
+function buildInvoiceNoticeQueue(rows){
+  const notices = [];
+  const seen = new Set();
+
+  (rows || []).forEach(inv => {
+    if(Number(inv.payment_reminder || 0) === 1 && !isInvoicePaid(inv)){
+      const notice = { type:'payment', inv };
+      const key = invoiceNoticeKey(notice);
+      if(!seen.has(key)){
+        seen.add(key);
+        notices.push(notice);
+      }
+    }
+  });
+
+  (rows || []).forEach(inv => {
+    if(
+      Number(inv.seen_by_client || 0) === 0 &&
+      !['gotowka','cash'].includes(String(inv.payment_type || '').toLowerCase())
+    ){
+      const notice = { type:'new', inv };
+      const key = invoiceNoticeKey(notice);
+      if(!seen.has(key)){
+        seen.add(key);
+        notices.push(notice);
+      }
+    }
+  });
+
+  return notices;
+}
+
+function showNextInvoiceNotice(){
+  if(!INVOICE_NOTICE_QUEUE.length){
+    CURRENT_NEW_INVOICE = null;
+    CURRENT_INVOICE_NOTICE = null;
+    $('newInvoiceModal').classList.add('hidden');
+    return;
+  }
+  showNewInvoiceModal(INVOICE_NOTICE_QUEUE.shift());
+}
+
+function showNewInvoiceModal(noticeOrInvoice){
+  const notice = noticeOrInvoice && noticeOrInvoice.inv ? noticeOrInvoice : { type:'new', inv: noticeOrInvoice };
+  const inv = notice.inv || {};
+  CURRENT_INVOICE_NOTICE = notice;
   CURRENT_NEW_INVOICE = inv;
-  $('newInvoiceText').innerHTML = `Faktura <b>${esc(inv.invoice_no || '')}</b> do zamówienia <b>${esc(inv.order_no || '')}</b> jest gotowa.`;
+
+  const isPayment = notice.type === 'payment';
+  const box = $('newInvoiceBox');
+  const title = $('newInvoiceTitle');
+  const text = $('newInvoiceText');
+
+  if(isPayment){
+    box.style.background = '#fee2e2';
+    box.style.borderColor = '#dc2626';
+    title.style.color = '#991b1b';
+    text.style.color = '#991b1b';
+    title.textContent = 'Masz zaległą płatność';
+    text.innerHTML = `Faktura <b>${esc(inv.invoice_no || '')}</b> na kwotę <b>${formatMoney(inv.total_gross)} PLN</b> jest oznaczona jako nieopłacona. Prosimy o uregulowanie płatności.`;
+  } else {
+    box.style.background = '#e9f9ee';
+    box.style.borderColor = '#16a34a';
+    title.style.color = '#166534';
+    text.style.color = '#166534';
+    title.textContent = 'Masz nową fakturę';
+    text.innerHTML = `Faktura <b>${esc(inv.invoice_no || '')}</b> do zamówienia <b>${esc(inv.order_no || '')}</b> jest gotowa.`;
+  }
+
   $('newInvoiceModal').classList.remove('hidden');
 }
 
@@ -633,10 +713,7 @@ async function loadInvoices(showModal = true, force = false){
     }
 
     const paymentBadge = (r) => {
-      const paid = Number(r.paid ?? r.is_paid ?? r.invoice_paid ?? 0) === 1 ||
-        String(r.payment_status || '').toLowerCase() === 'paid' ||
-        String(r.status_payment || '').toLowerCase() === 'paid';
-      if(paid){
+      if(isInvoicePaid(r)){
         return ' <span class="badge">Opłacona</span>';
       }
       return ' <span class="badge">Do opłacenia</span>';
@@ -665,12 +742,9 @@ async function loadInvoices(showModal = true, force = false){
       };
     });
 
-    const unseen = rows.find(r =>
-      Number(r.seen_by_client || 0) === 0 &&
-      !['gotowka','cash'].includes(String(r.payment_type || '').toLowerCase())
-    );
-    if(showModal && unseen){
-      showNewInvoiceModal(unseen);
+    if(showModal){
+      INVOICE_NOTICE_QUEUE = buildInvoiceNoticeQueue(rows);
+      showNextInvoiceNotice();
     }
     LAST_LOADED.invoices = Date.now();
   } catch(error){
@@ -1226,164 +1300,4 @@ async function loadOrders(force = false){
         }
       };
     });
-    LAST_LOADED.orders = Date.now();
-  } catch(error){
-    tb.innerHTML = `<tr><td colspan="6">Błąd: ${esc(error.message)}</td></tr>`;
-  }
-  })();
-
-  try {
-    await LOAD_IN_FLIGHT.orders;
-  } finally {
-    LOAD_IN_FLIGHT.orders = null;
-  }
-}
-$('btnLoadOrders').onclick = () => loadOrders(true);
-if ($('btnLoadInvoices')) $('btnLoadInvoices').onclick = () => loadInvoices(true, true);
-$('btnShowOrderByCode').onclick = () => showOrderByCode();
-
-
-document.querySelectorAll('#clientNav [data-target]').forEach(link => {
-  link.onclick = async (e) => {
-    e.preventDefault();
-    openSection(link.dataset.target);
-
-    if(link.dataset.target === 'stockSection'){
-      await loadStock(false);
-    }
-    if(link.dataset.target === 'orderSection'){
-      await loadStock(false);
-      renderOrderDraft();
-    }
-    if(link.dataset.target === 'ordersSection'){
-      await loadOrders(false);
-    }
-    if(link.dataset.target === 'invoicesSection'){
-      await loadInvoices(true, false);
-    }
-  };
-});
-
-$('btnChangePassword').onclick = async () => {
-  const p1 = ($('newPassword').value || '').trim();
-  const p2 = ($('repeatPassword').value || '').trim();
-
-  if(!p1 || !p2){
-    $('passwordMsg').textContent = 'Wpisz nowe hasło dwa razy.';
-    return;
-  }
-  if(p1 !== p2){
-    $('passwordMsg').textContent = 'Hasła nie są takie same.';
-    return;
-  }
-  if(p1.length < 6){
-    $('passwordMsg').textContent = 'Hasło musi mieć co najmniej 6 znaków.';
-    return;
-  }
-
-  try {
-    const { error } = await sbAuth.auth.updateUser({ password: p1 });
-    if(error) throw error;
-    $('newPassword').value = '';
-    $('repeatPassword').value = '';
-    $('passwordMsg').textContent = 'Hasło zostało zmienione.';
-  } catch(error){
-    $('passwordMsg').textContent = 'Błąd: ' + error.message;
-  }
-};
-
-
-$('btnNewInvoiceDownload').onclick = async () => {
-  if(CURRENT_NEW_INVOICE){
-    try {
-      await markInvoiceSeenAndOpenPdf(CURRENT_NEW_INVOICE);
-    } catch(error){
-      alert('Nie udało się otworzyć faktury: ' + error.message);
-    }
-  }
-};
-$('btnNewInvoiceLater').onclick = () => {
-  CURRENT_NEW_INVOICE = null;
-  $('newInvoiceModal').classList.add('hidden');
-};
-
-renderOrderDraft();
-
-let orderQrScanner = null;
-let orderQrScannerRunning = false;
-
-async function startOrderQrScanner(){
-  if(!window.Html5Qrcode) return;
-  if(!orderQrScanner){
-    orderQrScanner = new Html5Qrcode('orderQrReader');
-  }
-  if(orderQrScannerRunning) return;
-
-  const onSuccess = async (decodedText) => {
-    const parsedCode = parseOrderCode(decodedText);
-    $('orderCodeInput').value = parsedCode || decodedText;
-    await stopOrderQrScanner();
-    $('qrScannerModal').classList.add('hidden');
-    await showOrderByCode(parsedCode || decodedText);
-  };
-
-  try {
-    await orderQrScanner.start(
-      { facingMode: { exact: 'environment' } },
-      { fps: 10, qrbox: 220, aspectRatio: 1.0 },
-      onSuccess,
-      () => {}
-    );
-    orderQrScannerRunning = true;
-  } catch (e1) {
-    try {
-      await orderQrScanner.start(
-        { facingMode: 'environment' },
-        { fps: 10, qrbox: 220, aspectRatio: 1.0 },
-        onSuccess,
-        () => {}
-      );
-      orderQrScannerRunning = true;
-    } catch (e2) {
-      $('orderScanOut').innerHTML = '<div class="muted">Nie udało się uruchomić tylnego aparatu.</div>';
-      $('qrScannerModal').classList.add('hidden');
-    }
-  }
-}
-
-async function stopOrderQrScanner(){
-  try {
-    if(orderQrScanner && orderQrScannerRunning){
-      await orderQrScanner.stop();
-      await orderQrScanner.clear();
-    }
-  } catch (e) {}
-  orderQrScannerRunning = false;
-}
-
-$('openQrScanner').onclick = async () => {
-  $('qrScannerModal').classList.remove('hidden');
-  await startOrderQrScanner();
-};
-
-$('closeQrScanner').onclick = async () => {
-  await stopOrderQrScanner();
-  $('qrScannerModal').classList.add('hidden');
-};
-
-$('qrScannerModal').onclick = async (e) => {
-  if(e.target && e.target.id === 'qrScannerModal'){
-    await stopOrderQrScanner();
-    $('qrScannerModal').classList.add('hidden');
-  }
-};
-
-window.addEventListener('beforeunload', () => {
-  stopOrderQrScanner();
-});
-
-loadSession();
-</script>
-
-</body>
-</html>
+    LAST_LOADED.orders = Date.
