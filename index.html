@@ -212,8 +212,8 @@
 
     
       <div id="newInvoiceModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:10000;padding:16px;box-sizing:border-box;">
-        <div style="max-width:430px;margin:8vh auto;background:#e9f9ee;border:2px solid #16a34a;border-radius:18px;padding:16px;">
-          <div style="font-size:24px;font-weight:700;color:#166534;">Masz nową fakturę</div>
+        <div id="newInvoiceBox" style="max-width:430px;margin:8vh auto;background:#e9f9ee;border:2px solid #16a34a;border-radius:18px;padding:16px;">
+          <div id="newInvoiceTitle" style="font-size:24px;font-weight:700;color:#166534;">Masz nową fakturę</div>
           <div id="newInvoiceText" style="margin-top:8px;color:#166534;"></div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
             <button id="btnNewInvoiceDownload" class="btn primary" type="button">Pobierz PDF</button>
@@ -293,6 +293,8 @@ let ORDER_DRAFT = [];
 let CURRENT_CUSTOMER = null;
 let PRICE_BY_MODEL = new Map();
 let CURRENT_NEW_INVOICE = null;
+let INVOICE_NOTICE_QUEUE = [];
+let CURRENT_INVOICE_NOTICE_TYPE = 'new';
 let PRICE_BY_SKU = new Map();
 const DATA_CACHE_MS = 60 * 1000;
 const LAST_LOADED = { stock: 0, orders: 0, invoices: 0 };
@@ -520,14 +522,14 @@ function markInvoiceSeenAndOpenPdf(inv){
         window.location.href = downloadUrl;
       }
 
-      CURRENT_NEW_INVOICE = null;
-      $('newInvoiceModal').classList.add('hidden');
+      hideInvoiceNoticeModal();
 
       // Oznaczenie jako przeczytana nie opóźnia już otwarcia pliku.
       fetch(`${MAGAZYN_API_BASE}/api/invoices/${inv.id}/seen?email=${email}`, {
         method:'POST'
       }).catch(() => {});
       LAST_LOADED.invoices = 0;
+      setTimeout(showNextInvoiceNotice, 200);
     } catch(error){
       if(pdfWindow) pdfWindow.close();
       throw error;
@@ -535,10 +537,96 @@ function markInvoiceSeenAndOpenPdf(inv){
   })();
 }
 
-function showNewInvoiceModal(inv){
-  CURRENT_NEW_INVOICE = inv;
-  $('newInvoiceText').innerHTML = `Faktura <b>${esc(inv.invoice_no || '')}</b> do zamówienia <b>${esc(inv.order_no || '')}</b> jest gotowa.`;
-  $('newInvoiceModal').classList.remove('hidden');
+function invoiceIsPaid(inv){
+  if(!inv) return false;
+  const paidValue = String(inv.payment_status || inv.status_payment || inv.paid_status || '').toLowerCase();
+  return Number(inv.paid || 0) === 1 || paidValue === 'paid' || paidValue === 'oplacona' || paidValue === 'opłacona';
+}
+
+function invoiceNoticeKey(type, inv){
+  return String(type || 'new') + ':' + String((inv && inv.id) || '');
+}
+
+function buildInvoiceNoticeQueue(rows){
+  const queue = [];
+  const used = {};
+  (rows || []).forEach(inv => {
+    if(Number((inv && inv.payment_reminder) || 0) === 1 && !invoiceIsPaid(inv)){
+      const key = invoiceNoticeKey('payment', inv);
+      if(!used[key]){
+        used[key] = 1;
+        queue.push({ type:'payment', inv });
+      }
+    }
+  });
+  (rows || []).forEach(inv => {
+    const paymentType = String((inv && inv.payment_type) || '').toLowerCase();
+    if(Number((inv && inv.seen_by_client) || 0) === 0 && !['gotowka','cash'].includes(paymentType)){
+      const key = invoiceNoticeKey('new', inv);
+      if(!used[key]){
+        used[key] = 1;
+        queue.push({ type:'new', inv });
+      }
+    }
+  });
+  return queue;
+}
+
+function hideInvoiceNoticeModal(){
+  CURRENT_NEW_INVOICE = null;
+  CURRENT_INVOICE_NOTICE_TYPE = 'new';
+  const modal = $('newInvoiceModal');
+  if(modal) modal.classList.add('hidden');
+}
+
+function showNextInvoiceNotice(){
+  if(!INVOICE_NOTICE_QUEUE.length){
+    hideInvoiceNoticeModal();
+    return;
+  }
+  showNewInvoiceModal(INVOICE_NOTICE_QUEUE.shift());
+}
+
+function showNewInvoiceModal(noticeOrInvoice){
+  try {
+    const notice = noticeOrInvoice && noticeOrInvoice.inv ? noticeOrInvoice : { type:'new', inv:noticeOrInvoice };
+    const inv = notice.inv || {};
+    const modal = $('newInvoiceModal');
+    const box = $('newInvoiceBox');
+    const title = $('newInvoiceTitle');
+    const text = $('newInvoiceText');
+    if(!modal || !text) return;
+
+    CURRENT_NEW_INVOICE = inv;
+    CURRENT_INVOICE_NOTICE_TYPE = notice.type || 'new';
+
+    if(CURRENT_INVOICE_NOTICE_TYPE === 'payment'){
+      if(box){
+        box.style.background = '#fee2e2';
+        box.style.borderColor = '#dc2626';
+      }
+      if(title){
+        title.textContent = 'Masz zaległą płatność';
+        title.style.color = '#991b1b';
+      }
+      text.style.color = '#991b1b';
+      text.innerHTML = `Faktura <b>${esc(inv.invoice_no || '')}</b> na kwotę <b>${formatMoney(inv.total_gross)} PLN</b> jest oznaczona jako nieopłacona. Prosimy o uregulowanie płatności.`;
+    } else {
+      if(box){
+        box.style.background = '#e9f9ee';
+        box.style.borderColor = '#16a34a';
+      }
+      if(title){
+        title.textContent = 'Masz nową fakturę';
+        title.style.color = '#166534';
+      }
+      text.style.color = '#166534';
+      text.innerHTML = `Faktura <b>${esc(inv.invoice_no || '')}</b> do zamówienia <b>${esc(inv.order_no || '')}</b> jest gotowa.`;
+    }
+    modal.classList.remove('hidden');
+  } catch(e){
+    hideInvoiceNoticeModal();
+  }
 }
 
 async function fetchInvoicesFromSupabase(email){
@@ -589,7 +677,7 @@ async function fetchInvoicesFromSupabase(email){
   const invoiceIds = invoices.map(inv => Number(inv.id));
   const metaRes = await sbAuth
     .from('invoice_meta')
-    .select('invoice_id,sent_to_client,seen_by_client,seen_at')
+    .select('invoice_id,sent_to_client,seen_by_client,seen_at,payment_reminder,paid,paid_at')
     .in('invoice_id', invoiceIds);
   if(metaRes.error) throw metaRes.error;
 
@@ -604,7 +692,10 @@ async function fetchInvoicesFromSupabase(email){
         order_no: order.order_no || '',
         sent_to_client: Number(meta.sent_to_client || 0),
         seen_by_client: Number(meta.seen_by_client || 0),
-        seen_at: meta.seen_at || ''
+        seen_at: meta.seen_at || '',
+        payment_reminder: Number(meta.payment_reminder || 0),
+        paid: Number(meta.paid || 0),
+        paid_at: meta.paid_at || ''
       };
     })
     .filter(inv => inv.sent_to_client === 1)
@@ -665,12 +756,14 @@ async function loadInvoices(showModal = true, force = false){
       };
     });
 
-    const unseen = rows.find(r =>
-      Number(r.seen_by_client || 0) === 0 &&
-      !['gotowka','cash'].includes(String(r.payment_type || '').toLowerCase())
-    );
-    if(showModal && unseen){
-      showNewInvoiceModal(unseen);
+    if(showModal){
+      try {
+        INVOICE_NOTICE_QUEUE = buildInvoiceNoticeQueue(rows);
+        showNextInvoiceNotice();
+      } catch(e){
+        INVOICE_NOTICE_QUEUE = [];
+        hideInvoiceNoticeModal();
+      }
     }
     LAST_LOADED.invoices = Date.now();
   } catch(error){
@@ -1303,8 +1396,8 @@ $('btnNewInvoiceDownload').onclick = async () => {
   }
 };
 $('btnNewInvoiceLater').onclick = () => {
-  CURRENT_NEW_INVOICE = null;
-  $('newInvoiceModal').classList.add('hidden');
+  hideInvoiceNoticeModal();
+  setTimeout(showNextInvoiceNotice, 100);
 };
 
 renderOrderDraft();
