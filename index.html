@@ -1324,6 +1324,7 @@ async function loadOrders(force = false){
         row.children[0].innerHTML = '<div class="muted">Ładowanie szczegółów...</div>';
         btn.disabled = true;
         try {
+          await loadStock(false);
           const order = orders.find(x => Number(x.id) === Number(id));
           const { items, totals } = await fetchOrderDetails(order);
           row.children[0].innerHTML = renderOrderDetailsHtml(order, items, totals);
@@ -1369,6 +1370,7 @@ document.querySelectorAll('#clientNav [data-target]').forEach(link => {
       renderOrderDraft();
     }
     if(link.dataset.target === 'ordersSection'){
+      await loadStock(false);
       await loadOrders(false);
     }
     if(link.dataset.target === 'invoicesSection'){
