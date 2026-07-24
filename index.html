@@ -414,6 +414,11 @@ function orderDeliveryTimeLabel(it){
   const wantedQty = Number((it && it.qty) || 0);
   const itemSku = String((it && it.sku) || '').trim().toLowerCase();
   const itemProductId = Number((it && it.product_id) || 0);
+  const itemStockRaw = it && (it.stock_qty ?? it.stock ?? it.qty_physical ?? it.available_qty);
+  const itemStockNumber = Number(itemStockRaw);
+  if(wantedQty > 0 && Number.isFinite(itemStockNumber)){
+    return itemStockNumber >= wantedQty ? '1/3 dni' : '10/20 dni';
+  }
   const stockRow = (STOCK_VIEW || []).find(r => {
     const sameProduct = itemProductId && Number(r.product_id) === itemProductId;
     const sameSku = itemSku && String(r.sku || '').trim().toLowerCase() === itemSku;
