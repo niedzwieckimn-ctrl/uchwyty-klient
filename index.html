@@ -409,6 +409,13 @@ async function fetchMagazynJson(path, options = {}){
   throw lastError || new Error('Nie udało się pobrać danych.');
 }
 
+function orderDeliveryTimeLabel(it){
+  const raw = String((it && (it.availability_label || it.delivery_label || it.delivery_time)) || '').trim().toLowerCase();
+  if(raw === 'dostępne' || raw === 'dostepne' || raw === 'available' || raw === '1/3') return '1/3 dni';
+  if(raw) return raw;
+  return Number((it && it.stock_qty) || 0) >= Number((it && it.qty) || 0) ? '1/3 dni' : '10/20 dni';
+}
+
 function renderOrderDetailsHtml(order, items, totals){
   const rows = (items || []).map(it => `
     <tr>
@@ -417,11 +424,12 @@ function renderOrderDetailsHtml(order, items, totals){
       <td>${formatMoney(it.net_price)}</td>
       <td>${formatMoney(it.gross_price)}</td>
       <td>${Number(it.qty || 0)}</td>
+      <td>${esc(orderDeliveryTimeLabel(it))}</td>
       <td>${esc(it.realization_label || (Number(it.invoiced_qty || 0) >= Number(it.qty || 0) && Number(it.qty || 0) > 0 ? 'w całości' : `${Number(it.invoiced_qty || 0)} szt.`))}</td>
       <td>${formatMoney(it.line_net)}</td>
       <td>${formatMoney(it.line_gross)}</td>
     </tr>
-  `).join('') || '<tr><td colspan="8">Brak pozycji</td></tr>';
+  `).join('') || '<tr><td colspan="9">Brak pozycji</td></tr>';
 
   return `
     <div class="card" style="margin:8px 0 0 0">
@@ -436,7 +444,7 @@ function renderOrderDetailsHtml(order, items, totals){
       <div style="overflow:auto;margin-top:10px">
         <table>
           <thead>
-            <tr><th>Model</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Zamówiono</th><th>Zrealizowane</th><th>Wartość netto</th><th>Wartość brutto</th></tr>
+            <tr><th>Model</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Zamówiono</th><th>Czas realizacji</th><th>Zrealizowane</th><th>Wartość netto</th><th>Wartość brutto</th></tr>
           </thead>
           <tbody>${rows}</tbody>
         </table>
@@ -1016,15 +1024,14 @@ async function logStockSearch(query, rows){
 
   const normalizedQuery = cleanQuery.toLowerCase().replace(/\s+/g, '');
   const matches = resultRows
-    .filter(r => String(r.sku || r.model || '').toLowerCase().replace(/\s+/g, '').includes(normalizedQuery))
     .slice(0, 20)
     .map(r => ({
-    sku: r.sku || '',
-    model: r.sku || r.model || '',
-    name: productDisplayName(r)
-  }));
+      sku: r.sku || '',
+      model: r.sku || r.model || '',
+      name: productDisplayName(r)
+    }));
 
-  const sentMatches = resultRows.length <= 20 ? matches : [];
+  const sentMatches = matches;
   const matchKey = sentMatches.map(m => m.sku || m.model).join('|');
   const logKey = `${cleanQuery.toLowerCase()}|${resultRows.length}|${matchKey}`;
   if(logKey === LAST_STOCK_SEARCH_LOG_KEY) return;
