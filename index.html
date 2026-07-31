@@ -290,6 +290,7 @@ const authCard=$('authCard'), appArea=$('appArea'), who=$('who'), btnLogout=$('b
 let STOCK_RAW = [];
 let STOCK_VIEW = [];
 let ORDER_DRAFT = [];
+let ORDER_CREATE_IN_FLIGHT = false;
 let CURRENT_CUSTOMER = null;
 let PRICE_BY_MODEL = new Map();
 let CURRENT_NEW_INVOICE = null;
@@ -1226,9 +1227,18 @@ $('orderDraftTable').addEventListener('click', (e) => {
 });
 
 $('btnCreateOrder').onclick = async () => {
+  const createBtn = $('btnCreateOrder');
+  if(ORDER_CREATE_IN_FLIGHT) return;
+
   if(!ORDER_DRAFT.length){
     $('orderMsg').textContent = 'Dodaj przynajmniej jedną pozycję.';
     return;
+  }
+
+  ORDER_CREATE_IN_FLIGHT = true;
+  if(createBtn){
+    createBtn.disabled = true;
+    createBtn.textContent = 'Wysyłanie...';
   }
 
   try {
@@ -1300,6 +1310,12 @@ $('btnCreateOrder').onclick = async () => {
     await loadOrders(true);
   } catch(error){
     $('orderMsg').textContent = 'Błąd: ' + error.message;
+  } finally {
+    ORDER_CREATE_IN_FLIGHT = false;
+    if(createBtn){
+      createBtn.disabled = false;
+      createBtn.textContent = 'Wyślij zamówienie';
+    }
   }
 };
 
