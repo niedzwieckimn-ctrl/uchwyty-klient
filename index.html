@@ -1286,22 +1286,31 @@ $('btnCreateOrder').onclick = async () => {
       throw itemsRes.error;
     }
 
-    fetch(`${MAGAZYN_API_BASE}/api/client_order_email`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        order_id: orderId,
-        order_no: insertedOrder.data?.order_no || orderNo,
-        email,
-        customer_name: fallbackName,
-        note: p_note || '',
-        items: ORDER_DRAFT.map(x => ({
-          sku: x.sku || x.model || '',
-          name: x.name || productDisplayName(x) || '',
-          qty: x.qty || 0
-        }))
-      })
-    }).catch(() => {});
+    try {
+      const emailRes = await fetch(`${MAGAZYN_API_BASE}/api/client_order_email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          order_id: orderId,
+          order_no: insertedOrder.data?.order_no || orderNo,
+          email,
+          customer_email: email,
+          customer_name: fallbackName,
+          note: p_note || '',
+          items: ORDER_DRAFT.map(x => ({
+            sku: x.sku || x.model || '',
+            name: x.name || productDisplayName(x) || '',
+            qty: x.qty || 0
+          }))
+        })
+      });
+      const emailResult = await emailRes.json().catch(() => null);
+      if(!emailRes.ok || emailResult?.email?.ok === false){
+        console.warn('Nie wysłano maila potwierdzającego zamówienie', emailResult);
+      }
+    } catch(mailError){
+      console.warn('Nie wysłano maila potwierdzającego zamówienie', mailError);
+    }
 
     $('orderMsg').textContent = 'OK, utworzono zamówienie: ' + (insertedOrder.data?.order_no || orderNo);
     ORDER_DRAFT = [];
