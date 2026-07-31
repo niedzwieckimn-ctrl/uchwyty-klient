@@ -654,7 +654,7 @@ function showNewInvoiceModal(noticeOrInvoice){
         title.style.color = '#166534';
       }
       text.style.color = '#166534';
-      text.innerHTML = `Faktura <b>${esc(inv.invoice_no || '')}</b> do zamówienia <b>${esc(inv.order_no || '')}</b> jest gotowa.`;
+      text.innerHTML = `Faktura <b>${esc(inv.invoice_no || '')}</b> do zamówienia <b>${esc(inv.order_no || '')}</b> jest gotowa.<br><span style="font-size:14px;">To okno przestanie się pojawiać po pobraniu faktury PDF.</span>`;
     }
     modal.classList.remove('hidden');
   } catch(e){
@@ -1275,6 +1275,23 @@ $('btnCreateOrder').onclick = async () => {
       await sbAuth.from('orders').delete().eq('id', orderId);
       throw itemsRes.error;
     }
+
+    fetch(`${MAGAZYN_API_BASE}/api/client_order_email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        order_id: orderId,
+        order_no: insertedOrder.data?.order_no || orderNo,
+        email,
+        customer_name: fallbackName,
+        note: p_note || '',
+        items: ORDER_DRAFT.map(x => ({
+          sku: x.sku || x.model || '',
+          name: x.name || productDisplayName(x) || '',
+          qty: x.qty || 0
+        }))
+      })
+    }).catch(() => {});
 
     $('orderMsg').textContent = 'OK, utworzono zamówienie: ' + (insertedOrder.data?.order_no || orderNo);
     ORDER_DRAFT = [];
