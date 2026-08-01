@@ -101,7 +101,7 @@
           <table id="stockTable">
             <thead>
               <tr>
-                <th>SKU</th><th>Nazwa</th><th>Netto B2B</th><th>Brutto klient</th><th>Dostępne</th>
+                <th>SKU</th><th>Nazwa</th><th>Netto B2B</th><th>Detal brutto</th><th>Dostępne</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -130,7 +130,7 @@
         <div style="overflow:auto;margin-top:10px">
           <table id="orderDraftTable">
             <thead>
-              <tr><th>SKU</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Ilość</th><th>Wartość brutto</th><th></th></tr>
+              <tr><th>SKU</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Detal brutto/szt</th><th>Ilość</th><th>Wartość brutto</th><th>Detal brutto</th><th></th></tr>
             </thead>
             <tbody></tbody>
           </table>
@@ -436,19 +436,29 @@ function orderDeliveryTimeLabel(it){
 }
 
 function renderOrderDetailsHtml(order, items, totals){
-  const rows = (items || []).map(it => `
+  const detailTotal = (items || []).reduce((sum, it) => {
+    return sum + calcClientGrossFromNet(it.net_price) * Number(it.qty || 0);
+  }, 0);
+  const rows = (items || []).map(it => {
+    const qty = Number(it.qty || 0);
+    const detailUnit = calcClientGrossFromNet(it.net_price);
+    const detailLine = detailUnit * qty;
+    return `
     <tr>
       <td>${esc(it.sku)}</td>
       <td>${esc(productDisplayName(it))}</td>
       <td>${formatMoney(it.net_price)}</td>
       <td>${formatMoney(it.gross_price)}</td>
-      <td>${Number(it.qty || 0)}</td>
+      <td>${formatMoney(detailUnit)}</td>
+      <td>${qty}</td>
       <td>${esc(orderDeliveryTimeLabel(it))}</td>
-      <td>${esc(it.realization_label || (Number(it.invoiced_qty || 0) >= Number(it.qty || 0) && Number(it.qty || 0) > 0 ? 'w całości' : `${Number(it.invoiced_qty || 0)} szt.`))}</td>
+      <td>${esc(it.realization_label || (Number(it.invoiced_qty || 0) >= qty && qty > 0 ? 'w całości' : `${Number(it.invoiced_qty || 0)} szt.`))}</td>
       <td>${formatMoney(it.line_net)}</td>
       <td>${formatMoney(it.line_gross)}</td>
+      <td>${formatMoney(detailLine)}</td>
     </tr>
-  `).join('') || '<tr><td colspan="9">Brak pozycji</td></tr>';
+  `;
+  }).join('') || '<tr><td colspan="11">Brak pozycji</td></tr>';
 
   return `
     <div class="card" style="margin:8px 0 0 0">
@@ -458,12 +468,12 @@ function renderOrderDetailsHtml(order, items, totals){
         <div class="muted">Email: ${esc(order.customer_email || '-')}</div>
         <div class="muted">Data: ${esc(String(order.created_at || '').replace('T',' ').slice(0,19))}</div>
         <div class="muted">Notatka: ${esc(order.note || '-')}</div>
-        <div style="margin-top:8px"><span class="badge">Netto: ${formatMoney(totals.net)}</span> <span class="badge">Brutto: ${formatMoney(totals.gross)}</span></div>
+        <div style="margin-top:8px"><span class="badge">Netto: ${formatMoney(totals.net)}</span> <span class="badge">Brutto: ${formatMoney(totals.gross)}</span> <span class="badge">Detal brutto: ${formatMoney(detailTotal)}</span></div>
       </div>
       <div style="overflow:auto;margin-top:10px">
         <table>
           <thead>
-            <tr><th>Model</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Zamówiono</th><th>Czas realizacji</th><th>Zrealizowane</th><th>Wartość netto</th><th>Wartość brutto</th></tr>
+            <tr><th>Model</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Detal brutto/szt</th><th>Zamówiono</th><th>Czas realizacji</th><th>Zrealizowane</th><th>Wartość netto</th><th>Wartość brutto</th><th>Detal brutto</th></tr>
           </thead>
           <tbody>${rows}</tbody>
         </table>
@@ -1146,27 +1156,32 @@ function renderOrderDraft(){
   const tb = $('orderDraftTable').querySelector('tbody');
 
   if(!ORDER_DRAFT.length){
-    tb.innerHTML = '<tr><td colspan="7">Brak pozycji</td></tr>';
+    tb.innerHTML = '<tr><td colspan="9">Brak pozycji</td></tr>';
   } else {
     tb.innerHTML = ORDER_DRAFT.map((it, idx) => {
-      const grossLine = Number(it.gross_price || 0) * Number(it.qty || 0);
+      const qty = Number(it.qty || 0);
+      const grossLine = Number(it.gross_price || 0) * qty;
+      const detailUnit = calcClientGrossFromNet(it.net_price);
+      const detailLine = detailUnit * qty;
       return `
       <tr>
         <td>${esc(it.sku)}</td>
         <td>${esc(productDisplayName(it))}</td>
         <td>${Number(it.net_price || 0).toFixed(2)}</td>
         <td>${Number(it.gross_price || 0).toFixed(2)}</td>
+        <td>${formatMoney(detailUnit)}</td>
         <td><input type="number" min="1" value="${it.qty}" data-qty-idx="${idx}" style="width:90px" /></td>
         <td>${grossLine.toFixed(2)}</td>
+        <td>${formatMoney(detailLine)}</td>
         <td><button class="btn" type="button" data-del-idx="${idx}">Usuń</button></td>
       </tr>
     `;
     }).join('');
   }
 
-  const totalNet = ORDER_DRAFT.reduce((sum, it) => sum + Number(it.net_price || 0) * Number(it.qty || 0), 0);
   const totalGross = ORDER_DRAFT.reduce((sum, it) => sum + Number(it.gross_price || 0) * Number(it.qty || 0), 0);
-  $('orderDraftSummary').textContent = `Pozycji: ${ORDER_DRAFT.length} | Netto: ${totalNet.toFixed(2)} | Brutto: ${totalGross.toFixed(2)}`;
+  const totalDetail = ORDER_DRAFT.reduce((sum, it) => sum + calcClientGrossFromNet(it.net_price) * Number(it.qty || 0), 0);
+  $('orderDraftSummary').textContent = `Pozycji: ${ORDER_DRAFT.length} | Brutto B2B: ${totalGross.toFixed(2)} | Detal brutto: ${formatMoney(totalDetail)}`;
 }
 
 function parseProductInputToId(txt){
