@@ -902,12 +902,14 @@ function esc(v){
 
 function renderDashboardModelSearch(){
   const out = $('dashboardModelResults');
-  const query = String($('dashboardModelSearch')?.value || '').trim().toLowerCase();
-  if(!query){
+  const queryRaw = String($('dashboardModelSearch')?.value || '').trim();
+  const query = queryRaw.toLowerCase();
+  if(!queryRaw){
     out.innerHTML = '<div class="muted">Zacznij wpisywać, aby sprawdzić dostępność.</div>';
     return;
   }
   const matches = STOCK_VIEW.filter(r => `${r.sku} ${r.model} ${r.name}`.toLowerCase().includes(query)).slice(0,8);
+  scheduleStockSearchLog(queryRaw, matches);
   out.innerHTML = matches.length ? matches.map(r => `
     <div class="model-hit"><div><b>${esc(r.model || r.sku)}</b><span class="muted">${esc(r.name || r.sku)}</span></div><div class="available">${Number(r.qty_total_visible || 0)} szt.</div></div>
   `).join('') : '<div class="muted">Nie znaleziono modelu.</div>';
@@ -1119,7 +1121,7 @@ function scheduleStockSearchLog(query, rows){
 
   STOCK_SEARCH_LOG_TIMER = setTimeout(() => {
     logStockSearch(cleanQuery, resultRows).catch(() => {});
-  }, 10000);
+  }, 2000);
 }
 
 async function logStockSearch(query, rows){
@@ -1127,7 +1129,6 @@ async function logStockSearch(query, rows){
   if(cleanQuery.length < 2) return;
 
   const resultRows = Array.isArray(rows) ? rows : [];
-  if(resultRows.length < 1) return;
 
   const normalizedQuery = cleanQuery.toLowerCase().replace(/\s+/g, '');
   const matches = resultRows
