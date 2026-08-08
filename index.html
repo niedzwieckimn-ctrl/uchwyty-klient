@@ -11,13 +11,14 @@
     :root{--navy:#12213d;--navy2:#0b1730;--blue:#5577ee;--blue2:#3f63dc;--mint:#31b98b;--red:#df5264;--ink:#17233c;--muted:#718096;--bg:#f5f6fa;--line:#e7eaf2;--shadow:0 12px 35px rgba(31,45,78,.07)}
     *{box-sizing:border-box}body{font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at 88% -10%,#eaf0ff 0,transparent 30%),var(--bg);margin:0;color:var(--ink);line-height:1.45}
     .top{position:fixed;inset:10px auto 10px 10px;width:245px;background:linear-gradient(165deg,var(--navy),var(--navy2));color:#fff;padding:22px 14px;border-radius:26px;z-index:1000;box-shadow:0 24px 50px rgba(10,24,54,.22);overflow-y:auto}.top-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:4px 9px 16px}.brand{font-size:19px;font-weight:800;letter-spacing:-.3px;width:100%;display:flex;align-items:center;gap:10px}.brand:before{content:"◇";display:grid;place-items:center;width:36px;height:36px;border:1px solid rgba(255,255,255,.3);border-radius:12px;background:rgba(255,255,255,.08)}.top .btn{padding:8px 11px;border-radius:12px;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.15);color:#fff;box-shadow:none}.who{color:#9cacc7;font-size:11px;overflow-wrap:anywhere}
-    .client-nav{display:flex;flex-direction:column;gap:5px;margin-top:6px}.client-nav a{color:#dce5f7;text-decoration:none;padding:11px 12px;border:0;border-radius:13px;background:transparent;display:flex;align-items:center;font-size:14px;font-weight:650;transition:.18s}.client-nav a:before{width:26px;font-size:16px}.client-nav a:nth-child(1):before{content:"▦"}.client-nav a:nth-child(2):before{content:"＋"}.client-nav a:nth-child(3):before{content:"▣"}.client-nav a:nth-child(4):before{content:"▤"}.client-nav a:nth-child(5):before{content:"⚙"}.client-nav a:nth-child(6):before{content:"▧"}.client-nav a:hover,.client-nav a.active{background:rgba(93,128,246,.25);color:#fff;transform:translateX(2px)}
+    .client-nav{display:flex;flex-direction:column;gap:5px;margin-top:6px}.client-nav a{color:#dce5f7;text-decoration:none;padding:11px 12px;border:0;border-radius:13px;background:transparent;display:flex;align-items:center;font-size:14px;font-weight:650;transition:.18s}.client-nav a:before{width:26px;font-size:16px}.client-nav a:nth-child(1):before{content:"⌂"}.client-nav a:nth-child(2):before{content:"▦"}.client-nav a:nth-child(3):before{content:"＋"}.client-nav a:nth-child(4):before{content:"▣"}.client-nav a:nth-child(5):before{content:"▤"}.client-nav a:nth-child(6):before{content:"⚙"}.client-nav a:nth-child(7):before{content:"▧"}.client-nav a:hover,.client-nav a.active{background:rgba(93,128,246,.25);color:#fff;transform:translateX(2px)}
     #orderSummaryBar{margin-top:18px!important;padding:14px 7px 0;border-top:1px solid rgba(255,255,255,.13);display:grid!important;gap:7px!important}#orderSummaryBar.hidden{display:none!important}#orderSummaryBar .badge{background:rgba(255,255,255,.07)!important;border-color:rgba(255,255,255,.1)!important;color:#e8eefc!important;padding:8px 10px!important;text-align:left}
     .wrap{max-width:1450px;margin:0 0 0 265px;padding:28px;min-height:100vh}.card{background:rgba(255,255,255,.95);border:1px solid rgba(226,230,239,.9);border-radius:22px;padding:20px;margin-bottom:16px;box-shadow:var(--shadow);overflow-x:auto}.section-block{animation:rise .22s ease}@keyframes rise{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
     .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 14px;border:1px solid #dce1eb;border-radius:13px;background:#fff;color:var(--ink);font-weight:650;cursor:pointer;box-shadow:0 3px 10px rgba(30,44,75,.04);transition:.18s}.btn:hover{transform:translateY(-1px);border-color:#bec8de;box-shadow:0 7px 16px rgba(30,44,75,.09)}.btn.primary{background:linear-gradient(135deg,var(--blue),var(--blue2));color:#fff;border-color:transparent}.btn:disabled{opacity:.6;cursor:wait;transform:none}
     label{display:block;color:#526079;font-size:12px;font-weight:700;margin:0 0 6px}input,textarea,select{width:100%;padding:11px 13px;border:1px solid #dfe3ec;border-radius:13px;background:#fbfcfe;color:var(--ink);font:inherit;font-size:14px;outline:none;transition:.18s}input:focus,textarea:focus,select:focus{border-color:#7892f3;background:#fff;box-shadow:0 0 0 4px rgba(85,119,238,.11)}
     table{width:100%;border-collapse:separate;border-spacing:0;min-width:680px}th,td{padding:12px 11px;border-bottom:1px solid #edf0f5;text-align:left;vertical-align:middle}th{background:#f8f9fc;color:#64718a;font-size:11px;text-transform:uppercase;letter-spacing:.45px}thead th:first-child{border-radius:12px 0 0 12px}thead th:last-child{border-radius:0 12px 12px 0}tbody tr:hover{background:#fafbff}.muted{color:var(--muted);font-size:12px}.hidden{display:none}.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}.row3{display:grid;grid-template-columns:1fr 140px 150px;gap:12px}.badge{display:inline-block;padding:5px 10px;border:1px solid #dfe4ef;border-radius:999px;background:#f8faff;color:#526079;font-size:11px;font-weight:700}.badge-paid{border-color:#c9efe2;background:#e8f9f3;color:#16835f}.badge-unpaid{border-color:#ffd7dc;background:#fff1f2;color:#be3b50}.invoices-more-row td{text-align:center;padding:16px}.status-chip{display:inline-block;padding:5px 10px;border-radius:999px;font-size:11px;font-weight:700}.status-new{background:#fff1f2;color:#be3b50}.status-confirmed{background:#e8f9f3;color:#16835f}.status-in-delivery{background:#edf3ff;color:#4166d3}.status-other{background:#f0f2f6;color:#667085}#qrScannerModal.hidden,#newInvoiceModal.hidden{display:none}h3{font-size:25px;letter-spacing:-.6px;margin:2px 0 16px}#authCard{max-width:760px;margin:12vh auto;padding:28px}
-    @media(max-width:980px){.top{position:relative;inset:auto;width:auto;margin:10px;border-radius:22px;padding:16px}.top-head{padding-bottom:8px}.brand{width:auto;margin-right:auto}.client-nav{flex-direction:row;overflow-x:auto;padding-bottom:5px}.client-nav a{white-space:nowrap}.client-nav a:before{display:none}#orderSummaryBar{display:flex!important}#orderSummaryBar.hidden{display:none!important}.wrap{margin:0;padding:10px 14px 70px}.row,.row3{grid-template-columns:1fr}}
+    .client-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}.client-metric{background:#fff;border:1px solid var(--line);border-radius:20px;padding:17px;box-shadow:var(--shadow)}.client-metric span{color:var(--muted);font-size:11px;font-weight:700}.client-metric b{display:block;font-size:27px;margin-top:5px}.dashboard-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:16px}.quick-model-result{display:grid;gap:8px;margin-top:12px}.model-hit{display:grid;grid-template-columns:1fr auto;gap:12px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fafbff}.model-hit b{display:block}.model-hit .available{color:#16835f;font-weight:800}.dashboard-list{display:grid;gap:8px}.dashboard-row{display:grid;grid-template-columns:1fr auto;gap:12px;padding:11px 2px;border-bottom:1px solid #edf0f5}.dashboard-row b{font-size:12px}.dashboard-row small{display:block;color:var(--muted);margin-top:3px}.dashboard-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    @media(max-width:980px){.top{position:relative;inset:auto;width:auto;margin:10px;border-radius:22px;padding:16px}.top-head{padding-bottom:8px}.brand{width:auto;margin-right:auto}.client-nav{flex-direction:row;overflow-x:auto;padding-bottom:5px}.client-nav a{white-space:nowrap}.client-nav a:before{display:none}#orderSummaryBar{display:flex!important}#orderSummaryBar.hidden{display:none!important}.wrap{margin:0;padding:10px 14px 70px}.row,.row3,.dashboard-grid{grid-template-columns:1fr}.client-metrics{grid-template-columns:1fr 1fr}}
     @media(max-width:560px){.card{padding:15px;border-radius:18px}h3{font-size:22px}.client-nav a{padding:9px 11px}#authCard{margin:5vh auto}}
   </style>
 </head>
@@ -29,6 +30,7 @@
       <span id="who" class="who"></span>
     </div>
     <div id="clientNav" class="client-nav hidden">
+      <a href="#" data-target="dashboardSection">Pulpit</a>
       <a href="#" data-target="stockSection">Stany magazynowe</a>
       <a href="#" data-target="orderSection">Złóż zamówienie</a>
       <a href="#" data-target="ordersSection">Moje zamówienia</a>
@@ -69,6 +71,20 @@
     </div>
 
     <div id="appArea" class="hidden">
+      <div class="section-block hidden" id="dashboardSection">
+        <div style="margin-bottom:18px"><h3 style="margin-bottom:4px">Pulpit klienta</h3><div class="muted">Najważniejsze informacje i szybkie sprawdzanie dostępności.</div></div>
+        <div class="client-metrics">
+          <div class="client-metric"><span>Zamówienia w toku</span><b id="dashOrdersOpen">0</b></div>
+          <div class="client-metric"><span>Zrealizowane</span><b id="dashOrdersDone">0</b></div>
+          <div class="client-metric"><span>Dostępne modele</span><b id="dashModelsAvailable">0</b></div>
+          <div class="client-metric"><span>Faktury nieopłacone</span><b id="dashInvoicesUnpaid">0</b></div>
+        </div>
+        <div class="dashboard-grid">
+          <div class="card"><h3 style="font-size:19px">Szybko sprawdź model</h3><div class="muted">Wpisz model, SKU albo fragment nazwy produktu.</div><input id="dashboardModelSearch" placeholder="np. CH010, Winsor..." style="margin-top:12px"><div id="dashboardModelResults" class="quick-model-result"><div class="muted">Zacznij wpisywać, aby sprawdzić dostępność.</div></div><div class="dashboard-actions"><button id="dashGoStock" class="btn" type="button">Pełne stany</button><button id="dashGoOrder" class="btn primary" type="button">Złóż zamówienie</button></div></div>
+          <div class="card"><h3 style="font-size:19px">Ostatnie zamówienia</h3><div id="dashboardRecentOrders" class="dashboard-list"><div class="muted">Ładowanie...</div></div><div class="dashboard-actions"><button id="dashGoOrders" class="btn" type="button">Wszystkie zamówienia</button></div></div>
+          <div class="card"><h3 style="font-size:19px">Ostatnie faktury</h3><div id="dashboardRecentInvoices" class="dashboard-list"><div class="muted">Ładowanie...</div></div></div>
+        </div>
+      </div>
       <div class="card section-block hidden" id="stockSection">
         <h3>Stany magazynowe</h3>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
@@ -269,6 +285,8 @@ const authCard=$('authCard'), appArea=$('appArea'), who=$('who'), btnLogout=$('b
 
 let STOCK_RAW = [];
 let STOCK_VIEW = [];
+let CLIENT_ORDERS = [];
+let CLIENT_INVOICES = [];
 let ORDER_DRAFT = [];
 let ORDER_CREATE_IN_FLIGHT = false;
 let ORDER_IDEMPOTENCY_KEY = null;
@@ -767,6 +785,8 @@ async function fetchInvoicesFromSupabase(email){
     const email = encodeURIComponent(emailRaw);
     const payload = await fetchMagazynJson(`/api/client_invoices?email=${email}`);
       const rows = sortInvoicesNewest(payload.invoices || []);
+      CLIENT_INVOICES = rows;
+      renderClientDashboard();
 
       if(!rows.length){
         tb.innerHTML = '<tr><td colspan="6">Brak faktur</td></tr>';
@@ -876,6 +896,37 @@ function esc(v){
     .replace(/'/g, '&#39;');
 }
 
+function renderDashboardModelSearch(){
+  const out = $('dashboardModelResults');
+  const query = String($('dashboardModelSearch')?.value || '').trim().toLowerCase();
+  if(!query){
+    out.innerHTML = '<div class="muted">Zacznij wpisywać, aby sprawdzić dostępność.</div>';
+    return;
+  }
+  const matches = STOCK_VIEW.filter(r => `${r.sku} ${r.model} ${r.name}`.toLowerCase().includes(query)).slice(0,8);
+  out.innerHTML = matches.length ? matches.map(r => `
+    <div class="model-hit"><div><b>${esc(r.model || r.sku)}</b><span class="muted">${esc(r.name || r.sku)}</span></div><div class="available">${Number(r.qty_total_visible || 0)} szt.</div></div>
+  `).join('') : '<div class="muted">Nie znaleziono modelu.</div>';
+}
+
+function renderClientDashboard(){
+  const openStatuses = new Set(['new','pending','unconfirmed','confirmed','packed','in_delivery','shipped']);
+  $('dashOrdersOpen').textContent = String(CLIENT_ORDERS.filter(o => openStatuses.has(String(o.status || '').toLowerCase())).length);
+  $('dashOrdersDone').textContent = String(CLIENT_ORDERS.filter(o => String(o.status || '').toLowerCase() === 'issued').length);
+  $('dashModelsAvailable').textContent = String(STOCK_VIEW.filter(r => Number(r.qty_total_visible || 0) > 0).length);
+  $('dashInvoicesUnpaid').textContent = String(CLIENT_INVOICES.filter(inv => !invoiceIsPaid(inv)).length);
+
+  $('dashboardRecentOrders').innerHTML = CLIENT_ORDERS.slice(0,5).map(o => {
+    const st = orderStatusMeta(o.status);
+    return `<div class="dashboard-row"><div><b>${esc(displayOrderLabel(o))}</b><small>${esc(String(o.created_at || '').replace('T',' ').slice(0,16))}</small></div><span class="status-chip ${st.cls}">${esc(st.label)}</span></div>`;
+  }).join('') || '<div class="muted">Brak zamówień.</div>';
+
+  $('dashboardRecentInvoices').innerHTML = CLIENT_INVOICES.slice(0,5).map(inv => `
+    <div class="dashboard-row"><div><b>${esc(inv.invoice_no || '')}</b><small>${esc(inv.issue_date || '')}</small></div><span class="badge ${invoiceIsPaid(inv) ? 'badge-paid' : 'badge-unpaid'}">${invoiceIsPaid(inv) ? 'Opłacona' : 'Nieopłacona'}</span></div>
+  `).join('') || '<div class="muted">Brak faktur.</div>';
+  renderDashboardModelSearch();
+}
+
 function showAuth(msg='') {
   authCard.classList.remove('hidden');
   appArea.classList.add('hidden');
@@ -893,8 +944,8 @@ function showApp(email) {
   btnLogout.classList.remove('hidden');
   $('clientNav').classList.remove('hidden');
   $('orderSummaryBar').classList.remove('hidden');
-  hideAllSections();
   who.textContent=email;
+  openSection('dashboardSection');
 }
 
 async function getSession(){
@@ -924,7 +975,10 @@ async function loadSession(force = false) {
    try {
     const session = await getSession();
     if(!session){ showAuth(); return; }
-    if(!force && LOADED_USER_ID === session.user?.id) return;
+    if(!force && LOADED_USER_ID === session.user?.id){
+      if(!document.querySelector('.section-block:not(.hidden)')) openSection('dashboardSection');
+      return;
+    }
 
     showApp(session.user?.email || 'zalogowany');
     $('authMsg').textContent = '';
@@ -1139,6 +1193,7 @@ async function loadStock(force = false){
     }));
 
     STOCK_VIEW = STOCK_RAW.map(normalizeStockRow);
+    renderClientDashboard();
     renderStockTable();
     rebuildOrderProductList();
     LAST_LOADED.stock = Date.now();
@@ -1328,7 +1383,9 @@ async function loadOrders(force = false){
   try {
     const bundle = await fetchOrdersBundle();
     const orders = bundle.orders || [];
+    CLIENT_ORDERS = orders;
     updateOrderSummaryBar(orders);
+    renderClientDashboard();
 
     if(!orders.length){
       tb.innerHTML = '<tr><td colspan="5">Brak zamówień</td></tr>';
@@ -1402,11 +1459,20 @@ if ($('btnLoadInvoices')) $('btnLoadInvoices').onclick = () => {
 };
 $('btnShowOrderByCode').onclick = () => showOrderByCode();
 
+$('dashboardModelSearch').oninput = renderDashboardModelSearch;
+$('dashGoStock').onclick = () => openSection('stockSection');
+$('dashGoOrder').onclick = async () => { openSection('orderSection'); await loadStock(false); renderOrderDraft(); };
+$('dashGoOrders').onclick = async () => { openSection('ordersSection'); await loadOrders(false); };
+
 
 document.querySelectorAll('#clientNav [data-target]').forEach(link => {
   link.onclick = async (e) => {
     e.preventDefault();
     openSection(link.dataset.target);
+
+    if(link.dataset.target === 'dashboardSection'){
+      renderClientDashboard();
+    }
 
     if(link.dataset.target === 'stockSection'){
       await loadStock(false);
