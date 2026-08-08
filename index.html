@@ -393,7 +393,12 @@ async function fetchMagazynJson(path, options = {}){
 
   for(let attempt = 1; attempt <= attempts; attempt++){
     try {
-      const res = await fetch(`${MAGAZYN_API_BASE}${path}`, { cache: 'no-store' });
+      const session = await getSession();
+      if(!session?.access_token) throw new Error('Brak aktywnej sesji. Zaloguj się ponownie.');
+      const res = await fetch(`${MAGAZYN_API_BASE}${path}`, {
+        cache: 'no-store',
+        headers: { 'Authorization': `Bearer ${session.access_token}` }
+      });
       if(!res.ok){
         throw new Error(`Magazyn API: ${res.status}`);
       }
@@ -546,21 +551,20 @@ function markInvoiceSeenAndOpenPdf(inv){
     try {
       const session = await getSession();
       if(!session?.user?.email) throw new Error('Brak sesji.');
-      const emailRaw = session.user.email.trim().toLowerCase();
-      const email = encodeURIComponent(emailRaw);
-      const downloadUrl = `${MAGAZYN_API_BASE}/api/invoices/${inv.id}/download?email=${email}`;
-
-      if(pdfWindow){
-        pdfWindow.location.replace(downloadUrl);
-      } else {
-        window.location.href = downloadUrl;
-      }
+      const downloadUrl = `${MAGAZYN_API_BASE}/api/invoices/${inv.id}/download`;
+      const pdfResponse = await fetch(downloadUrl, { headers: { 'Authorization': `Bearer ${session.access_token}` } });
+      if(!pdfResponse.ok) throw new Error(`PDF HTTP ${pdfResponse.status}`);
+      const pdfBlob = await pdfResponse.blob();
+      const objectUrl = URL.createObjectURL(pdfBlob);
+      if(pdfWindow) pdfWindow.location.replace(objectUrl); else window.location.href = objectUrl;
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
 
       hideInvoiceNoticeModal();
 
       // Oznaczenie jako przeczytana nie opóźnia już otwarcia pliku.
-      fetch(`${MAGAZYN_API_BASE}/api/invoices/${inv.id}/seen?email=${email}`, {
-        method:'POST'
+      fetch(`${MAGAZYN_API_BASE}/api/invoices/${inv.id}/seen`, {
+        method:'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}` }
       }).catch(() => {});
       LAST_LOADED.invoices = 0;
       setTimeout(showNextInvoiceNotice, 200);
@@ -1142,11 +1146,15 @@ async function logStockSearch(query, rows){
 
   const session = await getSession();
   const email = String(session?.user?.email || '').trim().toLowerCase();
-  if(!email) return;
+  const accessToken = String(session?.access_token || '');
+  if(!email || !accessToken) return;
 
   await fetch(`${MAGAZYN_API_BASE}/api/client_search_log`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${accessToken}`
+    },
     body: JSON.stringify({
       email,
       name: email,
