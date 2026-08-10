@@ -305,6 +305,16 @@ let STOCK_SEARCH_LOG_TIMER = null;
 let LAST_STOCK_SEARCH_LOG_KEY = '';
 let INVOICES_SHOW_ALL = false;
 
+// Jednorazowo usuń stare migawki stanów utworzone przez poprzednią wersję.
+// Aktualna wersja nie zapisuje ani nie odczytuje stanów z przeglądarki.
+try {
+  const legacyStockPrefix = 'niedzwieccy-stock-v1:';
+  for(let i = localStorage.length - 1; i >= 0; i--){
+    const key = localStorage.key(i) || '';
+    if(key.startsWith(legacyStockPrefix)) localStorage.removeItem(key);
+  }
+} catch(e) {}
+
 function cacheIsFresh(key){
   return Date.now() - LAST_LOADED[key] < DATA_CACHE_MS;
 }
@@ -992,9 +1002,9 @@ async function loadSession(force = false) {
 
     await Promise.allSettled([
       loadStock(false),
-      loadOrders(false),
-      loadInvoices(true, false)
+      loadOrders(false)
     ]);
+    await loadInvoices(true, false);
   } catch(error){
     showAuth('Błąd sesji: ' + error.message);
   }
@@ -1068,6 +1078,25 @@ function normalizeStockRow(r){
     qty_in_delivery: inDelivery,
     qty_total_visible: total
   };
+}
+
+function applyStockCatalogRows(rows){
+  const safeRows = Array.isArray(rows) ? rows : [];
+  STOCK_RAW = safeRows.map(r => ({
+    product_id: Number(r.product_id),
+    sku: r.sku || '',
+    model: r.model || '',
+    name: r.name || '',
+    net_price: Number(r.net_price || 0),
+    gross_price: Number(r.gross_price || 0),
+    qty_on_stock: Number(r.qty_on_stock || 0),
+    qty_in_delivery: 0,
+    qty_total_visible: Number(r.qty_on_stock || 0)
+  }));
+  STOCK_VIEW = STOCK_RAW.map(normalizeStockRow);
+  renderClientDashboard();
+  renderStockTable();
+  rebuildOrderProductList();
 }
 
 function renderStockTable(){
@@ -1178,44 +1207,24 @@ function rebuildOrderProductList(){
 }
 
 async function loadStock(force = false){
-  if(!force && cacheIsFresh('stock') && STOCK_VIEW.length) return;
   if(LOAD_IN_FLIGHT.stock) return LOAD_IN_FLIGHT.stock;
 
   LOAD_IN_FLIGHT.stock = (async () => {
   const tb = $('stockTable').querySelector('tbody');
-  tb.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
+  tb.innerHTML = '<tr><td colspan="6">Pobieranie aktualnych stanów z Supabase...</td></tr>';
 
   try {
     const payload = await fetchMagazynJson('/api/client_stock_catalog');
     const rows = payload.rows || [];
-
-    STOCK_RAW = rows.map(r => ({
-      product_id: Number(r.product_id),
-      sku: r.sku || '',
-      model: r.model || '',
-      name: r.name || '',
-      net_price: Number(r.net_price || 0),
-      gross_price: Number(r.gross_price || 0),
-      qty_on_stock: Number(r.qty_on_stock || 0),
-      qty_in_delivery: 0,
-      qty_total_visible: Number(r.qty_on_stock || 0)
-    }));
-
-    STOCK_VIEW = STOCK_RAW.map(normalizeStockRow);
-    renderClientDashboard();
-    renderStockTable();
-    rebuildOrderProductList();
+    applyStockCatalogRows(rows);
     LAST_LOADED.stock = Date.now();
   } catch(error){
-    if(isAbortLikeError(error)){
-      if(STOCK_VIEW.length){
-        renderStockTable();
-      } else {
-        tb.innerHTML = '<tr><td colspan="6">Dane są odświeżane. Spróbuj ponownie za chwilę.</td></tr>';
-      }
-      return;
-    }
-    tb.innerHTML = '<tr><td colspan="6">Nie udało się odświeżyć danych. Spróbuj ponownie za chwilę.</td></tr>';
+    applyStockCatalogRows([]);
+    LAST_LOADED.stock = 0;
+    const message = isAbortLikeError(error)
+      ? 'Pobieranie przerwano. Kliknij „Odśwież stany”, aby pobrać bieżące dane z Supabase.'
+      : 'Nie udało się pobrać aktualnych danych z Supabase. Poprzednich stanów nie pokazano.';
+    tb.innerHTML = `<tr><td colspan="6">${message}</td></tr>`;
   }
   })();
 
@@ -1485,6 +1494,7 @@ document.querySelectorAll('#clientNav [data-target]').forEach(link => {
     openSection(link.dataset.target);
 
     if(link.dataset.target === 'dashboardSection'){
+      await loadStock(false);
       renderClientDashboard();
     }
 
