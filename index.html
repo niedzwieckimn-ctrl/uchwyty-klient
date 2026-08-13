@@ -100,7 +100,7 @@
           <table id="stockTable">
             <thead>
               <tr>
-                <th>SKU</th><th data-i18n="common.name">Nazwa</th><th data-i18n="stock.netB2b">Netto B2B</th><th data-i18n="stock.clientGross">Brutto klient</th><th data-i18n="stock.available">Dostępne</th>
+                <th>SKU</th><th data-i18n="common.name">Nazwa</th><th id="stockPriceHead" data-i18n="stock.netB2b">Netto B2B</th><th id="stockRetailHead" data-i18n="stock.clientGross">Brutto klient</th><th data-i18n="stock.available">Dostępne</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -129,7 +129,7 @@
         <div style="overflow:auto;margin-top:10px">
           <table id="orderDraftTable">
             <thead>
-              <tr><th>SKU</th><th data-i18n="common.name">Nazwa</th><th data-i18n="orders.netB2bUnit">Netto B2B/szt</th><th data-i18n="orders.grossB2bUnit">Brutto B2B/szt</th><th data-i18n="orders.retailGrossUnit">Brutto detal/szt</th><th data-i18n="common.quantity">Ilość</th><th data-i18n="orders.grossB2bValue">Wartość brutto B2B</th><th data-i18n="orders.retailGrossValue">Wartość brutto detal</th><th></th></tr>
+              <tr><th>SKU</th><th data-i18n="common.name">Nazwa</th><th id="draftPriceHead" data-i18n="orders.netB2bUnit">Netto B2B/szt</th><th class="pln-only-price" data-i18n="orders.grossB2bUnit">Brutto B2B/szt</th><th id="draftRetailHead" data-i18n="orders.retailGrossUnit">Brutto detal/szt</th><th data-i18n="common.quantity">Ilość</th><th id="draftValueHead" class="pln-only-price" data-i18n="orders.grossB2bValue">Wartość brutto B2B</th><th id="draftRetailValueHead" data-i18n="orders.retailGrossValue">Wartość brutto detal</th><th></th></tr>
             </thead>
             <tbody></tbody>
           </table>
@@ -344,7 +344,11 @@ Object.assign(PL_TRANSLATIONS, {
   'common.refreshFailed':'Nie udało się odświeżyć danych. Spróbuj ponownie za chwilę.',
   'common.requestFailed':'Żądanie nie powiodło się.',
   'orders.fastDelivery':'1–3 dni', 'orders.slowDelivery':'10–20 dni',
-  'orders.realizationCount':'{done} {unit}'
+  'orders.realizationCount':'{done} {unit}',
+  'price.eur':'Cena EUR', 'price.uvp':'UVP', 'price.eurUnit':'Cena EUR/szt.',
+  'price.uvpUnit':'UVP/szt.', 'price.orderValue':'Wartość zamówienia',
+  'price.uvpValue':'Wartość UVP', 'price.eurSummary':'Pozycji: {count} | Razem: {total} | UVP: {retail}',
+  'price.unavailable':'Ten produkt nie ma ceny w przypisanym cenniku.'
 });
 
 Object.assign(TRANSLATIONS.de, {
@@ -365,7 +369,11 @@ Object.assign(TRANSLATIONS.de, {
   'orders.summary':'Positionen: {count} | Netto B2B: {net} | Brutto B2B: {gross} | Brutto Einzelhandel: {retail}',
   'orders.netUnit':'Netto/Stk.', 'orders.grossUnit':'Brutto/Stk.', 'orders.netValue':'Nettowert',
   'orders.grossValue':'Bruttowert', 'orders.fastDelivery':'1–3 Tage', 'orders.slowDelivery':'10–20 Tage',
-  'orders.realizationCount':'{done} {unit}'
+  'orders.realizationCount':'{done} {unit}',
+  'price.eur':'Preis EUR', 'price.uvp':'UVP', 'price.eurUnit':'Preis EUR/Stk.',
+  'price.uvpUnit':'UVP/Stk.', 'price.orderValue':'Bestellwert',
+  'price.uvpValue':'UVP-Wert', 'price.eurSummary':'Positionen: {count} | Gesamt: {total} | UVP: {retail}',
+  'price.unavailable':'Für dieses Produkt ist in der zugewiesenen Preisliste kein Preis hinterlegt.'
 });
 
 Object.assign(TRANSLATIONS.en, {
@@ -386,7 +394,11 @@ Object.assign(TRANSLATIONS.en, {
   'orders.summary':'Items: {count} | Net B2B: {net} | Gross B2B: {gross} | Retail gross: {retail}',
   'orders.netUnit':'Net/unit', 'orders.grossUnit':'Gross/unit', 'orders.netValue':'Net value',
   'orders.grossValue':'Gross value', 'orders.fastDelivery':'1–3 days', 'orders.slowDelivery':'10–20 days',
-  'orders.realizationCount':'{done} {unit}'
+  'orders.realizationCount':'{done} {unit}',
+  'price.eur':'EUR price', 'price.uvp':'RRP', 'price.eurUnit':'EUR price/unit',
+  'price.uvpUnit':'RRP/unit', 'price.orderValue':'Order value',
+  'price.uvpValue':'RRP value', 'price.eurSummary':'Items: {count} | Total: {total} | RRP: {retail}',
+  'price.unavailable':'This product has no price in the assigned price list.'
 });
 
 Object.assign(TRANSLATIONS.es, {
@@ -407,7 +419,11 @@ Object.assign(TRANSLATIONS.es, {
   'orders.summary':'Artículos: {count} | Neto B2B: {net} | Bruto B2B: {gross} | Bruto minorista: {retail}',
   'orders.netUnit':'Neto/ud.', 'orders.grossUnit':'Bruto/ud.', 'orders.netValue':'Valor neto',
   'orders.grossValue':'Valor bruto', 'orders.fastDelivery':'1–3 días', 'orders.slowDelivery':'10–20 días',
-  'orders.realizationCount':'{done} {unit}'
+  'orders.realizationCount':'{done} {unit}',
+  'price.eur':'Precio EUR', 'price.uvp':'PVP', 'price.eurUnit':'Precio EUR/ud.',
+  'price.uvpUnit':'PVP/ud.', 'price.orderValue':'Valor del pedido',
+  'price.uvpValue':'Valor PVP', 'price.eurSummary':'Artículos: {count} | Total: {total} | PVP: {retail}',
+  'price.unavailable':'Este producto no tiene precio en la tarifa asignada.'
 });
 
 Object.assign(TRANSLATIONS.it, {
@@ -428,7 +444,11 @@ Object.assign(TRANSLATIONS.it, {
   'orders.summary':'Articoli: {count} | Netto B2B: {net} | Lordo B2B: {gross} | Lordo al dettaglio: {retail}',
   'orders.netUnit':'Netto/pz.', 'orders.grossUnit':'Lordo/pz.', 'orders.netValue':'Valore netto',
   'orders.grossValue':'Valore lordo', 'orders.fastDelivery':'1–3 giorni', 'orders.slowDelivery':'10–20 giorni',
-  'orders.realizationCount':'{done} {unit}'
+  'orders.realizationCount':'{done} {unit}',
+  'price.eur':'Prezzo EUR', 'price.uvp':'Prezzo consigliato', 'price.eurUnit':'Prezzo EUR/pz.',
+  'price.uvpUnit':'Prezzo consigliato/pz.', 'price.orderValue':'Valore ordine',
+  'price.uvpValue':'Valore consigliato', 'price.eurSummary':'Articoli: {count} | Totale: {total} | Prezzo consigliato: {retail}',
+  'price.unavailable':'Questo prodotto non ha un prezzo nel listino assegnato.'
 });
 
 function normalizeLanguage(value){
@@ -456,6 +476,7 @@ function applyTranslations(){
   document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
   document.querySelectorAll('[data-i18n-aria-label]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAriaLabel)); });
   document.querySelectorAll('[data-language]').forEach(btn => btn.classList.toggle('active', btn.dataset.language === CURRENT_LANGUAGE));
+  applyPriceModeLabels();
 }
 
 function setLanguage(value, rerender = true){
@@ -629,6 +650,32 @@ function formatCurrency(v, currency = 'PLN'){
   }).format(Number(v || 0));
 }
 
+function currentPriceList(){
+  return String(CURRENT_CUSTOMER?.price_list || 'pln').toLowerCase() === 'eu_eur' ? 'eu_eur' : 'pln';
+}
+
+function currentPriceCurrency(){
+  return String(CURRENT_CUSTOMER?.currency || (currentPriceList() === 'eu_eur' ? 'EUR' : 'PLN')).toUpperCase();
+}
+
+function isEurPriceList(){
+  return currentPriceList() === 'eu_eur';
+}
+
+function formatPrice(v, currency = currentPriceCurrency()){
+  return formatCurrency(v, String(currency || currentPriceCurrency()).toUpperCase());
+}
+
+function applyPriceModeLabels(){
+  const eur = isEurPriceList();
+  if($('stockPriceHead')) $('stockPriceHead').textContent = eur ? t('price.eur') : t('stock.netB2b');
+  if($('stockRetailHead')) $('stockRetailHead').textContent = eur ? t('price.uvp') : t('stock.clientGross');
+  if($('draftPriceHead')) $('draftPriceHead').textContent = eur ? t('price.eurUnit') : t('orders.netB2bUnit');
+  if($('draftRetailHead')) $('draftRetailHead').textContent = eur ? t('price.uvpUnit') : t('orders.retailGrossUnit');
+  if($('draftRetailValueHead')) $('draftRetailValueHead').textContent = eur ? t('price.uvpValue') : t('orders.retailGrossValue');
+  document.querySelectorAll('.pln-only-price').forEach(el => el.classList.toggle('hidden', eur));
+}
+
 function formatDate(value, withTime = false){
   if(!value) return '—';
   const raw = String(value);
@@ -711,29 +758,33 @@ function orderRealizationLabel(it){
 }
 
 function renderOrderDetailsHtml(order, items, totals){
+  const currency = String(order?.currency || items?.[0]?.currency || currentPriceCurrency()).toUpperCase();
   const rows = (items || []).map(it => `
     <tr>
       <td>${esc(it.sku)}</td>
       <td>${esc(productDisplayName(it))}</td>
-      <td>${formatMoney(it.net_price)}</td>
-      <td>${formatMoney(it.gross_price)}</td>
+      <td>${formatPrice(it.net_price, it.currency || currency)}</td>
+      <td>${formatPrice(it.gross_price, it.currency || currency)}</td>
       <td>${Number(it.qty || 0)}</td>
       <td>${esc(orderDeliveryTimeLabel(it))}</td>
       <td>${esc(orderRealizationLabel(it))}</td>
-      <td>${formatMoney(it.line_net)}</td>
-      <td>${formatMoney(it.line_gross)}</td>
+      <td>${formatPrice(it.line_net, it.currency || currency)}</td>
+      <td>${formatPrice(it.line_gross, it.currency || currency)}</td>
     </tr>
   `).join('') || `<tr><td colspan="9">${esc(t('orders.noItems'))}</td></tr>`;
 
   return `
     <div class="card" style="margin:8px 0 0 0">
-      <div>
-        <div><b>${esc(displayOrderLabel(order))}</b></div>
-        <div class="muted" style="margin-top:6px">${esc(t('common.customer'))}: ${esc(order.customer_name || '-')}</div>
-        <div class="muted">${esc(t('common.email'))}: ${esc(order.customer_email || '-')}</div>
-        <div class="muted">${esc(t('common.date'))}: ${esc(formatDate(order.created_at, true))}</div>
-        <div class="muted">${esc(t('common.note'))}: ${esc(order.note || '-')}</div>
-        <div style="margin-top:8px"><span class="badge">${esc(t('common.net'))}: ${formatMoney(totals.net)}</span> <span class="badge">${esc(t('common.gross'))}: ${formatMoney(totals.gross)}</span></div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap">
+        <div>
+          <div><b>${esc(displayOrderLabel(order))}</b></div>
+          <div class="muted" style="margin-top:6px">${esc(t('common.customer'))}: ${esc(order.customer_name || '-')}</div>
+          <div class="muted">${esc(t('common.email'))}: ${esc(order.customer_email || '-')}</div>
+          <div class="muted">${esc(t('common.date'))}: ${esc(formatDate(order.created_at, true))}</div>
+          <div class="muted">${esc(t('common.note'))}: ${esc(order.note || '-')}</div>
+          <div style="margin-top:8px"><span class="badge">${esc(t('common.net'))}: ${formatPrice(totals.net, currency)}</span> <span class="badge">${esc(t('common.gross'))}: ${formatPrice(totals.gross, currency)}</span></div>
+        </div>
+        <button class="btn primary" type="button" data-inline-pdf-order="${Number(order?.id || 0)}">${esc(t('orders.downloadPdf'))}</button>
       </div>
       <div style="overflow:auto;margin-top:10px">
         <table>
@@ -776,6 +827,25 @@ function downloadOrderPdf(order){
   })();
 }
 
+function wireOrderPdfButton(button, order){
+  if(!button || !order) return;
+  button.onclick = async () => {
+    button.disabled = true;
+    try {
+      await downloadOrderPdf(order);
+    } catch(error){
+      alert(t('orders.pdfFailed', { error:clientErrorDetail(error) }));
+    } finally {
+      button.disabled = false;
+    }
+  };
+}
+
+function wireInlineOrderPdf(root, order){
+  if(!root) return;
+  wireOrderPdfButton(root.querySelector('[data-inline-pdf-order]'), order);
+}
+
 async function fetchOrdersBundle(){
   const session = await getSession();
   if(!session?.user?.email) throw new Error(t('auth.noSession'));
@@ -783,7 +853,7 @@ async function fetchOrdersBundle(){
 
   const ordersRes = await sbAuth
     .from('orders')
-    .select('id,order_no,qr_data_url,status,created_at,customer_name,customer_email,note')
+    .select('id,order_no,qr_data_url,status,created_at,customer_name,customer_email,note,currency,price_list')
     .ilike('customer_email', email)
     .order('created_at', { ascending:false })
     .limit(200);
@@ -814,14 +884,18 @@ async function fetchOrderDetails(order){
     realization_label: it.realization_label || '',
     net_price: Number(it.net_price || 0),
     gross_price: Number(it.gross_price || 0),
+    retail_price: Number(it.retail_price || 0),
+    currency: String(it.currency || payload.order?.currency || order?.currency || 'PLN').toUpperCase(),
     line_net: Number(it.line_value_net || 0),
-    line_gross: Number(it.line_value_gross || 0)
+    line_gross: Number(it.line_value_gross || 0),
+    line_retail: Number(it.line_value_retail || 0)
   }));
   const totals = {
     net: Number(payload.order?.total_net ?? payload.total_net ?? 0),
-    gross: Number(payload.order?.total_gross ?? payload.total_gross ?? 0)
+    gross: Number(payload.order?.total_gross ?? payload.total_gross ?? 0),
+    retail: Number(payload.order?.total_retail ?? payload.total_retail ?? 0)
   };
-  return { items, totals };
+  return { order:{ ...order, ...(payload.order || {}) }, items, totals };
 }
 
 function parseOrderCode(value){
@@ -1192,6 +1266,7 @@ async function showOrderByCode(rawCode){
     }
     const { items, totals } = await fetchOrderDetails(order);
     out.innerHTML = renderOrderDetailsHtml(order, items, totals);
+    wireInlineOrderPdf(out, order);
     out.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch(error){
     out.innerHTML = `<div class="muted">${esc(t('common.error', { error:clientErrorDetail(error) }))}</div>`;
@@ -1401,6 +1476,10 @@ function normalizeStockRow(r){
     name: r.name || '',
     net_price: Number(r.net_price || 0),
     gross_price: Number(r.gross_price || 0),
+    retail_price: Number(r.retail_price || 0),
+    currency: String(r.currency || currentPriceCurrency()).toUpperCase(),
+    price_list: String(r.price_list || currentPriceList()),
+    price_available: r.price_available !== false && Number(r.net_price || 0) > 0,
     qty_on_stock: onStock,
     qty_in_delivery: inDelivery,
     qty_total_visible: total
@@ -1416,6 +1495,10 @@ function applyStockCatalogRows(rows){
     name: r.name || '',
     net_price: Number(r.net_price || 0),
     gross_price: Number(r.gross_price || 0),
+    retail_price: Number(r.retail_price || 0),
+    currency: String(r.currency || currentPriceCurrency()).toUpperCase(),
+    price_list: String(r.price_list || currentPriceList()),
+    price_available: r.price_available !== false && Number(r.net_price || 0) > 0,
     qty_on_stock: Number(r.qty_on_stock || 0),
     qty_in_delivery: 0,
     qty_total_visible: Number(r.qty_on_stock || 0)
@@ -1456,13 +1539,14 @@ function renderStockTable(){
   }
 
   tb.innerHTML = rows.map(r => {
-    const hasPrice = Number(r.net_price || 0) > 0;
+    const hasPrice = r.price_available !== false && Number(r.net_price || 0) > 0;
+    const retailPrice = Number(r.retail_price || 0) || calcClientGrossFromNet(r.net_price);
     return `
     <tr>
       <td>${esc(r.sku)}</td>
       <td>${esc(productDisplayName(r))}</td>
-      <td>${hasPrice ? formatMoney(r.net_price) : '—'}</td>
-      <td>${hasPrice ? formatMoney(calcClientGrossFromNet(r.net_price)) : '—'}</td>
+      <td>${hasPrice ? formatPrice(r.net_price, r.currency) : '—'}</td>
+      <td>${hasPrice ? formatPrice(retailPrice, r.currency) : '—'}</td>
       <td>${r.qty_on_stock}</td>
     </tr>
   `;
@@ -1543,6 +1627,12 @@ async function loadStock(force = false){
   try {
     const payload = await fetchMagazynJson('/api/client_stock_catalog');
     const rows = payload.rows || [];
+    CURRENT_CUSTOMER = {
+      ...(CURRENT_CUSTOMER || {}),
+      price_list: payload.price_list || rows[0]?.price_list || CURRENT_CUSTOMER?.price_list || 'pln',
+      currency: payload.currency || rows[0]?.currency || CURRENT_CUSTOMER?.currency || 'PLN'
+    };
+    applyPriceModeLabels();
     applyStockCatalogRows(rows);
     LAST_LOADED.stock = Date.now();
   } catch(error){
@@ -1571,18 +1661,18 @@ function renderOrderDraft(){
   } else {
     tb.innerHTML = ORDER_DRAFT.map((it, idx) => {
       const grossLine = Number(it.gross_price || 0) * Number(it.qty || 0);
-      const retailGrossUnit = calcClientGrossFromNet(it.net_price);
+      const retailGrossUnit = Number(it.retail_price || 0) || calcClientGrossFromNet(it.net_price);
       const retailGrossLine = retailGrossUnit * Number(it.qty || 0);
       return `
       <tr>
         <td>${esc(it.sku)}</td>
         <td>${esc(productDisplayName(it))}</td>
-        <td>${formatMoney(it.net_price)}</td>
-        <td>${formatMoney(it.gross_price)}</td>
-        <td>${formatMoney(retailGrossUnit)}</td>
+        <td>${formatPrice(it.net_price, it.currency)}</td>
+        <td class="pln-only-price ${isEurPriceList() ? 'hidden' : ''}">${formatPrice(it.gross_price, it.currency)}</td>
+        <td>${formatPrice(retailGrossUnit, it.currency)}</td>
         <td><input type="number" min="1" value="${it.qty}" data-qty-idx="${idx}" style="width:90px" /></td>
-        <td>${formatMoney(grossLine)}</td>
-        <td>${formatMoney(retailGrossLine)}</td>
+        <td class="pln-only-price ${isEurPriceList() ? 'hidden' : ''}">${formatPrice(grossLine, it.currency)}</td>
+        <td>${formatPrice(retailGrossLine, it.currency)}</td>
         <td><button class="btn" type="button" data-del-idx="${idx}">${esc(t('common.delete'))}</button></td>
       </tr>
     `;
@@ -1591,13 +1681,20 @@ function renderOrderDraft(){
 
   const totalNet = ORDER_DRAFT.reduce((sum, it) => sum + Number(it.net_price || 0) * Number(it.qty || 0), 0);
   const totalGross = ORDER_DRAFT.reduce((sum, it) => sum + Number(it.gross_price || 0) * Number(it.qty || 0), 0);
-  const totalRetailGross = ORDER_DRAFT.reduce((sum, it) => sum + calcClientGrossFromNet(it.net_price) * Number(it.qty || 0), 0);
-  $('orderDraftSummary').textContent = t('orders.summary', {
-    count:ORDER_DRAFT.length,
-    net:formatMoney(totalNet),
-    gross:formatMoney(totalGross),
-    retail:formatMoney(totalRetailGross)
-  });
+  const totalRetailGross = ORDER_DRAFT.reduce((sum, it) => sum + (Number(it.retail_price || 0) || calcClientGrossFromNet(it.net_price)) * Number(it.qty || 0), 0);
+  $('orderDraftSummary').textContent = isEurPriceList()
+    ? t('price.eurSummary', {
+        count:ORDER_DRAFT.length,
+        total:formatPrice(totalNet, 'EUR'),
+        retail:formatPrice(totalRetailGross, 'EUR')
+      })
+    : t('orders.summary', {
+        count:ORDER_DRAFT.length,
+        net:formatPrice(totalNet, 'PLN'),
+        gross:formatPrice(totalGross, 'PLN'),
+        retail:formatPrice(totalRetailGross, 'PLN')
+      });
+  applyPriceModeLabels();
 }
 
 function parseProductInputToId(txt){
@@ -1620,6 +1717,10 @@ $('btnAddOrderItem').onclick = () => {
     $('orderMsg').textContent = t('orders.productNotFound');
     return;
   }
+  if(row.price_available === false || Number(row.net_price || 0) <= 0){
+    $('orderMsg').textContent = t('price.unavailable');
+    return;
+  }
 
   const existing = ORDER_DRAFT.find(x => Number(x.product_id) === Number(productId));
   if(existing){
@@ -1632,6 +1733,8 @@ $('btnAddOrderItem').onclick = () => {
       name: row.name,
       net_price: Number(row.net_price || 0),
       gross_price: Number(row.gross_price || 0),
+      retail_price: Number(row.retail_price || 0),
+      currency: String(row.currency || currentPriceCurrency()).toUpperCase(),
       qty
     });
   }
@@ -1770,12 +1873,15 @@ function renderOrdersRows(orders){
       try {
         await loadStock(false);
         const order = rows.find(item => Number(item.id) === id);
-        const { items, totals } = await fetchOrderDetails(order);
-        detailRow.children[0].innerHTML = renderOrderDetailsHtml(order, items, totals);
+        const details = await fetchOrderDetails(order);
+        const { items, totals } = details;
+        detailRow.children[0].innerHTML = renderOrderDetailsHtml(details.order, items, totals);
+        wireInlineOrderPdf(detailRow, details.order);
         const netCell = document.getElementById(`order-net-${id}`);
         const grossCell = document.getElementById(`order-gross-${id}`);
-        if(netCell) netCell.textContent = formatMoney(totals.net);
-        if(grossCell) grossCell.textContent = formatMoney(totals.gross);
+        const currency = String(details.order?.currency || 'PLN').toUpperCase();
+        if(netCell) netCell.textContent = formatPrice(totals.net, currency);
+        if(grossCell) grossCell.textContent = formatPrice(totals.gross, currency);
         button.dataset.loaded = '1';
       } catch(error){
         detailRow.children[0].innerHTML = `<div class="muted">${esc(t('common.error', { error:clientErrorDetail(error) }))}</div>`;
@@ -1786,18 +1892,8 @@ function renderOrdersRows(orders){
   });
 
   tb.querySelectorAll('[data-pdf-order]').forEach(button => {
-    button.onclick = async () => {
-      const order = rows.find(item => Number(item.id) === Number(button.dataset.pdfOrder));
-      if(!order) return;
-      button.disabled = true;
-      try {
-        await downloadOrderPdf(order);
-      } catch(error){
-        alert(t('orders.pdfFailed', { error:clientErrorDetail(error) }));
-      } finally {
-        button.disabled = false;
-      }
-    };
+    const order = rows.find(item => Number(item.id) === Number(button.dataset.pdfOrder));
+    wireOrderPdfButton(button, order);
   });
 }
 
