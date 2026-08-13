@@ -141,7 +141,7 @@
         <div style="margin-top:8px">
           <button id="btnCreateOrder" class="btn primary" type="button" data-i18n="orders.send">Wyślij zamówienie</button>
         </div>
-        <div id="orderMsg" class="muted" style="margin-top:8px"></div>
+        <div id="orderMsg" class="muted" role="status" aria-live="polite" style="margin-top:8px"></div>
       </div>
 
       <div class="card section-block hidden" id="ordersSection">
@@ -1811,15 +1811,24 @@ $('btnCreateOrder').onclick = async () => {
     }
 
     const createdOrderNo = createJson?.order?.order_no || createJson?.order?.id || '';
-    $('orderMsg').textContent = createJson?.email?.ok
+    const successMessage = createJson?.email?.ok
       ? t('orders.createdMail', { number:createdOrderNo })
       : t('orders.createdRetry', { number:createdOrderNo });
     ORDER_IDEMPOTENCY_KEY = null;
     ORDER_DRAFT = [];
+    $('orderProductInput').value = '';
+    $('orderQtyInput').value = 1;
     $('orderNote').value = '';
     renderOrderDraft();
-    await loadOrders(true);
+    $('orderMsg').textContent = successMessage;
+    $('orderMsg').style.color = '#08775c';
+    $('orderMsg').style.fontWeight = '700';
+    // Odświeżenie listy jest pomocnicze. Jego błąd nie może cofnąć informacji,
+    // że zamówienie zostało już zapisane ani pozostawić wypełnionego formularza.
+    try { await loadOrders(true); } catch(_) {}
   } catch(error){
+    $('orderMsg').style.color = '#c73347';
+    $('orderMsg').style.fontWeight = '600';
     $('orderMsg').textContent = t('orders.createFailed', { error:clientErrorDetail(error) });
   } finally {
     ORDER_CREATE_IN_FLIGHT = false;
