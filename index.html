@@ -851,12 +851,35 @@ async function fetchOrdersBundle(){
   if(!session?.user?.email) throw new Error(t('auth.noSession'));
   const email = session.user.email.trim().toLowerCase();
 
-  const ordersRes = await sbAuth
+  let ordersRes = await sbAuth
     .from('orders')
     .select('id,order_no,qr_data_url,status,created_at,customer_name,customer_email,note,currency,price_list')
     .ilike('customer_email', email)
     .order('created_at', { ascending:false })
     .limit(200);
+
+  // Podczas wdroĹĽenia etapowego stary schemat Supabase moĹĽe jeszcze nie mieÄ‡
+  // kolumn EUR. Nie ukrywamy wtedy wszystkich dotychczasowych zamĂłwieĹ„:
+  // pobieramy starszy zestaw kolumn i bezpiecznie traktujemy go jako PLN.
+  const schemaError = `${ordersRes.error?.code || ''} ${ordersRes.error?.message || ''}`.toLowerCase();
+  const missingCurrencySchema = Boolean(ordersRes.error) &&
+    (schemaError.includes('currency') || schemaError.includes('price_list')) &&
+    (schemaError.includes('does not exist') || schemaError.includes('42703') || schemaError.includes('pgrst204'));
+  if(missingCurrencySchema){
+    ordersRes = await sbAuth
+      .from('orders')
+      .select('id,order_no,qr_data_url,status,created_at,customer_name,customer_email,note')
+      .ilike('customer_email', email)
+      .order('created_at', { ascending:false })
+      .limit(200);
+    if(!ordersRes.error){
+      ordersRes.data = (ordersRes.data || []).map(order => ({
+        ...order,
+        currency:'PLN',
+        price_list:'pln'
+      }));
+    }
+  }
   if(ordersRes.error) throw ordersRes.error;
 
   const orders = ordersRes.data || [];
