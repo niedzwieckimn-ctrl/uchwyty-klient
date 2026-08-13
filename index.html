@@ -19,6 +19,8 @@
     table{width:100%;border-collapse:separate;border-spacing:0;min-width:680px}th,td{padding:12px 11px;border-bottom:1px solid #edf0f5;text-align:left;vertical-align:middle}th{background:#f8f9fc;color:#64718a;font-size:11px;text-transform:uppercase;letter-spacing:.45px}thead th:first-child{border-radius:12px 0 0 12px}thead th:last-child{border-radius:0 12px 12px 0}tbody tr:hover{background:#fafbff}.muted{color:var(--muted);font-size:12px}.hidden{display:none}.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}.row3{display:grid;grid-template-columns:1fr 140px 150px;gap:12px}.badge{display:inline-block;padding:5px 10px;border:1px solid #dfe4ef;border-radius:999px;background:#f8faff;color:#526079;font-size:11px;font-weight:700}.badge-paid{border-color:#c9efe2;background:#e8f9f3;color:#16835f}.badge-unpaid{border-color:#ffd7dc;background:#fff1f2;color:#be3b50}.invoices-more-row td{text-align:center;padding:16px}.status-chip{display:inline-block;padding:5px 10px;border-radius:999px;font-size:11px;font-weight:700}.status-new{background:#fff1f2;color:#be3b50}.status-confirmed{background:#e8f9f3;color:#16835f}.status-in-delivery{background:#edf3ff;color:#4166d3}.status-other{background:#f0f2f6;color:#667085}#qrScannerModal.hidden,#newInvoiceModal.hidden{display:none}h3{font-size:25px;letter-spacing:-.6px;margin:2px 0 16px}#authCard{max-width:760px;margin:12vh auto;padding:28px}
     .client-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}.client-metric{background:#fff;border:1px solid var(--line);border-radius:20px;padding:17px;box-shadow:var(--shadow)}.client-metric span{color:var(--muted);font-size:11px;font-weight:700}.client-metric b{display:block;font-size:27px;margin-top:5px}.dashboard-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:16px}.quick-model-result{display:grid;gap:8px;margin-top:12px}.model-hit{display:grid;grid-template-columns:1fr auto;gap:12px;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fafbff}.model-hit b{display:block}.model-hit .available{color:#16835f;font-weight:800}.dashboard-list{display:grid;gap:8px}.dashboard-row{display:grid;grid-template-columns:1fr auto;gap:12px;padding:11px 2px;border-bottom:1px solid #edf0f5}.dashboard-row b{font-size:12px}.dashboard-row small{display:block;color:var(--muted);margin-top:3px}.dashboard-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
     @media(max-width:980px){.top{position:relative;inset:auto;width:auto;margin:10px;border-radius:22px;padding:16px}.top-head{padding-bottom:8px}.brand{width:auto;margin-right:auto}.client-nav{flex-direction:row;overflow-x:auto;padding-bottom:5px}.client-nav a{white-space:nowrap}.client-nav a:before{display:none}#orderSummaryBar{display:flex!important}#orderSummaryBar.hidden{display:none!important}.wrap{margin:0;padding:10px 14px 70px}.row,.row3,.dashboard-grid{grid-template-columns:1fr}.client-metrics{grid-template-columns:1fr 1fr}}
+    .language-switch{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.language-switch .btn{min-width:46px;padding:8px 10px}.language-switch .btn.active{background:linear-gradient(135deg,var(--blue),var(--blue2));border-color:transparent;color:#fff}
+    .boot-card{max-width:160px;margin:18vh auto;text-align:center}.boot-spinner{width:34px;height:34px;margin:auto;border:3px solid #e3e8f4;border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
     @media(max-width:560px){.card{padding:15px;border-radius:18px}h3{font-size:22px}.client-nav a{padding:9px 11px}#authCard{margin:5vh auto}}
   </style>
 </head>
@@ -26,45 +28,46 @@
   <div class="top">
     <div class="top-head">
       <div class="brand">Niedźwieccy</div>
-      <button id="btnLogout" class="btn hidden" type="button">Wyloguj</button>
+      <button id="btnLogout" class="btn hidden" type="button" data-i18n="auth.logout">Wyloguj</button>
       <span id="who" class="who"></span>
     </div>
     <div id="clientNav" class="client-nav hidden">
-      <a href="#" data-target="dashboardSection">Pulpit</a>
-      <a href="#" data-target="stockSection">Stany magazynowe</a>
-      <a href="#" data-target="orderSection">Złóż zamówienie</a>
-      <a href="#" data-target="ordersSection">Moje zamówienia</a>
-      <a href="#" data-target="invoicesSection">Faktury</a>
-      <a href="#" data-target="settingsSection">Ustawienia</a>
-      <a href="#" data-target="scanSection">Skan QR</a>
+      <a href="#" data-target="dashboardSection" data-i18n="nav.dashboard">Pulpit</a>
+      <a href="#" data-target="stockSection" data-i18n="nav.stock">Stany magazynowe</a>
+      <a href="#" data-target="orderSection" data-i18n="nav.newOrder">Złóż zamówienie</a>
+      <a href="#" data-target="ordersSection" data-i18n="nav.orders">Moje zamówienia</a>
+      <a href="#" data-target="invoicesSection" data-i18n="nav.invoices">Faktury</a>
+      <a href="#" data-target="settingsSection" data-i18n="nav.settings">Ustawienia</a>
+      <a href="#" data-target="scanSection" data-i18n="nav.scan">Skan QR</a>
     </div>
     <div id="orderSummaryBar" class="hidden" style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
       <span class="badge" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18);color:#fff;padding:8px 12px;">
-        Zamówienia w toku: <b id="ordersInProgressCount">0</b>
+        <span data-i18n="orders.inProgress">Zamówienia w toku</span>: <b id="ordersInProgressCount">0</b>
       </span>
       <span class="badge" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18);color:#fff;padding:8px 12px;">
-        Zamówienia zrealizowane: <b id="ordersDoneCount">0</b>
+        <span data-i18n="orders.completed">Zamówienia zrealizowane</span>: <b id="ordersDoneCount">0</b>
       </span>
     </div>
   </div>
 
   <div class="wrap">
-    <div id="authCard" class="card">
-      <h3>Logowanie klienta</h3>
+    <div id="bootCard" class="card boot-card" aria-busy="true"><div class="boot-spinner"></div></div>
+    <div id="authCard" class="card hidden">
+      <h3 data-i18n="auth.title">Logowanie klienta</h3>
       <form onsubmit="return false;">
         <div class="row">
           <div>
-            <label for="email">Email</label>
-            <input id="email" type="email" autocomplete="email" placeholder="email" />
+            <label for="email" data-i18n="auth.email">Email</label>
+            <input id="email" type="email" autocomplete="email" placeholder="email" data-i18n-placeholder="auth.emailPlaceholder" />
           </div>
           <div>
-            <label for="password">Hasło</label>
-            <input id="password" type="password" autocomplete="current-password" placeholder="hasło" />
+            <label for="password" data-i18n="auth.password">Hasło</label>
+            <input id="password" type="password" autocomplete="current-password" placeholder="hasło" data-i18n-placeholder="auth.passwordPlaceholder" />
           </div>
         </div>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-          <button id="btnLogin" class="btn primary" type="button">Zaloguj</button>
-          <button id="btnRegister" class="btn" type="button">Załóż konto</button>
+          <button id="btnLogin" class="btn primary" type="button" data-i18n="auth.login">Zaloguj</button>
+          <button id="btnRegister" class="btn" type="button" data-i18n="auth.register">Załóż konto</button>
         </div>
       </form>
       <div id="authMsg" class="muted" style="margin-top:8px"></div>
@@ -72,24 +75,24 @@
 
     <div id="appArea" class="hidden">
       <div class="section-block hidden" id="dashboardSection">
-        <div style="margin-bottom:18px"><h3 style="margin-bottom:4px">Pulpit klienta</h3><div class="muted">Najważniejsze informacje i szybkie sprawdzanie dostępności.</div></div>
+        <div style="margin-bottom:18px"><h3 style="margin-bottom:4px" data-i18n="dashboard.title">Pulpit klienta</h3><div class="muted" data-i18n="dashboard.subtitle">Najważniejsze informacje i szybkie sprawdzanie dostępności.</div></div>
         <div class="client-metrics">
-          <div class="client-metric"><span>Zamówienia w toku</span><b id="dashOrdersOpen">0</b></div>
-          <div class="client-metric"><span>Zrealizowane</span><b id="dashOrdersDone">0</b></div>
-          <div class="client-metric"><span>Dostępne modele</span><b id="dashModelsAvailable">0</b></div>
-          <div class="client-metric"><span>Faktury nieopłacone</span><b id="dashInvoicesUnpaid">0</b></div>
+          <div class="client-metric"><span data-i18n="dashboard.ordersOpen">Zamówienia w toku</span><b id="dashOrdersOpen">0</b></div>
+          <div class="client-metric"><span data-i18n="dashboard.ordersDone">Zrealizowane</span><b id="dashOrdersDone">0</b></div>
+          <div class="client-metric"><span data-i18n="dashboard.modelsAvailable">Dostępne modele</span><b id="dashModelsAvailable">0</b></div>
+          <div class="client-metric"><span data-i18n="dashboard.unpaidInvoices">Faktury nieopłacone</span><b id="dashInvoicesUnpaid">0</b></div>
         </div>
         <div class="dashboard-grid">
-          <div class="card"><h3 style="font-size:19px">Szybko sprawdź model</h3><div class="muted">Wpisz model, SKU albo fragment nazwy produktu.</div><input id="dashboardModelSearch" placeholder="np. CH010, Winsor..." style="margin-top:12px"><div id="dashboardModelResults" class="quick-model-result"><div class="muted">Zacznij wpisywać, aby sprawdzić dostępność.</div></div><div class="dashboard-actions"><button id="dashGoStock" class="btn" type="button">Pełne stany</button><button id="dashGoOrder" class="btn primary" type="button">Złóż zamówienie</button></div></div>
-          <div class="card"><h3 style="font-size:19px">Ostatnie zamówienia</h3><div id="dashboardRecentOrders" class="dashboard-list"><div class="muted">Ładowanie...</div></div><div class="dashboard-actions"><button id="dashGoOrders" class="btn" type="button">Wszystkie zamówienia</button></div></div>
-          <div class="card"><h3 style="font-size:19px">Ostatnie faktury</h3><div id="dashboardRecentInvoices" class="dashboard-list"><div class="muted">Ładowanie...</div></div></div>
+          <div class="card"><h3 style="font-size:19px" data-i18n="dashboard.quickSearch">Szybko sprawdź model</h3><div class="muted" data-i18n="dashboard.quickSearchHelp">Wpisz model, SKU albo fragment nazwy produktu.</div><input id="dashboardModelSearch" placeholder="np. CH010, Winsor..." data-i18n-placeholder="dashboard.quickSearchPlaceholder" style="margin-top:12px"><div id="dashboardModelResults" class="quick-model-result"><div class="muted" data-i18n="dashboard.startTyping">Zacznij wpisywać, aby sprawdzić dostępność.</div></div><div class="dashboard-actions"><button id="dashGoStock" class="btn" type="button" data-i18n="dashboard.fullStock">Pełne stany</button><button id="dashGoOrder" class="btn primary" type="button" data-i18n="orders.new">Złóż zamówienie</button></div></div>
+          <div class="card"><h3 style="font-size:19px" data-i18n="dashboard.recentOrders">Ostatnie zamówienia</h3><div id="dashboardRecentOrders" class="dashboard-list"><div class="muted" data-i18n="common.loading">Ładowanie...</div></div><div class="dashboard-actions"><button id="dashGoOrders" class="btn" type="button" data-i18n="dashboard.allOrders">Wszystkie zamówienia</button></div></div>
+          <div class="card"><h3 style="font-size:19px" data-i18n="dashboard.recentInvoices">Ostatnie faktury</h3><div id="dashboardRecentInvoices" class="dashboard-list"><div class="muted" data-i18n="common.loading">Ładowanie...</div></div></div>
         </div>
       </div>
       <div class="card section-block hidden" id="stockSection">
-        <h3>Stany magazynowe</h3>
+        <h3 data-i18n="stock.title">Stany magazynowe</h3>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <button id="btnLoadStock" class="btn" type="button">Odśwież stany</button>
-          <input id="stockSearch" placeholder="Szukaj: model / nazwa..." style="max-width:360px" />
+          <button id="btnLoadStock" class="btn" type="button" data-i18n="stock.refresh">Odśwież stany</button>
+          <input id="stockSearch" placeholder="Szukaj: model / nazwa..." data-i18n-placeholder="stock.searchPlaceholder" style="max-width:360px" />
           <span id="stockCount" class="badge">Pozycji: 0</span>
         </div>
 
@@ -97,7 +100,7 @@
           <table id="stockTable">
             <thead>
               <tr>
-                <th>SKU</th><th>Nazwa</th><th>Netto B2B</th><th>Brutto klient</th><th>Dostępne</th>
+                <th>SKU</th><th data-i18n="common.name">Nazwa</th><th data-i18n="stock.netB2b">Netto B2B</th><th data-i18n="stock.clientGross">Brutto klient</th><th data-i18n="stock.available">Dostępne</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -106,48 +109,48 @@
       </div>
 
       <div class="card section-block hidden" id="orderSection">
-        <h3>Złóż zamówienie</h3>
+        <h3 data-i18n="orders.new">Złóż zamówienie</h3>
 
         <div class="row3">
           <div>
-            <label>Produkt (pisz, aby wyszukać)</label>
-            <input id="orderProductInput" list="orderProductList" placeholder="np. CH010 / Winsor..." />
+            <label data-i18n="orders.productSearch">Produkt (pisz, aby wyszukać)</label>
+            <input id="orderProductInput" list="orderProductList" placeholder="np. CH010 / Winsor..." data-i18n-placeholder="orders.productPlaceholder" />
             <datalist id="orderProductList"></datalist>
           </div>
           <div>
-            <label>Ilość</label>
+            <label data-i18n="common.quantity">Ilość</label>
             <input id="orderQtyInput" type="number" min="1" value="1" />
           </div>
           <div style="display:flex;align-items:end">
-            <button id="btnAddOrderItem" class="btn" type="button" style="width:100%">Dodaj pozycję</button>
+            <button id="btnAddOrderItem" class="btn" type="button" style="width:100%" data-i18n="orders.addItem">Dodaj pozycję</button>
           </div>
         </div>
 
         <div style="overflow:auto;margin-top:10px">
           <table id="orderDraftTable">
             <thead>
-              <tr><th>SKU</th><th>Nazwa</th><th>Netto B2B/szt</th><th>Brutto B2B/szt</th><th>Brutto detal/szt</th><th>Ilość</th><th>Wartość brutto B2B</th><th>Wartość brutto detal</th><th></th></tr>
+              <tr><th>SKU</th><th data-i18n="common.name">Nazwa</th><th data-i18n="orders.netB2bUnit">Netto B2B/szt</th><th data-i18n="orders.grossB2bUnit">Brutto B2B/szt</th><th data-i18n="orders.retailGrossUnit">Brutto detal/szt</th><th data-i18n="common.quantity">Ilość</th><th data-i18n="orders.grossB2bValue">Wartość brutto B2B</th><th data-i18n="orders.retailGrossValue">Wartość brutto detal</th><th></th></tr>
             </thead>
             <tbody></tbody>
           </table>
         </div>
 
-        <input id="orderNote" placeholder="Notatka (opcjonalnie)" style="margin-top:8px" />
+        <input id="orderNote" placeholder="Notatka (opcjonalnie)" data-i18n-placeholder="orders.notePlaceholder" style="margin-top:8px" />
         <div id="orderDraftSummary" class="muted" style="margin-top:8px">Pozycji: 0</div>
 
         <div style="margin-top:8px">
-          <button id="btnCreateOrder" class="btn primary" type="button">Wyślij zamówienie</button>
+          <button id="btnCreateOrder" class="btn primary" type="button" data-i18n="orders.send">Wyślij zamówienie</button>
         </div>
         <div id="orderMsg" class="muted" style="margin-top:8px"></div>
       </div>
 
       <div class="card section-block hidden" id="ordersSection">
-        <h3>Moje zamówienia</h3>
-        <button id="btnLoadOrders" class="btn" type="button" style="margin-top:8px">Odśwież zamówienia</button>
+        <h3 data-i18n="orders.title">Moje zamówienia</h3>
+        <button id="btnLoadOrders" class="btn" type="button" style="margin-top:8px" data-i18n="orders.refresh">Odśwież zamówienia</button>
         <div style="overflow:auto;margin-top:10px">
           <table id="ordersTable">
             <thead>
-              <tr><th>Nr</th><th>Status</th><th>Netto</th><th>Brutto</th><th>Data</th><th>Akcje</th></tr>
+              <tr><th data-i18n="orders.number">Nr</th><th data-i18n="common.status">Status</th><th data-i18n="common.net">Netto</th><th data-i18n="common.gross">Brutto</th><th data-i18n="common.date">Data</th><th data-i18n="common.actions">Akcje</th></tr>
             </thead>
             <tbody></tbody>
           </table>
@@ -155,12 +158,12 @@
       </div>
 
       <div class="card section-block hidden" id="invoicesSection">
-        <h3>Faktury</h3>
-        <button id="btnLoadInvoices" class="btn" type="button" style="margin-top:8px">Odśwież faktury</button>
+        <h3 data-i18n="invoices.title">Faktury</h3>
+        <button id="btnLoadInvoices" class="btn" type="button" style="margin-top:8px" data-i18n="invoices.refresh">Odśwież faktury</button>
         <div style="overflow:auto;margin-top:10px">
           <table id="invoicesTable">
             <thead>
-              <tr><th>Nr faktury</th><th>Nr zamówienia</th><th>Data</th><th>Netto</th><th>Brutto</th><th>PDF</th></tr>
+              <tr><th data-i18n="invoices.number">Nr faktury</th><th data-i18n="orders.orderNumber">Nr zamówienia</th><th data-i18n="common.date">Data</th><th data-i18n="common.net">Netto</th><th data-i18n="common.gross">Brutto</th><th>PDF</th></tr>
             </thead>
             <tbody></tbody>
           </table>
@@ -168,29 +171,39 @@
       </div>
 
       <div class="card section-block hidden" id="settingsSection">
-        <h3>Ustawienia</h3>
-        <div class="muted">Tutaj zmienisz hasło do logowania w panelu klienta.</div>
+        <h3 data-i18n="settings.title">Ustawienia</h3>
+        <div class="muted" data-i18n="settings.languageHelp">Język panelu i dokumentów zamówienia.</div>
+        <div class="language-switch" id="languageSwitch" role="group" aria-label="Język" data-i18n-aria-label="settings.language">
+          <button class="btn" type="button" data-language="pl">PL</button>
+          <button class="btn" type="button" data-language="de">DE</button>
+          <button class="btn" type="button" data-language="en">EN</button>
+          <button class="btn" type="button" data-language="es">ES</button>
+          <button class="btn" type="button" data-language="it">IT</button>
+        </div>
+        <div id="languageMsg" class="muted" style="margin-top:8px"></div>
+        <hr style="border:0;border-top:1px solid #edf0f5;margin:18px 0" />
+        <div class="muted" data-i18n="settings.passwordHelp">Tutaj zmienisz hasło do logowania w panelu klienta.</div>
         <div class="row" style="margin-top:10px;">
           <div>
-            <label>Nowe hasło</label>
-            <input id="newPassword" type="password" autocomplete="new-password" placeholder="Nowe hasło" />
+            <label data-i18n="settings.newPassword">Nowe hasło</label>
+            <input id="newPassword" type="password" autocomplete="new-password" placeholder="Nowe hasło" data-i18n-placeholder="settings.newPassword" />
           </div>
           <div>
-            <label>Powtórz nowe hasło</label>
-            <input id="repeatPassword" type="password" autocomplete="new-password" placeholder="Powtórz nowe hasło" />
+            <label data-i18n="settings.repeatPassword">Powtórz nowe hasło</label>
+            <input id="repeatPassword" type="password" autocomplete="new-password" placeholder="Powtórz nowe hasło" data-i18n-placeholder="settings.repeatPassword" />
           </div>
         </div>
         <div style="margin-top:10px;">
-          <button id="btnChangePassword" class="btn primary" type="button">Zmień hasło</button>
+          <button id="btnChangePassword" class="btn primary" type="button" data-i18n="settings.changePassword">Zmień hasło</button>
         </div>
         <div id="passwordMsg" class="muted" style="margin-top:8px"></div>
       </div>
 
       <div class="card section-block hidden" id="scanSection">
-        <h3 id="openQrScanner" style="cursor:pointer;text-decoration:underline;">Skanuj QR zamówienia</h3>
+        <h3 id="openQrScanner" style="cursor:pointer;text-decoration:underline;" data-i18n="scan.title">Skanuj QR zamówienia</h3>
         <div>
-          <input id="orderCodeInput" placeholder="Wklej kod zamówienia ZAM-... albo kliknij „Skanuj QR zamówienia”" />
-          <button id="btnShowOrderByCode" class="btn" type="button" style="margin-top:8px">Pokaż zamówienie</button>
+          <input id="orderCodeInput" placeholder="Wklej kod zamówienia ZAM-... albo kliknij „Skanuj QR zamówienia”" data-i18n-placeholder="scan.placeholder" />
+          <button id="btnShowOrderByCode" class="btn" type="button" style="margin-top:8px" data-i18n="scan.showOrder">Pokaż zamówienie</button>
         </div>
         <div id="orderScanOut" style="margin-top:10px"></div>
       </div>
@@ -198,10 +211,10 @@
       <div id="qrScannerModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:9999;padding:16px;box-sizing:border-box;">
         <div style="max-width:420px;margin:4vh auto;background:#fff;border-radius:16px;padding:12px;">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;">
-            <b>Skanuj QR</b>
-            <button id="closeQrScanner" class="btn" type="button">Zamknij</button>
+            <b data-i18n="scan.scanQr">Skanuj QR</b>
+            <button id="closeQrScanner" class="btn" type="button" data-i18n="common.close">Zamknij</button>
           </div>
-          <div class="muted" style="margin-bottom:8px;">Uruchamia się tylko tylny aparat.</div>
+          <div class="muted" style="margin-bottom:8px;" data-i18n="scan.cameraHelp">Uruchamia się tylko tylny aparat.</div>
           <div id="orderQrReader" style="width:100%;min-height:280px;"></div>
         </div>
       </div>
@@ -209,11 +222,11 @@
     
       <div id="newInvoiceModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,.62);z-index:10000;padding:16px;box-sizing:border-box;">
         <div id="newInvoiceBox" style="max-width:430px;margin:8vh auto;background:#e9f9ee;border:2px solid #16a34a;border-radius:18px;padding:16px;">
-          <div id="newInvoiceTitle" style="font-size:24px;font-weight:700;color:#166534;">Masz nową fakturę</div>
+          <div id="newInvoiceTitle" style="font-size:24px;font-weight:700;color:#166534;" data-i18n="invoices.newTitle">Masz nową fakturę</div>
           <div id="newInvoiceText" style="margin-top:8px;color:#166534;"></div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
-            <button id="btnNewInvoiceDownload" class="btn primary" type="button">Pobierz PDF</button>
-            <button id="btnNewInvoiceLater" class="btn" type="button">Później</button>
+            <button id="btnNewInvoiceDownload" class="btn primary" type="button" data-i18n="common.downloadPdf">Pobierz PDF</button>
+            <button id="btnNewInvoiceLater" class="btn" type="button" data-i18n="common.later">Później</button>
           </div>
         </div>
       </div>
@@ -230,37 +243,245 @@ const sbAuth = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 });
 
 const sbPublic = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+    storageKey: 'niedzwieccy-client-public'
+  }
 });
 
 window.sb = sbAuth;
 window.sbPublic = sbPublic;
 const MAGAZYN_API_BASE = "https://uchwyty.onrender.com";
 
-const STATUS_LABELS = {
-  new: 'Niepotwierdzone',
-  pending: 'Niepotwierdzone',
-  unconfirmed: 'Niepotwierdzone',
-  confirmed: 'Potwierdzone',
-  packed: 'Potwierdzone',
-  in_delivery: 'W dostawie',
-  shipped: 'W dostawie',
-  issued: 'Zrealizowane',
-  cancelled: 'Anulowane'
+const SUPPORTED_LANGUAGES = ['pl', 'de', 'en', 'es', 'it'];
+const LOCALES = { pl:'pl-PL', de:'de-DE', en:'en-GB', es:'es-ES', it:'it-IT' };
+let CURRENT_LANGUAGE = 'pl';
+
+const PL_TRANSLATIONS = {
+  'app.title':'Panel Klienta', 'auth.title':'Logowanie klienta', 'auth.email':'Email',
+  'auth.emailPlaceholder':'email', 'auth.password':'Hasło', 'auth.passwordPlaceholder':'hasło',
+  'auth.login':'Zaloguj', 'auth.register':'Załóż konto', 'auth.logout':'Wyloguj',
+  'auth.loggedIn':'zalogowany', 'auth.loginError':'Błąd logowania: {error}',
+  'auth.registerError':'Błąd rejestracji: {error}', 'auth.sessionError':'Błąd sesji: {error}',
+  'auth.sessionMissing':'Logowanie przyjęte, ale brak aktywnej sesji. Jeśli masz włączone potwierdzenie mailowe, potwierdź e-mail.',
+  'auth.accountCreated':'Konto utworzone. Jeśli masz włączone potwierdzenie mailowe, potwierdź e-mail i dopiero się zaloguj.',
+  'auth.loggedOut':'Wylogowano.', 'auth.noSession':'Brak aktywnej sesji. Zaloguj się ponownie.',
+  'nav.dashboard':'Pulpit', 'nav.stock':'Stany magazynowe', 'nav.newOrder':'Złóż zamówienie',
+  'nav.orders':'Moje zamówienia', 'nav.invoices':'Faktury', 'nav.settings':'Ustawienia', 'nav.scan':'Skan QR',
+  'common.name':'Nazwa', 'common.quantity':'Ilość', 'common.status':'Status', 'common.net':'Netto',
+  'common.gross':'Brutto', 'common.date':'Data', 'common.actions':'Akcje', 'common.close':'Zamknij',
+  'common.loading':'Ładowanie...', 'common.error':'Błąd: {error}', 'common.noData':'Brak danych',
+  'common.downloadPdf':'Pobierz PDF', 'common.later':'Później', 'common.delete':'Usuń',
+  'common.pieces':'szt.', 'common.customer':'Klient', 'common.email':'Email', 'common.note':'Notatka',
+  'dashboard.title':'Pulpit klienta', 'dashboard.subtitle':'Najważniejsze informacje i szybkie sprawdzanie dostępności.',
+  'dashboard.ordersOpen':'Zamówienia w toku', 'dashboard.ordersDone':'Zrealizowane',
+  'dashboard.modelsAvailable':'Dostępne modele', 'dashboard.unpaidInvoices':'Faktury nieopłacone',
+  'dashboard.quickSearch':'Szybko sprawdź model', 'dashboard.quickSearchHelp':'Wpisz model, SKU albo fragment nazwy produktu.',
+  'dashboard.quickSearchPlaceholder':'np. CH010, Winsor...', 'dashboard.startTyping':'Zacznij wpisywać, aby sprawdzić dostępność.',
+  'dashboard.fullStock':'Pełne stany', 'dashboard.recentOrders':'Ostatnie zamówienia',
+  'dashboard.allOrders':'Wszystkie zamówienia', 'dashboard.recentInvoices':'Ostatnie faktury',
+  'dashboard.modelNotFound':'Nie znaleziono modelu.', 'dashboard.noOrders':'Brak zamówień.', 'dashboard.noInvoices':'Brak faktur.',
+  'stock.title':'Stany magazynowe', 'stock.refresh':'Odśwież stany', 'stock.searchPlaceholder':'Szukaj: model / nazwa...',
+  'stock.count':'Pozycji: {count}', 'stock.searchHint':'Wpisz model, SKU lub nazwę produktu.',
+  'stock.netB2b':'Netto B2B', 'stock.clientGross':'Brutto klient', 'stock.available':'Dostępne',
+  'stock.loading':'Pobieranie aktualnych stanów z Supabase...',
+  'stock.aborted':'Pobieranie przerwano. Kliknij „Odśwież stany”, aby pobrać bieżące dane z Supabase.',
+  'stock.failed':'Nie udało się pobrać aktualnych danych z Supabase. Poprzednich stanów nie pokazano.',
+  'orders.title':'Moje zamówienia', 'orders.new':'Złóż zamówienie', 'orders.refresh':'Odśwież zamówienia',
+  'orders.inProgress':'Zamówienia w toku', 'orders.completed':'Zamówienia zrealizowane',
+  'orders.productSearch':'Produkt (pisz, aby wyszukać)', 'orders.productPlaceholder':'np. CH010 / Winsor...',
+  'orders.addItem':'Dodaj pozycję', 'orders.netB2bUnit':'Netto B2B/szt', 'orders.grossB2bUnit':'Brutto B2B/szt',
+  'orders.retailGrossUnit':'Brutto detal/szt', 'orders.grossB2bValue':'Wartość brutto B2B',
+  'orders.retailGrossValue':'Wartość brutto detal', 'orders.notePlaceholder':'Notatka (opcjonalnie)',
+  'orders.send':'Wyślij zamówienie', 'orders.sending':'Wysyłanie...', 'orders.number':'Nr',
+  'orders.orderNumber':'Nr zamówienia', 'orders.details':'Szczegóły', 'orders.downloadPdf':'Pobierz PDF',
+  'orders.loadDetails':'Kliknij „Szczegóły”, aby pobrać pozycje zamówienia.',
+  'orders.loadingDetails':'Ładowanie szczegółów...', 'orders.empty':'Brak zamówień', 'orders.noItems':'Brak pozycji',
+  'orders.selectProduct':'Wybierz produkt z listy podpowiedzi.', 'orders.productNotFound':'Nie znaleziono produktu.',
+  'orders.addAtLeastOne':'Dodaj przynajmniej jedną pozycję.', 'orders.noUser':'Brak zalogowanego użytkownika.',
+  'orders.createdMail':'OK, utworzono zamówienie: {number}. Mail wysłany.',
+  'orders.createdRetry':'Zamówienie {number} zostało utworzone. Potwierdzenie e-mail zostanie ponowione.',
+  'orders.createFailed':'Nie udało się utworzyć zamówienia: {error}',
+  'orders.pdfFailed':'Nie udało się pobrać PDF zamówienia: {error}',
+  'orders.summary':'Pozycji: {count} | Netto B2B: {net} | Brutto B2B: {gross} | Brutto detal: {retail}',
+  'orders.deliveryTime':'Czas realizacji', 'orders.ordered':'Zamówiono', 'orders.realized':'Zrealizowane',
+  'orders.netUnit':'Netto/szt', 'orders.grossUnit':'Brutto/szt', 'orders.netValue':'Wartość netto',
+  'orders.grossValue':'Wartość brutto', 'orders.full':'w całości',
+  'invoices.title':'Faktury', 'invoices.refresh':'Odśwież faktury', 'invoices.number':'Nr faktury',
+  'invoices.empty':'Brak faktur', 'invoices.new':'Nowa', 'invoices.paid':'Opłacona', 'invoices.unpaid':'Nieopłacona',
+  'invoices.showOlder':'Pokaż starsze faktury ({count})', 'invoices.openFailed':'Nie udało się otworzyć faktury: {error}',
+  'invoices.newTitle':'Masz nową fakturę', 'invoices.overdueTitle':'Masz zaległą płatność',
+  'invoices.overdueText':'Faktura <b>{invoice}</b> na kwotę <b>{amount} PLN</b> jest oznaczona jako nieopłacona. Prosimy o uregulowanie płatności.',
+  'invoices.readyText':'Faktura <b>{invoice}</b> do zamówienia <b>{order}</b> jest gotowa.<br><span style="font-size:14px;">To okno przestanie się pojawiać po pobraniu faktury PDF.</span>',
+  'settings.title':'Ustawienia', 'settings.language':'Język', 'settings.languageHelp':'Język panelu i dokumentów zamówienia.',
+  'settings.languageSaved':'Język został zapisany.', 'settings.languageSaveFailed':'Panel przełączono, ale nie udało się zapisać języka: {error}',
+  'settings.passwordHelp':'Tutaj zmienisz hasło do logowania w panelu klienta.',
+  'settings.newPassword':'Nowe hasło', 'settings.repeatPassword':'Powtórz nowe hasło', 'settings.changePassword':'Zmień hasło',
+  'settings.passwordTwice':'Wpisz nowe hasło dwa razy.', 'settings.passwordMismatch':'Hasła nie są takie same.',
+  'settings.passwordShort':'Hasło musi mieć co najmniej 6 znaków.', 'settings.passwordChanged':'Hasło zostało zmienione.',
+  'scan.title':'Skanuj QR zamówienia', 'scan.placeholder':'Wklej kod zamówienia ZAM-... albo kliknij „Skanuj QR zamówienia”',
+  'scan.showOrder':'Pokaż zamówienie', 'scan.scanQr':'Skanuj QR', 'scan.cameraHelp':'Uruchamia się tylko tylny aparat.',
+  'scan.enterCode':'Wpisz albo zeskanuj kod ZAM-...', 'scan.notFound':'Nie znaleziono Twojego zamówienia o takim kodzie.',
+  'scan.cameraFailed':'Nie udało się uruchomić tylnego aparatu.',
+  'status.unconfirmed':'Niepotwierdzone', 'status.confirmed':'Potwierdzone', 'status.inDelivery':'W dostawie',
+  'status.completed':'Zrealizowane', 'status.cancelled':'Anulowane', 'status.other':'Inny'
 };
+
+const TRANSLATIONS = {
+  pl: PL_TRANSLATIONS,
+  de: { 'app.title':'Kundenportal','auth.title':'Kundenanmeldung','auth.password':'Passwort','auth.passwordPlaceholder':'Passwort','auth.login':'Anmelden','auth.register':'Konto erstellen','auth.logout':'Abmelden','nav.dashboard':'Übersicht','nav.stock':'Lagerbestand','nav.newOrder':'Bestellung aufgeben','nav.orders':'Meine Bestellungen','nav.invoices':'Rechnungen','nav.settings':'Einstellungen','nav.scan':'QR scannen','dashboard.title':'Kundenübersicht','dashboard.subtitle':'Die wichtigsten Informationen und eine schnelle Verfügbarkeitsprüfung.','dashboard.ordersOpen':'Laufende Bestellungen','dashboard.ordersDone':'Abgeschlossen','dashboard.modelsAvailable':'Verfügbare Modelle','dashboard.unpaidInvoices':'Unbezahlte Rechnungen','dashboard.quickSearch':'Modell schnell prüfen','dashboard.quickSearchHelp':'Modell, SKU oder einen Teil des Produktnamens eingeben.','dashboard.startTyping':'Tippen Sie, um die Verfügbarkeit zu prüfen.','dashboard.fullStock':'Gesamter Bestand','dashboard.recentOrders':'Letzte Bestellungen','dashboard.allOrders':'Alle Bestellungen','dashboard.recentInvoices':'Letzte Rechnungen','dashboard.modelNotFound':'Modell nicht gefunden.','dashboard.noOrders':'Keine Bestellungen.','dashboard.noInvoices':'Keine Rechnungen.','stock.title':'Lagerbestand','stock.refresh':'Bestand aktualisieren','stock.searchPlaceholder':'Suche: Modell / Name...','stock.count':'Positionen: {count}','stock.searchHint':'Modell, SKU oder Produktname eingeben.','stock.clientGross':'Brutto Kunde','stock.available':'Verfügbar','stock.loading':'Aktuelle Bestände werden aus Supabase geladen...','stock.aborted':'Laden abgebrochen. Klicken Sie auf „Bestand aktualisieren“.','stock.failed':'Aktuelle Daten konnten nicht aus Supabase geladen werden. Alte Bestände werden nicht angezeigt.','orders.title':'Meine Bestellungen','orders.new':'Bestellung aufgeben','orders.refresh':'Bestellungen aktualisieren','orders.inProgress':'Laufende Bestellungen','orders.completed':'Abgeschlossene Bestellungen','orders.productSearch':'Produkt (zum Suchen tippen)','orders.addItem':'Position hinzufügen','orders.notePlaceholder':'Notiz (optional)','orders.send':'Bestellung senden','orders.sending':'Wird gesendet...','orders.number':'Nr.','orders.orderNumber':'Bestellnummer','orders.details':'Details','orders.downloadPdf':'PDF herunterladen','orders.loadDetails':'Klicken Sie auf „Details“, um die Positionen zu laden.','orders.loadingDetails':'Details werden geladen...','orders.empty':'Keine Bestellungen','orders.noItems':'Keine Positionen','orders.selectProduct':'Wählen Sie ein Produkt aus der Vorschlagsliste.','orders.productNotFound':'Produkt nicht gefunden.','orders.addAtLeastOne':'Fügen Sie mindestens eine Position hinzu.','orders.noUser':'Kein angemeldeter Benutzer.','orders.createdMail':'Bestellung {number} wurde erstellt. E-Mail gesendet.','orders.createdRetry':'Bestellung {number} wurde erstellt. Die E-Mail-Bestätigung wird erneut versucht.','orders.createFailed':'Bestellung konnte nicht erstellt werden: {error}','orders.pdfFailed':'Bestell-PDF konnte nicht geladen werden: {error}','orders.deliveryTime':'Lieferzeit','orders.ordered':'Bestellt','orders.realized':'Erfüllt','orders.full':'vollständig','invoices.title':'Rechnungen','invoices.refresh':'Rechnungen aktualisieren','invoices.number':'Rechnungsnr.','invoices.empty':'Keine Rechnungen','invoices.new':'Neu','invoices.paid':'Bezahlt','invoices.unpaid':'Unbezahlt','invoices.showOlder':'Ältere Rechnungen anzeigen ({count})','invoices.openFailed':'Rechnung konnte nicht geöffnet werden: {error}','invoices.newTitle':'Neue Rechnung','invoices.overdueTitle':'Überfällige Zahlung','invoices.overdueText':'Die Rechnung <b>{invoice}</b> über <b>{amount} PLN</b> ist als unbezahlt markiert. Bitte begleichen Sie die Zahlung.','invoices.readyText':'Die Rechnung <b>{invoice}</b> zur Bestellung <b>{order}</b> ist bereit.<br><span style="font-size:14px;">Dieses Fenster wird nach dem PDF-Download nicht mehr angezeigt.</span>','settings.title':'Einstellungen','settings.language':'Sprache','settings.languageHelp':'Sprache des Portals und der Bestelldokumente.','settings.languageSaved':'Sprache wurde gespeichert.','settings.languageSaveFailed':'Das Portal wurde umgestellt, aber die Sprache konnte nicht gespeichert werden: {error}','settings.passwordHelp':'Hier können Sie Ihr Anmeldepasswort ändern.','settings.newPassword':'Neues Passwort','settings.repeatPassword':'Neues Passwort wiederholen','settings.changePassword':'Passwort ändern','settings.passwordTwice':'Geben Sie das neue Passwort zweimal ein.','settings.passwordMismatch':'Die Passwörter stimmen nicht überein.','settings.passwordShort':'Das Passwort muss mindestens 6 Zeichen lang sein.','settings.passwordChanged':'Passwort wurde geändert.','scan.title':'Bestell-QR scannen','scan.placeholder':'Bestellcode ZAM-... einfügen oder QR scannen','scan.showOrder':'Bestellung anzeigen','scan.scanQr':'QR scannen','scan.cameraHelp':'Nur die rückseitige Kamera wird verwendet.','scan.enterCode':'ZAM-... Code eingeben oder scannen.','scan.notFound':'Ihre Bestellung mit diesem Code wurde nicht gefunden.','scan.cameraFailed':'Die rückseitige Kamera konnte nicht gestartet werden.','status.unconfirmed':'Unbestätigt','status.confirmed':'Bestätigt','status.inDelivery':'In Lieferung','status.completed':'Abgeschlossen','status.cancelled':'Storniert','status.other':'Sonstiger','common.name':'Name','common.quantity':'Menge','common.status':'Status','common.net':'Netto','common.gross':'Brutto','common.date':'Datum','common.actions':'Aktionen','common.close':'Schließen','common.loading':'Wird geladen...','common.noData':'Keine Daten','common.downloadPdf':'PDF herunterladen','common.later':'Später','common.delete':'Entfernen','common.pieces':'Stk.','common.customer':'Kunde','common.note':'Notiz' },
+  en: { 'app.title':'Customer Portal','auth.title':'Customer login','auth.password':'Password','auth.passwordPlaceholder':'password','auth.login':'Log in','auth.register':'Create account','auth.logout':'Log out','nav.dashboard':'Dashboard','nav.stock':'Stock','nav.newOrder':'Place order','nav.orders':'My orders','nav.invoices':'Invoices','nav.settings':'Settings','nav.scan':'Scan QR','dashboard.title':'Customer dashboard','dashboard.subtitle':'Key information and quick availability checks.','dashboard.ordersOpen':'Orders in progress','dashboard.ordersDone':'Completed','dashboard.modelsAvailable':'Available models','dashboard.unpaidInvoices':'Unpaid invoices','dashboard.quickSearch':'Quick model check','dashboard.quickSearchHelp':'Enter a model, SKU or part of a product name.','dashboard.startTyping':'Start typing to check availability.','dashboard.fullStock':'Full stock','dashboard.recentOrders':'Recent orders','dashboard.allOrders':'All orders','dashboard.recentInvoices':'Recent invoices','dashboard.modelNotFound':'Model not found.','dashboard.noOrders':'No orders.','dashboard.noInvoices':'No invoices.','stock.title':'Stock','stock.refresh':'Refresh stock','stock.searchPlaceholder':'Search: model / name...','stock.count':'Items: {count}','stock.searchHint':'Enter a model, SKU or product name.','stock.clientGross':'Customer gross','stock.available':'Available','stock.loading':'Loading current stock from Supabase...','stock.aborted':'Loading was cancelled. Click “Refresh stock” to try again.','stock.failed':'Current data could not be loaded from Supabase. Old stock is not displayed.','orders.title':'My orders','orders.new':'Place order','orders.refresh':'Refresh orders','orders.inProgress':'Orders in progress','orders.completed':'Completed orders','orders.productSearch':'Product (type to search)','orders.addItem':'Add item','orders.notePlaceholder':'Note (optional)','orders.send':'Send order','orders.sending':'Sending...','orders.number':'No.','orders.orderNumber':'Order number','orders.details':'Details','orders.downloadPdf':'Download PDF','orders.loadDetails':'Click “Details” to load order items.','orders.loadingDetails':'Loading details...','orders.empty':'No orders','orders.noItems':'No items','orders.selectProduct':'Select a product from the suggestion list.','orders.productNotFound':'Product not found.','orders.addAtLeastOne':'Add at least one item.','orders.noUser':'No logged-in user.','orders.createdMail':'Order {number} was created. Email sent.','orders.createdRetry':'Order {number} was created. The confirmation email will be retried.','orders.createFailed':'Could not create order: {error}','orders.pdfFailed':'Could not download the order PDF: {error}','orders.deliveryTime':'Lead time','orders.ordered':'Ordered','orders.realized':'Completed','orders.full':'in full','invoices.title':'Invoices','invoices.refresh':'Refresh invoices','invoices.number':'Invoice no.','invoices.empty':'No invoices','invoices.new':'New','invoices.paid':'Paid','invoices.unpaid':'Unpaid','invoices.showOlder':'Show older invoices ({count})','invoices.openFailed':'Could not open the invoice: {error}','invoices.newTitle':'You have a new invoice','invoices.overdueTitle':'You have an overdue payment','invoices.overdueText':'Invoice <b>{invoice}</b> for <b>{amount} PLN</b> is marked as unpaid. Please settle the payment.','invoices.readyText':'Invoice <b>{invoice}</b> for order <b>{order}</b> is ready.<br><span style="font-size:14px;">This window will stop appearing after the PDF is downloaded.</span>','settings.title':'Settings','settings.language':'Language','settings.languageHelp':'Language of the portal and order documents.','settings.languageSaved':'Language saved.','settings.languageSaveFailed':'The portal changed language, but the preference could not be saved: {error}','settings.passwordHelp':'Change your customer portal password here.','settings.newPassword':'New password','settings.repeatPassword':'Repeat new password','settings.changePassword':'Change password','settings.passwordTwice':'Enter the new password twice.','settings.passwordMismatch':'The passwords do not match.','settings.passwordShort':'The password must be at least 6 characters.','settings.passwordChanged':'Password changed.','scan.title':'Scan order QR','scan.placeholder':'Paste a ZAM-... order code or scan QR','scan.showOrder':'Show order','scan.scanQr':'Scan QR','scan.cameraHelp':'Only the rear camera is used.','scan.enterCode':'Enter or scan a ZAM-... code.','scan.notFound':'Your order with this code was not found.','scan.cameraFailed':'The rear camera could not be started.','status.unconfirmed':'Unconfirmed','status.confirmed':'Confirmed','status.inDelivery':'In delivery','status.completed':'Completed','status.cancelled':'Cancelled','status.other':'Other','common.name':'Name','common.quantity':'Quantity','common.status':'Status','common.net':'Net','common.gross':'Gross','common.date':'Date','common.actions':'Actions','common.close':'Close','common.loading':'Loading...','common.noData':'No data','common.downloadPdf':'Download PDF','common.later':'Later','common.delete':'Remove','common.pieces':'pcs','common.customer':'Customer','common.note':'Note' },
+  es: { 'app.title':'Portal del cliente','auth.title':'Acceso de clientes','auth.password':'Contraseña','auth.passwordPlaceholder':'contraseña','auth.login':'Iniciar sesión','auth.register':'Crear cuenta','auth.logout':'Cerrar sesión','nav.dashboard':'Inicio','nav.stock':'Existencias','nav.newOrder':'Realizar pedido','nav.orders':'Mis pedidos','nav.invoices':'Facturas','nav.settings':'Ajustes','nav.scan':'Escanear QR','dashboard.title':'Panel del cliente','dashboard.subtitle':'Información importante y consulta rápida de disponibilidad.','dashboard.ordersOpen':'Pedidos en curso','dashboard.ordersDone':'Completados','dashboard.modelsAvailable':'Modelos disponibles','dashboard.unpaidInvoices':'Facturas pendientes','dashboard.quickSearch':'Consulta rápida de modelo','dashboard.quickSearchHelp':'Introduce un modelo, SKU o parte del nombre.','dashboard.startTyping':'Empieza a escribir para comprobar la disponibilidad.','dashboard.fullStock':'Existencias completas','dashboard.recentOrders':'Últimos pedidos','dashboard.allOrders':'Todos los pedidos','dashboard.recentInvoices':'Últimas facturas','dashboard.modelNotFound':'Modelo no encontrado.','dashboard.noOrders':'No hay pedidos.','dashboard.noInvoices':'No hay facturas.','stock.title':'Existencias','stock.refresh':'Actualizar existencias','stock.searchPlaceholder':'Buscar: modelo / nombre...','stock.count':'Artículos: {count}','stock.searchHint':'Introduce un modelo, SKU o nombre de producto.','stock.clientGross':'Bruto cliente','stock.available':'Disponible','stock.loading':'Cargando existencias actuales desde Supabase...','stock.aborted':'Carga cancelada. Pulsa «Actualizar existencias» para reintentar.','stock.failed':'No se pudieron cargar los datos actuales de Supabase. No se muestran existencias antiguas.','orders.title':'Mis pedidos','orders.new':'Realizar pedido','orders.refresh':'Actualizar pedidos','orders.inProgress':'Pedidos en curso','orders.completed':'Pedidos completados','orders.productSearch':'Producto (escribe para buscar)','orders.addItem':'Añadir artículo','orders.notePlaceholder':'Nota (opcional)','orders.send':'Enviar pedido','orders.sending':'Enviando...','orders.number':'N.º','orders.orderNumber':'Número de pedido','orders.details':'Detalles','orders.downloadPdf':'Descargar PDF','orders.loadDetails':'Pulsa «Detalles» para cargar los artículos del pedido.','orders.loadingDetails':'Cargando detalles...','orders.empty':'No hay pedidos','orders.noItems':'No hay artículos','orders.selectProduct':'Selecciona un producto de la lista de sugerencias.','orders.productNotFound':'Producto no encontrado.','orders.addAtLeastOne':'Añade al menos un artículo.','orders.noUser':'No hay ningún usuario conectado.','orders.createdMail':'Pedido {number} creado. Correo enviado.','orders.createdRetry':'Pedido {number} creado. Se reintentará el correo de confirmación.','orders.createFailed':'No se pudo crear el pedido: {error}','orders.pdfFailed':'No se pudo descargar el PDF del pedido: {error}','orders.deliveryTime':'Plazo de entrega','orders.ordered':'Pedido','orders.realized':'Completado','orders.full':'por completo','invoices.title':'Facturas','invoices.refresh':'Actualizar facturas','invoices.number':'N.º de factura','invoices.empty':'No hay facturas','invoices.new':'Nueva','invoices.paid':'Pagada','invoices.unpaid':'Pendiente','invoices.showOlder':'Mostrar facturas anteriores ({count})','invoices.openFailed':'No se pudo abrir la factura: {error}','invoices.newTitle':'Tienes una nueva factura','invoices.overdueTitle':'Tienes un pago pendiente','invoices.overdueText':'La factura <b>{invoice}</b> por <b>{amount} PLN</b> está marcada como pendiente. Por favor, realiza el pago.','invoices.readyText':'La factura <b>{invoice}</b> del pedido <b>{order}</b> está lista.<br><span style="font-size:14px;">Esta ventana dejará de aparecer tras descargar el PDF.</span>','settings.title':'Ajustes','settings.language':'Idioma','settings.languageHelp':'Idioma del portal y de los documentos de pedido.','settings.languageSaved':'Idioma guardado.','settings.languageSaveFailed':'El portal cambió de idioma, pero no se pudo guardar la preferencia: {error}','settings.passwordHelp':'Aquí puedes cambiar tu contraseña de acceso.','settings.newPassword':'Nueva contraseña','settings.repeatPassword':'Repite la nueva contraseña','settings.changePassword':'Cambiar contraseña','settings.passwordTwice':'Introduce la nueva contraseña dos veces.','settings.passwordMismatch':'Las contraseñas no coinciden.','settings.passwordShort':'La contraseña debe tener al menos 6 caracteres.','settings.passwordChanged':'Contraseña cambiada.','scan.title':'Escanear QR del pedido','scan.placeholder':'Pega un código de pedido ZAM-... o escanea el QR','scan.showOrder':'Mostrar pedido','scan.scanQr':'Escanear QR','scan.cameraHelp':'Solo se utiliza la cámara trasera.','scan.enterCode':'Introduce o escanea un código ZAM-...','scan.notFound':'No se encontró tu pedido con ese código.','scan.cameraFailed':'No se pudo iniciar la cámara trasera.','status.unconfirmed':'Sin confirmar','status.confirmed':'Confirmado','status.inDelivery':'En entrega','status.completed':'Completado','status.cancelled':'Cancelado','status.other':'Otro','common.name':'Nombre','common.quantity':'Cantidad','common.status':'Estado','common.net':'Neto','common.gross':'Bruto','common.date':'Fecha','common.actions':'Acciones','common.close':'Cerrar','common.loading':'Cargando...','common.noData':'Sin datos','common.downloadPdf':'Descargar PDF','common.later':'Más tarde','common.delete':'Eliminar','common.pieces':'uds.','common.customer':'Cliente','common.note':'Nota' },
+  it: { 'app.title':'Portale clienti','auth.title':'Accesso clienti','auth.password':'Password','auth.passwordPlaceholder':'password','auth.login':'Accedi','auth.register':'Crea account','auth.logout':'Esci','nav.dashboard':'Dashboard','nav.stock':'Disponibilità','nav.newOrder':'Effettua ordine','nav.orders':'I miei ordini','nav.invoices':'Fatture','nav.settings':'Impostazioni','nav.scan':'Scansiona QR','dashboard.title':'Dashboard cliente','dashboard.subtitle':'Informazioni principali e verifica rapida della disponibilità.','dashboard.ordersOpen':'Ordini in corso','dashboard.ordersDone':'Completati','dashboard.modelsAvailable':'Modelli disponibili','dashboard.unpaidInvoices':'Fatture non pagate','dashboard.quickSearch':'Verifica rapida modello','dashboard.quickSearchHelp':'Inserisci modello, SKU o parte del nome del prodotto.','dashboard.startTyping':'Inizia a digitare per verificare la disponibilità.','dashboard.fullStock':'Disponibilità completa','dashboard.recentOrders':'Ordini recenti','dashboard.allOrders':'Tutti gli ordini','dashboard.recentInvoices':'Fatture recenti','dashboard.modelNotFound':'Modello non trovato.','dashboard.noOrders':'Nessun ordine.','dashboard.noInvoices':'Nessuna fattura.','stock.title':'Disponibilità','stock.refresh':'Aggiorna disponibilità','stock.searchPlaceholder':'Cerca: modello / nome...','stock.count':'Articoli: {count}','stock.searchHint':'Inserisci modello, SKU o nome del prodotto.','stock.clientGross':'Lordo cliente','stock.available':'Disponibile','stock.loading':'Caricamento delle disponibilità correnti da Supabase...','stock.aborted':'Caricamento annullato. Premi “Aggiorna disponibilità” per riprovare.','stock.failed':'Impossibile caricare i dati correnti da Supabase. Le vecchie disponibilità non vengono mostrate.','orders.title':'I miei ordini','orders.new':'Effettua ordine','orders.refresh':'Aggiorna ordini','orders.inProgress':'Ordini in corso','orders.completed':'Ordini completati','orders.productSearch':'Prodotto (digita per cercare)','orders.addItem':'Aggiungi articolo','orders.notePlaceholder':'Nota (facoltativa)','orders.send':'Invia ordine','orders.sending':'Invio in corso...','orders.number':'N.','orders.orderNumber':'Numero ordine','orders.details':'Dettagli','orders.downloadPdf':'Scarica PDF','orders.loadDetails':'Premi “Dettagli” per caricare gli articoli dell’ordine.','orders.loadingDetails':'Caricamento dettagli...','orders.empty':'Nessun ordine','orders.noItems':'Nessun articolo','orders.selectProduct':'Seleziona un prodotto dall’elenco dei suggerimenti.','orders.productNotFound':'Prodotto non trovato.','orders.addAtLeastOne':'Aggiungi almeno un articolo.','orders.noUser':'Nessun utente connesso.','orders.createdMail':'Ordine {number} creato. E-mail inviata.','orders.createdRetry':'Ordine {number} creato. L’e-mail di conferma verrà ritentata.','orders.createFailed':'Impossibile creare l’ordine: {error}','orders.pdfFailed':'Impossibile scaricare il PDF dell’ordine: {error}','orders.deliveryTime':'Tempo di consegna','orders.ordered':'Ordinato','orders.realized':'Completato','orders.full':'completamente','invoices.title':'Fatture','invoices.refresh':'Aggiorna fatture','invoices.number':'N. fattura','invoices.empty':'Nessuna fattura','invoices.new':'Nuova','invoices.paid':'Pagata','invoices.unpaid':'Non pagata','invoices.showOlder':'Mostra fatture precedenti ({count})','invoices.openFailed':'Impossibile aprire la fattura: {error}','invoices.newTitle':'Hai una nuova fattura','invoices.overdueTitle':'Hai un pagamento scaduto','invoices.overdueText':'La fattura <b>{invoice}</b> di <b>{amount} PLN</b> risulta non pagata. Ti preghiamo di effettuare il pagamento.','invoices.readyText':'La fattura <b>{invoice}</b> per l’ordine <b>{order}</b> è pronta.<br><span style="font-size:14px;">Questa finestra non verrà più mostrata dopo il download del PDF.</span>','settings.title':'Impostazioni','settings.language':'Lingua','settings.languageHelp':'Lingua del portale e dei documenti d’ordine.','settings.languageSaved':'Lingua salvata.','settings.languageSaveFailed':'Il portale ha cambiato lingua, ma non è stato possibile salvare la preferenza: {error}','settings.passwordHelp':'Qui puoi cambiare la password di accesso.','settings.newPassword':'Nuova password','settings.repeatPassword':'Ripeti la nuova password','settings.changePassword':'Cambia password','settings.passwordTwice':'Inserisci due volte la nuova password.','settings.passwordMismatch':'Le password non coincidono.','settings.passwordShort':'La password deve contenere almeno 6 caratteri.','settings.passwordChanged':'Password modificata.','scan.title':'Scansiona QR ordine','scan.placeholder':'Incolla un codice ordine ZAM-... o scansiona il QR','scan.showOrder':'Mostra ordine','scan.scanQr':'Scansiona QR','scan.cameraHelp':'Viene utilizzata solo la fotocamera posteriore.','scan.enterCode':'Inserisci o scansiona un codice ZAM-...','scan.notFound':'Il tuo ordine con questo codice non è stato trovato.','scan.cameraFailed':'Impossibile avviare la fotocamera posteriore.','status.unconfirmed':'Non confermato','status.confirmed':'Confermato','status.inDelivery':'In consegna','status.completed':'Completato','status.cancelled':'Annullato','status.other':'Altro','common.name':'Nome','common.quantity':'Quantità','common.status':'Stato','common.net':'Netto','common.gross':'Lordo','common.date':'Data','common.actions':'Azioni','common.close':'Chiudi','common.loading':'Caricamento...','common.noData':'Nessun dato','common.downloadPdf':'Scarica PDF','common.later':'Più tardi','common.delete':'Rimuovi','common.pieces':'pz.','common.customer':'Cliente','common.note':'Nota' }
+};
+
+// Każdy język ma pełny zestaw komunikatów. Polski pozostaje wyłącznie
+// bezpiecznym fallbackiem dla nieznanego kodu lub przypadkowo brakującego klucza.
+Object.assign(PL_TRANSLATIONS, {
+  'common.refreshing':'Dane są odświeżane. Spróbuj ponownie za chwilę.',
+  'common.refreshFailed':'Nie udało się odświeżyć danych. Spróbuj ponownie za chwilę.',
+  'common.requestFailed':'Żądanie nie powiodło się.',
+  'orders.fastDelivery':'1–3 dni', 'orders.slowDelivery':'10–20 dni',
+  'orders.realizationCount':'{done} {unit}'
+});
+
+Object.assign(TRANSLATIONS.de, {
+  'auth.email':'E-Mail', 'auth.emailPlaceholder':'E-Mail', 'auth.loggedIn':'angemeldet',
+  'auth.loginError':'Anmeldefehler: {error}', 'auth.registerError':'Registrierungsfehler: {error}',
+  'auth.sessionError':'Sitzungsfehler: {error}',
+  'auth.sessionMissing':'Die Anmeldung wurde akzeptiert, aber es gibt keine aktive Sitzung. Falls die E-Mail-Bestätigung aktiviert ist, bestätigen Sie bitte Ihre E-Mail-Adresse.',
+  'auth.accountCreated':'Das Konto wurde erstellt. Falls die E-Mail-Bestätigung aktiviert ist, bestätigen Sie bitte zuerst Ihre E-Mail-Adresse und melden Sie sich anschließend an.',
+  'auth.loggedOut':'Abgemeldet.', 'auth.noSession':'Keine aktive Sitzung. Bitte melden Sie sich erneut an.',
+  'common.error':'Fehler: {error}', 'common.email':'E-Mail',
+  'common.refreshing':'Die Daten werden aktualisiert. Bitte versuchen Sie es gleich erneut.',
+  'common.refreshFailed':'Die Daten konnten nicht aktualisiert werden. Bitte versuchen Sie es gleich erneut.',
+  'common.requestFailed':'Die Anfrage ist fehlgeschlagen.',
+  'dashboard.quickSearchPlaceholder':'z. B. CH010, Winsor...', 'stock.netB2b':'Netto B2B',
+  'orders.productPlaceholder':'z. B. CH010 / Winsor...', 'orders.netB2bUnit':'Netto B2B/Stk.',
+  'orders.grossB2bUnit':'Brutto B2B/Stk.', 'orders.retailGrossUnit':'Brutto Einzelhandel/Stk.',
+  'orders.grossB2bValue':'Bruttowert B2B', 'orders.retailGrossValue':'Bruttowert Einzelhandel',
+  'orders.summary':'Positionen: {count} | Netto B2B: {net} | Brutto B2B: {gross} | Brutto Einzelhandel: {retail}',
+  'orders.netUnit':'Netto/Stk.', 'orders.grossUnit':'Brutto/Stk.', 'orders.netValue':'Nettowert',
+  'orders.grossValue':'Bruttowert', 'orders.fastDelivery':'1–3 Tage', 'orders.slowDelivery':'10–20 Tage',
+  'orders.realizationCount':'{done} {unit}'
+});
+
+Object.assign(TRANSLATIONS.en, {
+  'auth.email':'Email', 'auth.emailPlaceholder':'email', 'auth.loggedIn':'signed in',
+  'auth.loginError':'Login error: {error}', 'auth.registerError':'Registration error: {error}',
+  'auth.sessionError':'Session error: {error}',
+  'auth.sessionMissing':'The login was accepted, but there is no active session. If email confirmation is enabled, confirm your email address.',
+  'auth.accountCreated':'The account was created. If email confirmation is enabled, confirm your email address before signing in.',
+  'auth.loggedOut':'Signed out.', 'auth.noSession':'No active session. Please sign in again.',
+  'common.error':'Error: {error}', 'common.email':'Email',
+  'common.refreshing':'Data is being refreshed. Please try again shortly.',
+  'common.refreshFailed':'The data could not be refreshed. Please try again shortly.',
+  'common.requestFailed':'The request failed.',
+  'dashboard.quickSearchPlaceholder':'e.g. CH010, Winsor...', 'stock.netB2b':'Net B2B',
+  'orders.productPlaceholder':'e.g. CH010 / Winsor...', 'orders.netB2bUnit':'Net B2B/unit',
+  'orders.grossB2bUnit':'Gross B2B/unit', 'orders.retailGrossUnit':'Retail gross/unit',
+  'orders.grossB2bValue':'Gross B2B value', 'orders.retailGrossValue':'Retail gross value',
+  'orders.summary':'Items: {count} | Net B2B: {net} | Gross B2B: {gross} | Retail gross: {retail}',
+  'orders.netUnit':'Net/unit', 'orders.grossUnit':'Gross/unit', 'orders.netValue':'Net value',
+  'orders.grossValue':'Gross value', 'orders.fastDelivery':'1–3 days', 'orders.slowDelivery':'10–20 days',
+  'orders.realizationCount':'{done} {unit}'
+});
+
+Object.assign(TRANSLATIONS.es, {
+  'auth.email':'Email', 'auth.emailPlaceholder':'email', 'auth.loggedIn':'sesión iniciada',
+  'auth.loginError':'Error de acceso: {error}', 'auth.registerError':'Error de registro: {error}',
+  'auth.sessionError':'Error de sesión: {error}',
+  'auth.sessionMissing':'El acceso fue aceptado, pero no hay una sesión activa. Si la confirmación por correo está habilitada, confirma tu dirección de email.',
+  'auth.accountCreated':'La cuenta se ha creado. Si la confirmación por correo está habilitada, confirma tu dirección de email antes de iniciar sesión.',
+  'auth.loggedOut':'Sesión cerrada.', 'auth.noSession':'No hay una sesión activa. Inicia sesión de nuevo.',
+  'common.error':'Error: {error}', 'common.email':'Email',
+  'common.refreshing':'Los datos se están actualizando. Inténtalo de nuevo en unos instantes.',
+  'common.refreshFailed':'No se pudieron actualizar los datos. Inténtalo de nuevo en unos instantes.',
+  'common.requestFailed':'La solicitud ha fallado.',
+  'dashboard.quickSearchPlaceholder':'p. ej. CH010, Winsor...', 'stock.netB2b':'Neto B2B',
+  'orders.productPlaceholder':'p. ej. CH010 / Winsor...', 'orders.netB2bUnit':'Neto B2B/ud.',
+  'orders.grossB2bUnit':'Bruto B2B/ud.', 'orders.retailGrossUnit':'Bruto minorista/ud.',
+  'orders.grossB2bValue':'Valor bruto B2B', 'orders.retailGrossValue':'Valor bruto minorista',
+  'orders.summary':'Artículos: {count} | Neto B2B: {net} | Bruto B2B: {gross} | Bruto minorista: {retail}',
+  'orders.netUnit':'Neto/ud.', 'orders.grossUnit':'Bruto/ud.', 'orders.netValue':'Valor neto',
+  'orders.grossValue':'Valor bruto', 'orders.fastDelivery':'1–3 días', 'orders.slowDelivery':'10–20 días',
+  'orders.realizationCount':'{done} {unit}'
+});
+
+Object.assign(TRANSLATIONS.it, {
+  'auth.email':'Email', 'auth.emailPlaceholder':'email', 'auth.loggedIn':'accesso effettuato',
+  'auth.loginError':'Errore di accesso: {error}', 'auth.registerError':'Errore di registrazione: {error}',
+  'auth.sessionError':'Errore di sessione: {error}',
+  'auth.sessionMissing':'L’accesso è stato accettato, ma non è presente una sessione attiva. Se la conferma e-mail è abilitata, conferma il tuo indirizzo e-mail.',
+  'auth.accountCreated':'L’account è stato creato. Se la conferma e-mail è abilitata, conferma il tuo indirizzo prima di accedere.',
+  'auth.loggedOut':'Disconnesso.', 'auth.noSession':'Nessuna sessione attiva. Accedi di nuovo.',
+  'common.error':'Errore: {error}', 'common.email':'Email',
+  'common.refreshing':'I dati sono in aggiornamento. Riprova tra poco.',
+  'common.refreshFailed':'Impossibile aggiornare i dati. Riprova tra poco.',
+  'common.requestFailed':'La richiesta non è riuscita.',
+  'dashboard.quickSearchPlaceholder':'ad es. CH010, Winsor...', 'stock.netB2b':'Netto B2B',
+  'orders.productPlaceholder':'ad es. CH010 / Winsor...', 'orders.netB2bUnit':'Netto B2B/pz.',
+  'orders.grossB2bUnit':'Lordo B2B/pz.', 'orders.retailGrossUnit':'Lordo al dettaglio/pz.',
+  'orders.grossB2bValue':'Valore lordo B2B', 'orders.retailGrossValue':'Valore lordo al dettaglio',
+  'orders.summary':'Articoli: {count} | Netto B2B: {net} | Lordo B2B: {gross} | Lordo al dettaglio: {retail}',
+  'orders.netUnit':'Netto/pz.', 'orders.grossUnit':'Lordo/pz.', 'orders.netValue':'Valore netto',
+  'orders.grossValue':'Valore lordo', 'orders.fastDelivery':'1–3 giorni', 'orders.slowDelivery':'10–20 giorni',
+  'orders.realizationCount':'{done} {unit}'
+});
+
+function normalizeLanguage(value){
+  const language = String(value || '').trim().toLowerCase();
+  return SUPPORTED_LANGUAGES.includes(language) ? language : 'pl';
+}
+
+function t(key, params = {}){
+  let value = TRANSLATIONS[CURRENT_LANGUAGE]?.[key] ?? PL_TRANSLATIONS[key] ?? '';
+  return String(value).replace(/\{(\w+)\}/g, (_, name) => String(params[name] ?? ''));
+}
+
+function clientErrorDetail(error){
+  const message = String(error?.message || error || '').trim();
+  if(CURRENT_LANGUAGE === 'pl') return message || t('common.requestFailed');
+  const technical = message.match(/(?:HTTP|API)\s*:?[ ]*\d{3}/i);
+  return technical ? technical[0] : t('common.requestFailed');
+}
+
+function applyTranslations(){
+  document.documentElement.lang = CURRENT_LANGUAGE;
+  document.title = t('app.title');
+  document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = t(el.dataset.i18n); });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => { el.placeholder = t(el.dataset.i18nPlaceholder); });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
+  document.querySelectorAll('[data-i18n-aria-label]').forEach(el => { el.setAttribute('aria-label', t(el.dataset.i18nAriaLabel)); });
+  document.querySelectorAll('[data-language]').forEach(btn => btn.classList.toggle('active', btn.dataset.language === CURRENT_LANGUAGE));
+}
+
+function setLanguage(value, rerender = true){
+  CURRENT_LANGUAGE = normalizeLanguage(value);
+  applyTranslations();
+  if(rerender){
+    renderClientDashboard(); renderStockTable(); renderOrderDraft();
+    if(CLIENT_ORDERS.length) renderOrdersRows(CLIENT_ORDERS);
+    if(CLIENT_INVOICES.length) renderInvoicesRows(CLIENT_INVOICES);
+  }
+}
 
 function orderStatusMeta(statusRaw) {
   const key = String(statusRaw || '').toLowerCase();
   if (key === 'new' || key === 'pending' || key === 'unconfirmed') {
-    return { label: STATUS_LABELS[key], cls: 'status-new' };
+    return { label: t('status.unconfirmed'), cls: 'status-new' };
   }
   if (key === 'confirmed' || key === 'packed') {
-    return { label: STATUS_LABELS[key], cls: 'status-confirmed' };
+    return { label: t('status.confirmed'), cls: 'status-confirmed' };
   }
   if (key === 'in_delivery' || key === 'shipped') {
-    return { label: STATUS_LABELS[key], cls: 'status-in-delivery' };
+    return { label: t('status.inDelivery'), cls: 'status-in-delivery' };
   }
-  return { label: STATUS_LABELS[key] || statusRaw || '-', cls: 'status-other' };
+  if(key === 'issued' || key === 'completed') return { label:t('status.completed'), cls:'status-other' };
+  if(key === 'cancelled') return { label:t('status.cancelled'), cls:'status-other' };
+  return { label:t('status.other'), cls:'status-other' };
 }
 
 function updateOrderSummaryBar(orders){
@@ -389,8 +610,35 @@ async function makeQrDataUrl(value){
   }
 }
 
+function currentLocale(){
+  return LOCALES[CURRENT_LANGUAGE] || LOCALES.pl;
+}
+
 function formatMoney(v){
-  return Number(v || 0).toFixed(2);
+  return new Intl.NumberFormat(currentLocale(), {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(Number(v || 0));
+}
+
+function formatCurrency(v, currency = 'PLN'){
+  return new Intl.NumberFormat(currentLocale(), {
+    style: 'currency', currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(Number(v || 0));
+}
+
+function formatDate(value, withTime = false){
+  if(!value) return '—';
+  const raw = String(value);
+  const date = new Date(raw.length <= 10 ? `${raw}T00:00:00` : raw);
+  if(Number.isNaN(date.getTime())) return raw;
+  return new Intl.DateTimeFormat(currentLocale(), withTime ? {
+    year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'
+  } : {
+    year:'numeric', month:'2-digit', day:'2-digit'
+  }).format(date);
 }
 
 function calcClientGrossFromNet(netB2B){
@@ -399,15 +647,21 @@ function calcClientGrossFromNet(netB2B){
 
 async function fetchMagazynJson(path, options = {}){
   const attempts = Number(options.attempts || 2);
+  const requestOptions = { ...options };
+  delete requestOptions.attempts;
   let lastError = null;
 
   for(let attempt = 1; attempt <= attempts; attempt++){
     try {
       const session = await getSession();
-      if(!session?.access_token) throw new Error('Brak aktywnej sesji. Zaloguj się ponownie.');
+      if(!session?.access_token) throw new Error(t('auth.noSession'));
       const res = await fetch(`${MAGAZYN_API_BASE}${path}`, {
         cache: 'no-store',
-        headers: { 'Authorization': `Bearer ${session.access_token}` }
+        ...requestOptions,
+        headers: {
+          ...(requestOptions.headers || {}),
+          'Authorization': `Bearer ${session.access_token}`
+        }
       });
       if(!res.ok){
         throw new Error(`Magazyn API: ${res.status}`);
@@ -422,7 +676,7 @@ async function fetchMagazynJson(path, options = {}){
     }
   }
 
-  throw lastError || new Error('Nie udało się pobrać danych.');
+  throw lastError || new Error(t('common.refreshFailed'));
 }
 
 function orderDeliveryTimeLabel(it){
@@ -433,7 +687,7 @@ function orderDeliveryTimeLabel(it){
   const itemStockRaw = it && (it.stock_qty ?? it.stock ?? it.qty_physical ?? it.available_qty);
   const itemStockNumber = Number(itemStockRaw);
   if(wantedQty > 0 && Number.isFinite(itemStockNumber)){
-    return itemStockNumber >= wantedQty ? '1/3 dni' : '10/20 dni';
+    return itemStockNumber >= wantedQty ? t('orders.fastDelivery') : t('orders.slowDelivery');
   }
   const stockRow = (STOCK_VIEW || []).find(r => {
     const sameProduct = itemProductId && Number(r.product_id) === itemProductId;
@@ -444,10 +698,16 @@ function orderDeliveryTimeLabel(it){
     ? Number(stockRow.qty_on_stock || 0)
     : Number((it && (it.stock_qty ?? it.qty_on_stock ?? it.available_qty)) || 0);
 
-  if(wantedQty > 0 && availableNow >= wantedQty) return '1/3 dni';
-  if(raw === 'dostępne' || raw === 'dostepne' || raw === 'available' || raw === '1/3') return '1/3 dni';
-  if(raw && raw !== '10/20 dni' && raw !== '10/20') return raw;
-  return '10/20 dni';
+  if(wantedQty > 0 && availableNow >= wantedQty) return t('orders.fastDelivery');
+  if(raw === 'dostępne' || raw === 'dostepne' || raw === 'available' || raw === '1/3') return t('orders.fastDelivery');
+  return t('orders.slowDelivery');
+}
+
+function orderRealizationLabel(it){
+  const qty = Number(it?.qty || 0);
+  const done = Number(it?.invoiced_qty || 0);
+  if(qty > 0 && done >= qty) return t('orders.full');
+  return t('orders.realizationCount', { done:Math.max(0, done), unit:t('common.pieces') });
 }
 
 function renderOrderDetailsHtml(order, items, totals){
@@ -459,26 +719,26 @@ function renderOrderDetailsHtml(order, items, totals){
       <td>${formatMoney(it.gross_price)}</td>
       <td>${Number(it.qty || 0)}</td>
       <td>${esc(orderDeliveryTimeLabel(it))}</td>
-      <td>${esc(it.realization_label || (Number(it.invoiced_qty || 0) >= Number(it.qty || 0) && Number(it.qty || 0) > 0 ? 'w całości' : `${Number(it.invoiced_qty || 0)} szt.`))}</td>
+      <td>${esc(orderRealizationLabel(it))}</td>
       <td>${formatMoney(it.line_net)}</td>
       <td>${formatMoney(it.line_gross)}</td>
     </tr>
-  `).join('') || '<tr><td colspan="9">Brak pozycji</td></tr>';
+  `).join('') || `<tr><td colspan="9">${esc(t('orders.noItems'))}</td></tr>`;
 
   return `
     <div class="card" style="margin:8px 0 0 0">
       <div>
         <div><b>${esc(displayOrderLabel(order))}</b></div>
-        <div class="muted" style="margin-top:6px">Klient: ${esc(order.customer_name || '-')}</div>
-        <div class="muted">Email: ${esc(order.customer_email || '-')}</div>
-        <div class="muted">Data: ${esc(String(order.created_at || '').replace('T',' ').slice(0,19))}</div>
-        <div class="muted">Notatka: ${esc(order.note || '-')}</div>
-        <div style="margin-top:8px"><span class="badge">Netto: ${formatMoney(totals.net)}</span> <span class="badge">Brutto: ${formatMoney(totals.gross)}</span></div>
+        <div class="muted" style="margin-top:6px">${esc(t('common.customer'))}: ${esc(order.customer_name || '-')}</div>
+        <div class="muted">${esc(t('common.email'))}: ${esc(order.customer_email || '-')}</div>
+        <div class="muted">${esc(t('common.date'))}: ${esc(formatDate(order.created_at, true))}</div>
+        <div class="muted">${esc(t('common.note'))}: ${esc(order.note || '-')}</div>
+        <div style="margin-top:8px"><span class="badge">${esc(t('common.net'))}: ${formatMoney(totals.net)}</span> <span class="badge">${esc(t('common.gross'))}: ${formatMoney(totals.gross)}</span></div>
       </div>
       <div style="overflow:auto;margin-top:10px">
         <table>
           <thead>
-            <tr><th>Model</th><th>Nazwa</th><th>Netto/szt</th><th>Brutto/szt</th><th>Zamówiono</th><th>Czas realizacji</th><th>Zrealizowane</th><th>Wartość netto</th><th>Wartość brutto</th></tr>
+            <tr><th>SKU</th><th>${esc(t('common.name'))}</th><th>${esc(t('orders.netUnit'))}</th><th>${esc(t('orders.grossUnit'))}</th><th>${esc(t('orders.ordered'))}</th><th>${esc(t('orders.deliveryTime'))}</th><th>${esc(t('orders.realized'))}</th><th>${esc(t('orders.netValue'))}</th><th>${esc(t('orders.grossValue'))}</th></tr>
           </thead>
           <tbody>${rows}</tbody>
         </table>
@@ -487,9 +747,38 @@ function renderOrderDetailsHtml(order, items, totals){
   `;
 }
 
+function downloadOrderPdf(order){
+  // Otwarcie pustej karty następuje bezpośrednio po kliknięciu, więc blokada
+  // popupów nie zatrzyma PDF podczas oczekiwania na odpowiedź Rendera.
+  const pdfWindow = window.open('about:blank', '_blank');
+  if(pdfWindow) pdfWindow.opener = null;
+
+  return (async () => {
+    try {
+      const session = await getSession();
+      if(!session?.access_token) throw new Error(t('auth.noSession'));
+      const response = await fetch(`${MAGAZYN_API_BASE}/api/client/orders/${Number(order.id)}/pdf`, {
+        cache:'no-store',
+        headers:{ 'Authorization':`Bearer ${session.access_token}` }
+      });
+      if(!response.ok){
+        let message = `PDF HTTP ${response.status}`;
+        try { message = (await response.json())?.error || message; } catch(_) {}
+        throw new Error(message);
+      }
+      const objectUrl = URL.createObjectURL(await response.blob());
+      if(pdfWindow) pdfWindow.location.replace(objectUrl); else window.location.href = objectUrl;
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+    } catch(error){
+      if(pdfWindow) pdfWindow.close();
+      throw error;
+    }
+  })();
+}
+
 async function fetchOrdersBundle(){
   const session = await getSession();
-  if(!session?.user?.email) throw new Error('Brak sesji.');
+  if(!session?.user?.email) throw new Error(t('auth.noSession'));
   const email = session.user.email.trim().toLowerCase();
 
   const ordersRes = await sbAuth
@@ -560,7 +849,7 @@ function markInvoiceSeenAndOpenPdf(inv){
   return (async () => {
     try {
       const session = await getSession();
-      if(!session?.user?.email) throw new Error('Brak sesji.');
+      if(!session?.user?.email) throw new Error(t('auth.noSession'));
       const downloadUrl = `${MAGAZYN_API_BASE}/api/invoices/${inv.id}/download`;
       const pdfResponse = await fetch(downloadUrl, { headers: { 'Authorization': `Bearer ${session.access_token}` } });
       if(!pdfResponse.ok) throw new Error(`PDF HTTP ${pdfResponse.status}`);
@@ -654,22 +943,28 @@ function showNewInvoiceModal(noticeOrInvoice){
         box.style.borderColor = '#dc2626';
       }
       if(title){
-        title.textContent = 'Masz zaległą płatność';
+        title.textContent = t('invoices.overdueTitle');
         title.style.color = '#991b1b';
       }
       text.style.color = '#991b1b';
-      text.innerHTML = `Faktura <b>${esc(inv.invoice_no || '')}</b> na kwotę <b>${formatMoney(inv.total_gross)} PLN</b> jest oznaczona jako nieopłacona. Prosimy o uregulowanie płatności.`;
+      text.innerHTML = t('invoices.overdueText', {
+        invoice:esc(inv.invoice_no || ''),
+        amount:formatMoney(inv.total_gross)
+      });
     } else {
       if(box){
         box.style.background = '#e9f9ee';
         box.style.borderColor = '#16a34a';
       }
       if(title){
-        title.textContent = 'Masz nową fakturę';
+        title.textContent = t('invoices.newTitle');
         title.style.color = '#166534';
       }
       text.style.color = '#166534';
-      text.innerHTML = `Faktura <b>${esc(inv.invoice_no || '')}</b> do zamówienia <b>${esc(inv.order_no || '')}</b> jest gotowa.<br><span style="font-size:14px;">To okno przestanie się pojawiać po pobraniu faktury PDF.</span>`;
+      text.innerHTML = t('invoices.readyText', {
+        invoice:esc(inv.invoice_no || ''),
+        order:esc(inv.order_no || '')
+      });
     }
     modal.classList.remove('hidden');
   } catch(e){
@@ -780,8 +1075,54 @@ async function fetchInvoicesFromSupabase(email){
 
   function invoicePaymentBadge(inv){
     return invoiceIsPaid(inv)
-      ? ' <span class="badge badge-paid">Op&#322;acona</span>'
-      : ' <span class="badge badge-unpaid">Nieop&#322;acona</span>';
+      ? ` <span class="badge badge-paid">${esc(t('invoices.paid'))}</span>`
+      : ` <span class="badge badge-unpaid">${esc(t('invoices.unpaid'))}</span>`;
+  }
+
+  function renderInvoicesRows(rows){
+    const invoices = Array.isArray(rows) ? rows : [];
+    const tb = $('invoicesTable').querySelector('tbody');
+    if(!invoices.length){
+      tb.innerHTML = `<tr><td colspan="6">${esc(t('invoices.empty'))}</td></tr>`;
+      return;
+    }
+
+    const visibleRows = INVOICES_SHOW_ALL ? invoices : invoices.slice(0, 10);
+    const olderButtonRow = invoices.length > visibleRows.length ? `
+      <tr class="invoices-more-row"><td colspan="6">
+        <button class="btn" type="button" id="btnShowOlderInvoices">${esc(t('invoices.showOlder', { count:invoices.length - visibleRows.length }))}</button>
+      </td></tr>
+    ` : '';
+
+    tb.innerHTML = visibleRows.map(invoice => `
+      <tr>
+        <td><b>${esc(invoice.invoice_no || '')}</b>${Number(invoice.seen_by_client || 0) === 0 ? ` <span class="badge">${esc(t('invoices.new'))}</span>` : ''}${invoicePaymentBadge(invoice)}</td>
+        <td>${esc(invoice.order_display || displayOrderLabel(invoice) || invoice.order_no || '')}</td>
+        <td>${esc(formatDate(invoice.issue_date))}</td>
+        <td>${formatMoney(invoice.total_net)}</td>
+        <td>${formatMoney(invoice.total_gross)}</td>
+        <td><button class="btn" type="button" data-open-invoice="${invoice.id}">${esc(t('common.downloadPdf'))}</button></td>
+      </tr>
+    `).join('') + olderButtonRow;
+
+    tb.querySelectorAll('[data-open-invoice]').forEach(button => {
+      button.onclick = async () => {
+        const invoice = invoices.find(item => Number(item.id) === Number(button.dataset.openInvoice));
+        if(!invoice) return;
+        try {
+          await markInvoiceSeenAndOpenPdf(invoice);
+        } catch(error){
+          alert(t('invoices.openFailed', { error:clientErrorDetail(error) }));
+        }
+      };
+    });
+    const olderButton = $('btnShowOlderInvoices');
+    if(olderButton){
+      olderButton.onclick = () => {
+        INVOICES_SHOW_ALL = true;
+        renderInvoicesRows(invoices);
+      };
+    }
   }
 
   async function loadInvoices(showModal = true, force = false){
@@ -790,11 +1131,11 @@ async function fetchInvoicesFromSupabase(email){
 
   LOAD_IN_FLIGHT.invoices = (async () => {
   const tb = $('invoicesTable').querySelector('tbody');
-  tb.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
+  tb.innerHTML = `<tr><td colspan="6">${esc(t('common.loading'))}</td></tr>`;
 
   try {
     const session = await getSession();
-    if(!session?.user?.email) throw new Error('Brak sesji.');
+    if(!session?.user?.email) throw new Error(t('auth.noSession'));
     const emailRaw = session.user.email.trim().toLowerCase();
     const email = encodeURIComponent(emailRaw);
     const payload = await fetchMagazynJson(`/api/client_invoices?email=${email}`);
@@ -802,50 +1143,7 @@ async function fetchInvoicesFromSupabase(email){
       CLIENT_INVOICES = rows;
       renderClientDashboard();
 
-      if(!rows.length){
-        tb.innerHTML = '<tr><td colspan="6">Brak faktur</td></tr>';
-        return;
-      }
-
-      const visibleRows = INVOICES_SHOW_ALL ? rows : rows.slice(0, 10);
-      const olderButtonRow = rows.length > visibleRows.length ? `
-        <tr class="invoices-more-row">
-          <td colspan="6">
-            <button class="btn" type="button" id="btnShowOlderInvoices">Poka&#380; starsze faktury (${rows.length - visibleRows.length})</button>
-          </td>
-        </tr>
-      ` : '';
-
-      tb.innerHTML = visibleRows.map(r => `
-        <tr>
-          <td><b>${esc(r.invoice_no || '')}</b>${Number(r.seen_by_client || 0) === 0 ? ' <span class="badge">Nowa</span>' : ''}${invoicePaymentBadge(r)}</td>
-          <td>${esc(r.order_display || displayOrderLabel(r) || r.order_no || '')}</td>
-          <td>${esc(r.issue_date || '')}</td>
-          <td>${formatMoney(r.total_net)}</td>
-          <td>${formatMoney(r.total_gross)}</td>
-          <td><button class="btn" type="button" data-open-invoice="${r.id}">Pobierz PDF</button></td>
-        </tr>
-      `).join('') + olderButtonRow;
-
-    tb.querySelectorAll('[data-open-invoice]').forEach(btn => {
-      btn.onclick = async () => {
-        const inv = rows.find(x => Number(x.id) === Number(btn.dataset.openInvoice));
-        if(!inv) return;
-        try {
-          await markInvoiceSeenAndOpenPdf(inv);
-        } catch(error){
-          alert('Nie udało się otworzyć faktury: ' + error.message);
-          }
-        };
-      });
-      const olderBtn = $('btnShowOlderInvoices');
-      if(olderBtn){
-        olderBtn.onclick = () => {
-          INVOICES_SHOW_ALL = true;
-          LAST_LOADED.invoices = 0;
-          loadInvoices(false, true);
-        };
-      }
+      renderInvoicesRows(rows);
 
     if(showModal){
       try {
@@ -859,14 +1157,14 @@ async function fetchInvoicesFromSupabase(email){
     LAST_LOADED.invoices = Date.now();
   } catch(error){
     if(isAbortLikeError(error)){
-      if(STOCK_VIEW.length){
-        renderStockTable();
+      if(CLIENT_INVOICES.length){
+        renderInvoicesRows(CLIENT_INVOICES);
       } else {
-        tb.innerHTML = '<tr><td colspan="6">Dane są odświeżane. Spróbuj ponownie za chwilę.</td></tr>';
+        tb.innerHTML = `<tr><td colspan="6">${esc(t('common.refreshing'))}</td></tr>`;
       }
       return;
     }
-    tb.innerHTML = '<tr><td colspan="6">Nie udało się odświeżyć danych. Spróbuj ponownie za chwilę.</td></tr>';
+    tb.innerHTML = `<tr><td colspan="6">${esc(t('common.refreshFailed'))}</td></tr>`;
   }
   })();
 
@@ -881,7 +1179,7 @@ async function showOrderByCode(rawCode){
   const out = $('orderScanOut');
   const code = parseOrderCode(rawCode || $('orderCodeInput').value || '');
   if(!code){
-    out.innerHTML = '<div class="muted">Wpisz albo zeskanuj kod ZAM-...</div>';
+    out.innerHTML = `<div class="muted">${esc(t('scan.enterCode'))}</div>`;
     return;
   }
 
@@ -889,15 +1187,14 @@ async function showOrderByCode(rawCode){
     const bundle = await fetchOrdersBundle();
     const order = (bundle.orders || []).find(o => displayOrderNo(o) === code || String(o.order_no || '').trim() === code);
     if(!order){
-      out.innerHTML = '<div class="muted">Nie znaleziono Twojego zamówienia o takim kodzie.</div>';
+      out.innerHTML = `<div class="muted">${esc(t('scan.notFound'))}</div>`;
       return;
     }
-    const items = bundle.itemsByOrder.get(Number(order.id)) || [];
-    const totals = bundle.totalsByOrder.get(Number(order.id)) || { net:0, gross:0 };
+    const { items, totals } = await fetchOrderDetails(order);
     out.innerHTML = renderOrderDetailsHtml(order, items, totals);
     out.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch(error){
-    out.innerHTML = `<div class="muted">Błąd: ${esc(error.message)}</div>`;
+    out.innerHTML = `<div class="muted">${esc(t('common.error', { error:clientErrorDetail(error) }))}</div>`;
   }
 }
 
@@ -915,14 +1212,14 @@ function renderDashboardModelSearch(){
   const queryRaw = String($('dashboardModelSearch')?.value || '').trim();
   const query = queryRaw.toLowerCase();
   if(!queryRaw){
-    out.innerHTML = '<div class="muted">Zacznij wpisywać, aby sprawdzić dostępność.</div>';
+    out.innerHTML = `<div class="muted">${esc(t('dashboard.startTyping'))}</div>`;
     return;
   }
   const matches = STOCK_VIEW.filter(r => `${r.sku} ${r.model} ${r.name}`.toLowerCase().includes(query)).slice(0,8);
   scheduleStockSearchLog(queryRaw, matches);
   out.innerHTML = matches.length ? matches.map(r => `
-    <div class="model-hit"><div><b>${esc(r.model || r.sku)}</b><span class="muted">${esc(r.name || r.sku)}</span></div><div class="available">${Number(r.qty_total_visible || 0)} szt.</div></div>
-  `).join('') : '<div class="muted">Nie znaleziono modelu.</div>';
+    <div class="model-hit"><div><b>${esc(r.model || r.sku)}</b><span class="muted">${esc(r.name || r.sku)}</span></div><div class="available">${Number(r.qty_total_visible || 0)} ${esc(t('common.pieces'))}</div></div>
+  `).join('') : `<div class="muted">${esc(t('dashboard.modelNotFound'))}</div>`;
 }
 
 function renderClientDashboard(){
@@ -934,16 +1231,17 @@ function renderClientDashboard(){
 
   $('dashboardRecentOrders').innerHTML = CLIENT_ORDERS.slice(0,5).map(o => {
     const st = orderStatusMeta(o.status);
-    return `<div class="dashboard-row"><div><b>${esc(displayOrderLabel(o))}</b><small>${esc(String(o.created_at || '').replace('T',' ').slice(0,16))}</small></div><span class="status-chip ${st.cls}">${esc(st.label)}</span></div>`;
-  }).join('') || '<div class="muted">Brak zamówień.</div>';
+    return `<div class="dashboard-row"><div><b>${esc(displayOrderLabel(o))}</b><small>${esc(formatDate(o.created_at, true))}</small></div><span class="status-chip ${st.cls}">${esc(st.label)}</span></div>`;
+  }).join('') || `<div class="muted">${esc(t('dashboard.noOrders'))}</div>`;
 
   $('dashboardRecentInvoices').innerHTML = CLIENT_INVOICES.slice(0,5).map(inv => `
-    <div class="dashboard-row"><div><b>${esc(inv.invoice_no || '')}</b><small>${esc(inv.issue_date || '')}</small></div><span class="badge ${invoiceIsPaid(inv) ? 'badge-paid' : 'badge-unpaid'}">${invoiceIsPaid(inv) ? 'Opłacona' : 'Nieopłacona'}</span></div>
-  `).join('') || '<div class="muted">Brak faktur.</div>';
+    <div class="dashboard-row"><div><b>${esc(inv.invoice_no || '')}</b><small>${esc(formatDate(inv.issue_date))}</small></div><span class="badge ${invoiceIsPaid(inv) ? 'badge-paid' : 'badge-unpaid'}">${esc(invoiceIsPaid(inv) ? t('invoices.paid') : t('invoices.unpaid'))}</span></div>
+  `).join('') || `<div class="muted">${esc(t('dashboard.noInvoices'))}</div>`;
   renderDashboardModelSearch();
 }
 
 function showAuth(msg='') {
+  $('bootCard').classList.add('hidden');
   authCard.classList.remove('hidden');
   appArea.classList.add('hidden');
   btnLogout.classList.add('hidden');
@@ -955,6 +1253,7 @@ function showAuth(msg='') {
 }
 
 function showApp(email) {
+  $('bootCard').classList.add('hidden');
   authCard.classList.add('hidden');
   appArea.classList.remove('hidden');
   btnLogout.classList.remove('hidden');
@@ -968,6 +1267,22 @@ async function getSession(){
   const { data:{ session }, error } = await sbAuth.auth.getSession();
   if(error) throw error;
   return session;
+}
+
+async function fetchClientProfile(){
+  const payload = await fetchMagazynJson('/api/client/profile', { attempts:2 });
+  return payload?.customer || { language:'pl' };
+}
+
+async function saveClientLanguage(language){
+  const payload = await fetchMagazynJson('/api/client/profile', {
+    method:'PATCH',
+    attempts:1,
+    headers:{ 'Content-Type':'application/json' },
+    body:JSON.stringify({ language:normalizeLanguage(language) })
+  });
+  CURRENT_CUSTOMER = payload?.customer || CURRENT_CUSTOMER;
+  return CURRENT_CUSTOMER;
 }
 
 function hideAllSections(){
@@ -996,7 +1311,17 @@ async function loadSession(force = false) {
       return;
     }
 
-    showApp(session.user?.email || 'zalogowany');
+    // Profil (w tym język) jest ładowany przed pokazaniem aplikacji. Zapobiega
+    // to mignięciu polskiego interfejsu po zalogowaniu klienta zagranicznego.
+    let profile = null;
+    try {
+      profile = await fetchClientProfile();
+    } catch(_){
+      profile = { email:session.user?.email || '', language:'pl' };
+    }
+    CURRENT_CUSTOMER = profile;
+    setLanguage(profile?.language, false);
+    showApp(session.user?.email || t('auth.loggedIn'));
     $('authMsg').textContent = '';
     LOADED_USER_ID = session.user?.id || session.user?.email || 'session';
 
@@ -1006,7 +1331,7 @@ async function loadSession(force = false) {
     ]);
     await loadInvoices(true, false);
   } catch(error){
-    showAuth('Błąd sesji: ' + error.message);
+    showAuth(t('auth.sessionError', { error:clientErrorDetail(error) }));
   }
   })();
 
@@ -1021,9 +1346,9 @@ $('btnLogin').onclick = async () => {
   const email=$('email').value.trim();
   const password=$('password').value;
   const { data, error } = await sbAuth.auth.signInWithPassword({ email, password });
-  if(error){ showAuth('Błąd logowania: ' + error.message); return; }
+  if(error){ showAuth(t('auth.loginError', { error:clientErrorDetail(error) })); return; }
   if(!data?.session){
-    showAuth('Logowanie przyjęte, ale brak aktywnej sesji. Jeśli masz włączone potwierdzenie mailowe, potwierdź e-mail.');
+    showAuth(t('auth.sessionMissing'));
     return;
   }
   await loadSession();
@@ -1033,12 +1358,12 @@ $('btnRegister').onclick = async () => {
   const email=$('email').value.trim();
   const password=$('password').value;
   const { data, error } = await sbAuth.auth.signUp({ email, password });
-  if(error){ showAuth('Błąd rejestracji: ' + error.message); return; }
+  if(error){ showAuth(t('auth.registerError', { error:clientErrorDetail(error) })); return; }
   if(data?.session){
     await loadSession();
     return;
   }
-  showAuth('Konto utworzone. Jeśli masz włączone potwierdzenie mailowe, potwierdź e-mail i dopiero się zaloguj.');
+  showAuth(t('auth.accountCreated'));
 };
 
 btnLogout.onclick = async () => {
@@ -1046,12 +1371,14 @@ btnLogout.onclick = async () => {
   CURRENT_CUSTOMER = null;
   LOADED_USER_ID = null;
   LAST_LOADED.stock = LAST_LOADED.orders = LAST_LOADED.invoices = 0;
-  showAuth('Wylogowano.');
+  setLanguage('pl', false);
+  showAuth(t('auth.loggedOut'));
 };
 
 sbAuth.auth.onAuthStateChange((event, session) => {
   if(event === 'SIGNED_OUT' || !session){
     LOADED_USER_ID = null;
+    setLanguage('pl', false);
     showAuth();
   } else if(event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'USER_UPDATED'){
     loadSession();
@@ -1105,8 +1432,8 @@ function renderStockTable(){
   const q = queryRaw.toLowerCase();
 
   if (!q) {
-    $('stockCount').textContent = 'Pozycji: 0';
-    tb.innerHTML = '<tr><td colspan="5">Wpisz model, SKU lub nazwę produktu.</td></tr>';
+    $('stockCount').textContent = t('stock.count', { count:0 });
+    tb.innerHTML = `<tr><td colspan="5">${esc(t('stock.searchHint'))}</td></tr>`;
     return;
   }
 
@@ -1120,11 +1447,11 @@ function renderStockTable(){
     );
   }
 
-  $('stockCount').textContent = `Pozycji: ${rows.length}`;
+  $('stockCount').textContent = t('stock.count', { count:rows.length });
   scheduleStockSearchLog(queryRaw, rows);
 
   if (!rows.length) {
-    tb.innerHTML = '<tr><td colspan="5">Brak danych</td></tr>';
+    tb.innerHTML = `<tr><td colspan="5">${esc(t('common.noData'))}</td></tr>`;
     return;
   }
 
@@ -1211,7 +1538,7 @@ async function loadStock(force = false){
 
   LOAD_IN_FLIGHT.stock = (async () => {
   const tb = $('stockTable').querySelector('tbody');
-  tb.innerHTML = '<tr><td colspan="6">Pobieranie aktualnych stanów z Supabase...</td></tr>';
+  tb.innerHTML = `<tr><td colspan="5">${esc(t('stock.loading'))}</td></tr>`;
 
   try {
     const payload = await fetchMagazynJson('/api/client_stock_catalog');
@@ -1221,10 +1548,8 @@ async function loadStock(force = false){
   } catch(error){
     applyStockCatalogRows([]);
     LAST_LOADED.stock = 0;
-    const message = isAbortLikeError(error)
-      ? 'Pobieranie przerwano. Kliknij „Odśwież stany”, aby pobrać bieżące dane z Supabase.'
-      : 'Nie udało się pobrać aktualnych danych z Supabase. Poprzednich stanów nie pokazano.';
-    tb.innerHTML = `<tr><td colspan="6">${message}</td></tr>`;
+    const message = isAbortLikeError(error) ? t('stock.aborted') : t('stock.failed');
+    tb.innerHTML = `<tr><td colspan="5">${esc(message)}</td></tr>`;
   }
   })();
 
@@ -1242,7 +1567,7 @@ function renderOrderDraft(){
   const tb = $('orderDraftTable').querySelector('tbody');
 
   if(!ORDER_DRAFT.length){
-    tb.innerHTML = '<tr><td colspan="9">Brak pozycji</td></tr>';
+    tb.innerHTML = `<tr><td colspan="9">${esc(t('orders.noItems'))}</td></tr>`;
   } else {
     tb.innerHTML = ORDER_DRAFT.map((it, idx) => {
       const grossLine = Number(it.gross_price || 0) * Number(it.qty || 0);
@@ -1252,13 +1577,13 @@ function renderOrderDraft(){
       <tr>
         <td>${esc(it.sku)}</td>
         <td>${esc(productDisplayName(it))}</td>
-        <td>${Number(it.net_price || 0).toFixed(2)}</td>
-        <td>${Number(it.gross_price || 0).toFixed(2)}</td>
-        <td>${retailGrossUnit.toFixed(2)}</td>
+        <td>${formatMoney(it.net_price)}</td>
+        <td>${formatMoney(it.gross_price)}</td>
+        <td>${formatMoney(retailGrossUnit)}</td>
         <td><input type="number" min="1" value="${it.qty}" data-qty-idx="${idx}" style="width:90px" /></td>
-        <td>${grossLine.toFixed(2)}</td>
-        <td>${retailGrossLine.toFixed(2)}</td>
-        <td><button class="btn" type="button" data-del-idx="${idx}">Usuń</button></td>
+        <td>${formatMoney(grossLine)}</td>
+        <td>${formatMoney(retailGrossLine)}</td>
+        <td><button class="btn" type="button" data-del-idx="${idx}">${esc(t('common.delete'))}</button></td>
       </tr>
     `;
     }).join('');
@@ -1267,7 +1592,12 @@ function renderOrderDraft(){
   const totalNet = ORDER_DRAFT.reduce((sum, it) => sum + Number(it.net_price || 0) * Number(it.qty || 0), 0);
   const totalGross = ORDER_DRAFT.reduce((sum, it) => sum + Number(it.gross_price || 0) * Number(it.qty || 0), 0);
   const totalRetailGross = ORDER_DRAFT.reduce((sum, it) => sum + calcClientGrossFromNet(it.net_price) * Number(it.qty || 0), 0);
-  $('orderDraftSummary').textContent = `Pozycji: ${ORDER_DRAFT.length} | Netto B2B: ${totalNet.toFixed(2)} | Brutto B2B: ${totalGross.toFixed(2)} | Brutto detal: ${totalRetailGross.toFixed(2)}`;
+  $('orderDraftSummary').textContent = t('orders.summary', {
+    count:ORDER_DRAFT.length,
+    net:formatMoney(totalNet),
+    gross:formatMoney(totalGross),
+    retail:formatMoney(totalRetailGross)
+  });
 }
 
 function parseProductInputToId(txt){
@@ -1281,13 +1611,13 @@ $('btnAddOrderItem').onclick = () => {
   const productId = parseProductInputToId(txt);
 
   if(!productId){
-    $('orderMsg').textContent = 'Wybierz produkt z listy podpowiedzi.';
+    $('orderMsg').textContent = t('orders.selectProduct');
     return;
   }
 
   const row = STOCK_VIEW.find(x => Number(x.product_id) === Number(productId));
   if(!row){
-    $('orderMsg').textContent = 'Nie znaleziono produktu.';
+    $('orderMsg').textContent = t('orders.productNotFound');
     return;
   }
 
@@ -1332,19 +1662,19 @@ $('btnCreateOrder').onclick = async () => {
   if(ORDER_CREATE_IN_FLIGHT) return;
 
   if(!ORDER_DRAFT.length){
-    $('orderMsg').textContent = 'Dodaj przynajmniej jedną pozycję.';
+    $('orderMsg').textContent = t('orders.addAtLeastOne');
     return;
   }
 
   ORDER_CREATE_IN_FLIGHT = true;
   if(createBtn){
     createBtn.disabled = true;
-    createBtn.textContent = 'Wysyłanie...';
+    createBtn.textContent = t('orders.sending');
   }
 
   try {
     const session = await getSession();
-    if(!session?.user?.email) throw new Error('Brak zalogowanego użytkownika.');
+    if(!session?.user?.email) throw new Error(t('orders.noUser'));
     const email = session.user.email.trim().toLowerCase();
     const fallbackName = email.split('@')[0] || email;
     const p_note = $('orderNote').value || null;
@@ -1377,23 +1707,99 @@ $('btnCreateOrder').onclick = async () => {
 
     const createdOrderNo = createJson?.order?.order_no || createJson?.order?.id || '';
     $('orderMsg').textContent = createJson?.email?.ok
-      ? `OK, utworzono zamówienie: ${createdOrderNo}. Mail wysłany.`
-      : `Zamówienie ${createdOrderNo} zostało utworzone. Potwierdzenie e-mail zostanie ponowione.`;
+      ? t('orders.createdMail', { number:createdOrderNo })
+      : t('orders.createdRetry', { number:createdOrderNo });
     ORDER_IDEMPOTENCY_KEY = null;
     ORDER_DRAFT = [];
     $('orderNote').value = '';
     renderOrderDraft();
     await loadOrders(true);
   } catch(error){
-    $('orderMsg').textContent = 'Nie udało się utworzyć zamówienia: ' + error.message;
+    $('orderMsg').textContent = t('orders.createFailed', { error:clientErrorDetail(error) });
   } finally {
     ORDER_CREATE_IN_FLIGHT = false;
     if(createBtn){
       createBtn.disabled = false;
-      createBtn.textContent = 'Wyślij zamówienie';
+      createBtn.textContent = t('orders.send');
     }
   }
 };
+
+function renderOrdersRows(orders){
+  const rows = Array.isArray(orders) ? orders : [];
+  const tb = $('ordersTable').querySelector('tbody');
+  if(!rows.length){
+    tb.innerHTML = `<tr><td colspan="6">${esc(t('orders.empty'))}</td></tr>`;
+    return;
+  }
+
+  tb.innerHTML = rows.map(order => {
+    const status = orderStatusMeta(order.status);
+    return `
+      <tr>
+        <td>${esc(displayOrderLabel(order))}</td>
+        <td><span class="status-chip ${status.cls}">${esc(status.label)}</span></td>
+        <td id="order-net-${order.id}">—</td>
+        <td id="order-gross-${order.id}">—</td>
+        <td>${esc(formatDate(order.created_at, true))}</td>
+        <td><div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" type="button" data-open-order="${order.id}">${esc(t('orders.details'))}</button>
+          <button class="btn" type="button" data-pdf-order="${order.id}">${esc(t('orders.downloadPdf'))}</button>
+        </div></td>
+      </tr>
+      <tr id="order-detail-${order.id}" class="hidden">
+        <td colspan="6"><div class="muted">${esc(t('orders.loadDetails'))}</div></td>
+      </tr>
+    `;
+  }).join('');
+
+  tb.querySelectorAll('[data-open-order]').forEach(button => {
+    button.onclick = async () => {
+      const id = Number(button.dataset.openOrder);
+      const detailRow = document.getElementById(`order-detail-${id}`);
+      if(!detailRow) return;
+      if(!detailRow.classList.contains('hidden')){
+        detailRow.classList.add('hidden');
+        return;
+      }
+      detailRow.classList.remove('hidden');
+      if(button.dataset.loaded === '1') return;
+
+      detailRow.children[0].innerHTML = `<div class="muted">${esc(t('orders.loadingDetails'))}</div>`;
+      button.disabled = true;
+      try {
+        await loadStock(false);
+        const order = rows.find(item => Number(item.id) === id);
+        const { items, totals } = await fetchOrderDetails(order);
+        detailRow.children[0].innerHTML = renderOrderDetailsHtml(order, items, totals);
+        const netCell = document.getElementById(`order-net-${id}`);
+        const grossCell = document.getElementById(`order-gross-${id}`);
+        if(netCell) netCell.textContent = formatMoney(totals.net);
+        if(grossCell) grossCell.textContent = formatMoney(totals.gross);
+        button.dataset.loaded = '1';
+      } catch(error){
+        detailRow.children[0].innerHTML = `<div class="muted">${esc(t('common.error', { error:clientErrorDetail(error) }))}</div>`;
+      } finally {
+        button.disabled = false;
+      }
+    };
+  });
+
+  tb.querySelectorAll('[data-pdf-order]').forEach(button => {
+    button.onclick = async () => {
+      const order = rows.find(item => Number(item.id) === Number(button.dataset.pdfOrder));
+      if(!order) return;
+      button.disabled = true;
+      try {
+        await downloadOrderPdf(order);
+      } catch(error){
+        alert(t('orders.pdfFailed', { error:clientErrorDetail(error) }));
+      } finally {
+        button.disabled = false;
+      }
+    };
+  });
+}
 
 async function loadOrders(force = false){
   if(!force && cacheIsFresh('orders')) return;
@@ -1401,7 +1807,7 @@ async function loadOrders(force = false){
 
   LOAD_IN_FLIGHT.orders = (async () => {
   const tb = $('ordersTable').querySelector('tbody');
-  tb.innerHTML = '<tr><td colspan="6">Ładowanie...</td></tr>';
+  tb.innerHTML = `<tr><td colspan="6">${esc(t('common.loading'))}</td></tr>`;
 
   try {
     const bundle = await fetchOrdersBundle();
@@ -1410,62 +1816,10 @@ async function loadOrders(force = false){
     updateOrderSummaryBar(orders);
     renderClientDashboard();
 
-    if(!orders.length){
-      tb.innerHTML = '<tr><td colspan="5">Brak zamówień</td></tr>';
-      return;
-    }
-
-    tb.innerHTML = orders.map(r => {
-      const st = orderStatusMeta(r.status);
-      return `
-        <tr>
-          <td>${esc(displayOrderLabel(r))}</td>
-          <td><span class="status-chip ${st.cls}">${esc(st.label)}</span></td>
-          <td id="order-net-${r.id}">—</td>
-          <td id="order-gross-${r.id}">—</td>
-          <td>${esc((r.created_at || '').replace('T',' ').slice(0,19))}</td>
-          <td><button class="btn" type="button" data-open-order="${r.id}">Szczegóły</button></td>
-        </tr>
-        <tr id="order-detail-${r.id}" class="hidden">
-          <td colspan="6"><div class="muted">Kliknij „Szczegóły”, aby pobrać pozycje zamówienia.</div></td>
-        </tr>
-      `;
-    }).join('');
-
-    tb.querySelectorAll('[data-open-order]').forEach(btn => {
-      btn.onclick = async () => {
-        const id = btn.getAttribute('data-open-order');
-        const row = document.getElementById(`order-detail-${id}`);
-        if(!row) return;
-        if(!row.classList.contains('hidden')){
-          row.classList.add('hidden');
-          return;
-        }
-        row.classList.remove('hidden');
-        if(btn.dataset.loaded === '1') return;
-
-        row.children[0].innerHTML = '<div class="muted">Ładowanie szczegółów...</div>';
-        btn.disabled = true;
-        try {
-          await loadStock(false);
-          const order = orders.find(x => Number(x.id) === Number(id));
-          const { items, totals } = await fetchOrderDetails(order);
-          row.children[0].innerHTML = renderOrderDetailsHtml(order, items, totals);
-          const netCell = document.getElementById(`order-net-${id}`);
-          const grossCell = document.getElementById(`order-gross-${id}`);
-          if(netCell) netCell.textContent = formatMoney(totals.net);
-          if(grossCell) grossCell.textContent = formatMoney(totals.gross);
-          btn.dataset.loaded = '1';
-        } catch(error){
-          row.children[0].innerHTML = `<div class="muted">Błąd: ${esc(error.message)}</div>`;
-        } finally {
-          btn.disabled = false;
-        }
-      };
-    });
+    renderOrdersRows(orders);
     LAST_LOADED.orders = Date.now();
   } catch(error){
-    tb.innerHTML = `<tr><td colspan="6">Błąd: ${esc(error.message)}</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="6">${esc(t('common.error', { error:clientErrorDetail(error) }))}</td></tr>`;
   }
   })();
 
@@ -1515,20 +1869,35 @@ document.querySelectorAll('#clientNav [data-target]').forEach(link => {
   };
 });
 
+document.querySelectorAll('[data-language]').forEach(button => {
+  button.onclick = async () => {
+    const language = normalizeLanguage(button.dataset.language);
+    $('languageMsg').textContent = '';
+    setLanguage(language, true);
+    if(CURRENT_CUSTOMER) CURRENT_CUSTOMER.language = language;
+    try {
+      await saveClientLanguage(language);
+      $('languageMsg').textContent = t('settings.languageSaved');
+    } catch(error){
+      $('languageMsg').textContent = t('settings.languageSaveFailed', { error:clientErrorDetail(error) });
+    }
+  };
+});
+
 $('btnChangePassword').onclick = async () => {
   const p1 = ($('newPassword').value || '').trim();
   const p2 = ($('repeatPassword').value || '').trim();
 
   if(!p1 || !p2){
-    $('passwordMsg').textContent = 'Wpisz nowe hasło dwa razy.';
+    $('passwordMsg').textContent = t('settings.passwordTwice');
     return;
   }
   if(p1 !== p2){
-    $('passwordMsg').textContent = 'Hasła nie są takie same.';
+    $('passwordMsg').textContent = t('settings.passwordMismatch');
     return;
   }
   if(p1.length < 6){
-    $('passwordMsg').textContent = 'Hasło musi mieć co najmniej 6 znaków.';
+    $('passwordMsg').textContent = t('settings.passwordShort');
     return;
   }
 
@@ -1537,9 +1906,9 @@ $('btnChangePassword').onclick = async () => {
     if(error) throw error;
     $('newPassword').value = '';
     $('repeatPassword').value = '';
-    $('passwordMsg').textContent = 'Hasło zostało zmienione.';
+    $('passwordMsg').textContent = t('settings.passwordChanged');
   } catch(error){
-    $('passwordMsg').textContent = 'Błąd: ' + error.message;
+    $('passwordMsg').textContent = t('common.error', { error:clientErrorDetail(error) });
   }
 };
 
@@ -1549,7 +1918,7 @@ $('btnNewInvoiceDownload').onclick = async () => {
     try {
       await markInvoiceSeenAndOpenPdf(CURRENT_NEW_INVOICE);
     } catch(error){
-      alert('Nie udało się otworzyć faktury: ' + error.message);
+      alert(t('invoices.openFailed', { error:clientErrorDetail(error) }));
     }
   }
 };
@@ -1596,7 +1965,7 @@ async function startOrderQrScanner(){
       );
       orderQrScannerRunning = true;
     } catch (e2) {
-      $('orderScanOut').innerHTML = '<div class="muted">Nie udało się uruchomić tylnego aparatu.</div>';
+      $('orderScanOut').innerHTML = `<div class="muted">${esc(t('scan.cameraFailed'))}</div>`;
       $('qrScannerModal').classList.add('hidden');
     }
   }
