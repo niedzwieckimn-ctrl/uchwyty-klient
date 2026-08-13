@@ -172,16 +172,6 @@
 
       <div class="card section-block hidden" id="settingsSection">
         <h3 data-i18n="settings.title">Ustawienia</h3>
-        <div class="muted" data-i18n="settings.languageHelp">Język panelu i dokumentów zamówienia.</div>
-        <div class="language-switch" id="languageSwitch" role="group" aria-label="Język" data-i18n-aria-label="settings.language">
-          <button class="btn" type="button" data-language="pl">PL</button>
-          <button class="btn" type="button" data-language="de">DE</button>
-          <button class="btn" type="button" data-language="en">EN</button>
-          <button class="btn" type="button" data-language="es">ES</button>
-          <button class="btn" type="button" data-language="it">IT</button>
-        </div>
-        <div id="languageMsg" class="muted" style="margin-top:8px"></div>
-        <hr style="border:0;border-top:1px solid #edf0f5;margin:18px 0" />
         <div class="muted" data-i18n="settings.passwordHelp">Tutaj zmienisz hasło do logowania w panelu klienta.</div>
         <div class="row" style="margin-top:10px;">
           <div>
@@ -1372,17 +1362,6 @@ async function fetchClientProfile(){
   return payload?.customer || { language:'pl' };
 }
 
-async function saveClientLanguage(language){
-  const payload = await fetchMagazynJson('/api/client/profile', {
-    method:'PATCH',
-    attempts:1,
-    headers:{ 'Content-Type':'application/json' },
-    body:JSON.stringify({ language:normalizeLanguage(language) })
-  });
-  CURRENT_CUSTOMER = payload?.customer || CURRENT_CUSTOMER;
-  return CURRENT_CUSTOMER;
-}
-
 function hideAllSections(){
   document.querySelectorAll('.section-block').forEach(el => el.classList.add('hidden'));
   document.querySelectorAll('#clientNav [data-target]').forEach(el => el.classList.remove('active'));
@@ -1984,21 +1963,6 @@ document.querySelectorAll('#clientNav [data-target]').forEach(link => {
     }
     if(link.dataset.target === 'invoicesSection'){
       await loadInvoices(true, false);
-    }
-  };
-});
-
-document.querySelectorAll('[data-language]').forEach(button => {
-  button.onclick = async () => {
-    const language = normalizeLanguage(button.dataset.language);
-    $('languageMsg').textContent = '';
-    setLanguage(language, true);
-    if(CURRENT_CUSTOMER) CURRENT_CUSTOMER.language = language;
-    try {
-      await saveClientLanguage(language);
-      $('languageMsg').textContent = t('settings.languageSaved');
-    } catch(error){
-      $('languageMsg').textContent = t('settings.languageSaveFailed', { error:clientErrorDetail(error) });
     }
   };
 });
