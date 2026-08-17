@@ -215,6 +215,7 @@
           <div id="newInvoiceTitle" style="font-size:24px;font-weight:700;color:#166534;" data-i18n="invoices.newTitle">Masz nową fakturę</div>
           <div id="newInvoiceText" style="margin-top:8px;color:#166534;"></div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
+            <button id="btnNewInvoiceAcknowledge" class="btn primary" type="button" data-i18n="invoices.acknowledge">Widziałem</button>
             <button id="btnNewInvoiceDownload" class="btn primary" type="button" data-i18n="common.downloadPdf">Pobierz PDF</button>
             <button id="btnNewInvoiceLater" class="btn" type="button" data-i18n="common.later">Później</button>
           </div>
@@ -330,6 +331,8 @@ const TRANSLATIONS = {
 // Każdy język ma pełny zestaw komunikatów. Polski pozostaje wyłącznie
 // bezpiecznym fallbackiem dla nieznanego kodu lub przypadkowo brakującego klucza.
 Object.assign(PL_TRANSLATIONS, {
+  'invoices.acknowledge':'Widziałem',
+  'invoices.readyText':'Faktura <b>{invoice}</b> do zamówienia <b>{order}</b> jest gotowa.<br><span style="font-size:14px;">Potwierdź, że ją widziałeś. PDF możesz pobrać teraz albo później.</span>',
   'common.refreshing':'Dane są odświeżane. Spróbuj ponownie za chwilę.',
   'common.refreshFailed':'Nie udało się odświeżyć danych. Spróbuj ponownie za chwilę.',
   'common.requestFailed':'Żądanie nie powiodło się.',
@@ -342,6 +345,8 @@ Object.assign(PL_TRANSLATIONS, {
 });
 
 Object.assign(TRANSLATIONS.de, {
+  'invoices.acknowledge':'Gesehen',
+  'invoices.readyText':'Die Rechnung <b>{invoice}</b> zur Bestellung <b>{order}</b> ist bereit.<br><span style="font-size:14px;">Bestätigen Sie, dass Sie sie gesehen haben. Das PDF können Sie jetzt oder später herunterladen.</span>',
   'auth.email':'E-Mail', 'auth.emailPlaceholder':'E-Mail', 'auth.loggedIn':'angemeldet',
   'auth.loginError':'Anmeldefehler: {error}', 'auth.registerError':'Registrierungsfehler: {error}',
   'auth.sessionError':'Sitzungsfehler: {error}',
@@ -367,6 +372,8 @@ Object.assign(TRANSLATIONS.de, {
 });
 
 Object.assign(TRANSLATIONS.en, {
+  'invoices.acknowledge':'I have seen it',
+  'invoices.readyText':'Invoice <b>{invoice}</b> for order <b>{order}</b> is ready.<br><span style="font-size:14px;">Confirm that you have seen it. You can download the PDF now or later.</span>',
   'auth.email':'Email', 'auth.emailPlaceholder':'email', 'auth.loggedIn':'signed in',
   'auth.loginError':'Login error: {error}', 'auth.registerError':'Registration error: {error}',
   'auth.sessionError':'Session error: {error}',
@@ -392,6 +399,8 @@ Object.assign(TRANSLATIONS.en, {
 });
 
 Object.assign(TRANSLATIONS.es, {
+  'invoices.acknowledge':'Ya la he visto',
+  'invoices.readyText':'La factura <b>{invoice}</b> del pedido <b>{order}</b> está lista.<br><span style="font-size:14px;">Confirma que la has visto. Puedes descargar el PDF ahora o más tarde.</span>',
   'auth.email':'Email', 'auth.emailPlaceholder':'email', 'auth.loggedIn':'sesión iniciada',
   'auth.loginError':'Error de acceso: {error}', 'auth.registerError':'Error de registro: {error}',
   'auth.sessionError':'Error de sesión: {error}',
@@ -417,6 +426,8 @@ Object.assign(TRANSLATIONS.es, {
 });
 
 Object.assign(TRANSLATIONS.it, {
+  'invoices.acknowledge':'L’ho vista',
+  'invoices.readyText':'La fattura <b>{invoice}</b> per l’ordine <b>{order}</b> è pronta.<br><span style="font-size:14px;">Conferma di averla vista. Puoi scaricare il PDF ora o più tardi.</span>',
   'auth.email':'Email', 'auth.emailPlaceholder':'email', 'auth.loggedIn':'accesso effettuato',
   'auth.loginError':'Errore di accesso: {error}', 'auth.registerError':'Errore di registrazione: {error}',
   'auth.sessionError':'Errore di sessione: {error}',
@@ -961,6 +972,21 @@ function markInvoiceSeenAndOpenPdf(inv){
   })();
 }
 
+async function acknowledgeInvoiceSeen(inv){
+  const session = await getSession();
+  if(!session?.user?.email) throw new Error(t('auth.noSession'));
+  const response = await fetch(`${MAGAZYN_API_BASE}/api/invoices/${inv.id}/seen`, {
+    method:'POST',
+    headers: { 'Authorization': `Bearer ${session.access_token}` }
+  });
+  if(!response.ok) throw new Error(`HTTP ${response.status}`);
+  inv.seen_by_client = 1;
+  inv.seen_at = new Date().toISOString();
+  hideInvoiceNoticeModal();
+  LAST_LOADED.invoices = 0;
+  setTimeout(showNextInvoiceNotice, 100);
+}
+
 function invoiceIsPaid(inv){
   if(!inv) return false;
   const paidValue = String(inv.payment_status || inv.status_payment || inv.paid_status || '').toLowerCase();
@@ -985,7 +1011,7 @@ function buildInvoiceNoticeQueue(rows){
   });
   (rows || []).forEach(inv => {
     const paymentType = String((inv && inv.payment_type) || '').toLowerCase();
-    if(Number((inv && inv.seen_by_client) || 0) === 0 && !['gotowka','cash'].includes(paymentType)){
+    if(Number((inv && inv.seen_by_client) || 0) === 0 && !invoiceIsPaid(inv) && !['gotowka','cash'].includes(paymentType)){
       const key = invoiceNoticeKey('new', inv);
       if(!used[key]){
         used[key] = 1;
@@ -1019,12 +1045,14 @@ function showNewInvoiceModal(noticeOrInvoice){
     const box = $('newInvoiceBox');
     const title = $('newInvoiceTitle');
     const text = $('newInvoiceText');
+    const acknowledgeButton = $('btnNewInvoiceAcknowledge');
     if(!modal || !text) return;
 
     CURRENT_NEW_INVOICE = inv;
     CURRENT_INVOICE_NOTICE_TYPE = notice.type || 'new';
 
     if(CURRENT_INVOICE_NOTICE_TYPE === 'payment'){
+      if(acknowledgeButton) acknowledgeButton.classList.add('hidden');
       if(box){
         box.style.background = '#fee2e2';
         box.style.borderColor = '#dc2626';
@@ -1039,6 +1067,7 @@ function showNewInvoiceModal(noticeOrInvoice){
         amount:formatMoney(inv.total_gross)
       });
     } else {
+      if(acknowledgeButton) acknowledgeButton.classList.remove('hidden');
       if(box){
         box.style.background = '#e9f9ee';
         box.style.borderColor = '#16a34a';
@@ -1183,7 +1212,7 @@ async function fetchInvoicesFromSupabase(email){
 
     tb.innerHTML = visibleRows.map(invoice => `
       <tr>
-        <td><b>${esc(invoice.invoice_no || '')}</b>${Number(invoice.seen_by_client || 0) === 0 ? ` <span class="badge">${esc(t('invoices.new'))}</span>` : ''}${invoicePaymentBadge(invoice)}</td>
+        <td><b>${esc(invoice.invoice_no || '')}</b>${Number(invoice.seen_by_client || 0) === 0 && !invoiceIsPaid(invoice) ? ` <span class="badge">${esc(t('invoices.new'))}</span>` : ''}${invoicePaymentBadge(invoice)}</td>
         <td>${esc(invoice.order_display || displayOrderLabel(invoice) || invoice.order_no || '')}</td>
         <td>${esc(formatDate(invoice.issue_date))}</td>
         <td>${formatMoney(invoice.total_net)}</td>
@@ -2012,6 +2041,18 @@ $('btnNewInvoiceDownload').onclick = async () => {
     } catch(error){
       alert(t('invoices.openFailed', { error:clientErrorDetail(error) }));
     }
+  }
+};
+$('btnNewInvoiceAcknowledge').onclick = async () => {
+  if(!CURRENT_NEW_INVOICE) return;
+  const button = $('btnNewInvoiceAcknowledge');
+  button.disabled = true;
+  try {
+    await acknowledgeInvoiceSeen(CURRENT_NEW_INVOICE);
+  } catch(error){
+    alert(t('common.error', { error:clientErrorDetail(error) }));
+  } finally {
+    button.disabled = false;
   }
 };
 $('btnNewInvoiceLater').onclick = () => {
