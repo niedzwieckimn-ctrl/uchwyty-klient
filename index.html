@@ -1026,7 +1026,10 @@ function hideInvoiceNoticeModal(){
   CURRENT_NEW_INVOICE = null;
   CURRENT_INVOICE_NOTICE_TYPE = 'new';
   const modal = $('newInvoiceModal');
-  if(modal) modal.classList.add('hidden');
+  if(modal){
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+  }
 }
 
 function showNextInvoiceNotice(){
@@ -1083,6 +1086,7 @@ function showNewInvoiceModal(noticeOrInvoice){
       });
     }
     modal.classList.remove('hidden');
+    modal.style.display = 'block';
   } catch(e){
     hideInvoiceNoticeModal();
   }
@@ -1242,7 +1246,9 @@ async function fetchInvoicesFromSupabase(email){
   }
 
   async function loadInvoices(showModal = true, force = false){
-  if(!force && cacheIsFresh('invoices')) return;
+  // Gdy oczekujemy komunikatu, zawsze pobierz aktualny stan. Inaczej faktura
+  // wystawiona przy już otwartym panelu może zostać ukryta przez krótki cache.
+  if(!force && !showModal && cacheIsFresh('invoices')) return;
   if(LOAD_IN_FLIGHT.invoices) return LOAD_IN_FLIGHT.invoices;
 
   LOAD_IN_FLIGHT.invoices = (async () => {
