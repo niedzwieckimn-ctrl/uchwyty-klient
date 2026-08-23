@@ -815,13 +815,27 @@ function orderRealizationLabel(it){
   return t('orders.realizationCount', { done:Math.max(0, done), unit:t('common.pieces') });
 }
 
+function carrierTrackingUrl(carrier, trackingNo){
+  const number = String(trackingNo || '').trim();
+  if(!number) return '';
+  const key = String(carrier || '').trim().toLowerCase();
+  const bases = {
+    inpost: 'https://inpost.pl/sledzenie-przesylek?number=',
+    dpd: 'https://tracktrace.dpd.com.pl/parcelDetails?p1=',
+    fedex: 'https://www.fedex.com/fedextrack/?trknbr=',
+    dhl: 'https://www.dhl.com/pl-pl/home/tracking.html?tracking-id=',
+    ups: 'https://www.ups.com/track?tracknum='
+  };
+  return (bases[key] || 'https://t.17track.net/en#nums=') + encodeURIComponent(number);
+}
+
 function renderOrderDetailsHtml(order, items, totals){
   const currency = String(order?.currency || items?.[0]?.currency || currentPriceCurrency()).toUpperCase();
   const statusKey = String(order?.status || '').toLowerCase();
   const shippingInfo = statusKey === 'packed'
     ? `<div class="notice" style="margin-top:12px">${esc(t('status.packing'))}<br><span class="muted">${esc(t('orders.packingLeadTime'))}</span></div>`
     : (statusKey === 'shipped'
-      ? `<div class="notice" style="margin-top:12px">${esc(t('status.shipped'))}${order?.tracking_no ? `<br>${esc(t('orders.tracking'))}: <b>${esc(order.tracking_no)}</b> &middot; <a href="https://t.17track.net/en#nums=${encodeURIComponent(order.tracking_no)}" target="_blank" rel="noopener">${esc(t('orders.trackShipment'))}</a>` : ''}</div>`
+      ? `<div class="notice" style="margin-top:12px">${esc(t('status.shipped'))}${order?.tracking_no ? `<br>${esc(t('orders.tracking'))}: <b>${esc(order.tracking_no)}</b> &middot; <a href="${esc(carrierTrackingUrl(order.carrier, order.tracking_no))}" target="_blank" rel="noopener">${esc(t('orders.trackShipment'))}</a>` : ''}</div>`
       : '');
   const rows = (items || []).map(it => `
     <tr>
@@ -918,7 +932,7 @@ async function fetchOrdersBundle(){
 
   let ordersRes = await sbAuth
     .from('orders')
-    .select('id,order_no,qr_data_url,status,created_at,customer_name,customer_email,note,currency,price_list,tracking_no,packed_at,shipped_at')
+    .select('id,order_no,qr_data_url,status,created_at,customer_name,customer_email,note,currency,price_list,tracking_no,carrier,packed_at,shipped_at')
     .ilike('customer_email', email)
     .order('created_at', { ascending:false })
     .limit(200);
@@ -928,7 +942,7 @@ async function fetchOrdersBundle(){
   // pobieramy starszy zestaw kolumn i bezpiecznie traktujemy go jako PLN.
   const schemaError = `${ordersRes.error?.code || ''} ${ordersRes.error?.message || ''}`.toLowerCase();
   const missingShippingSchema = Boolean(ordersRes.error) &&
-    (schemaError.includes('tracking_no') || schemaError.includes('packed_at') || schemaError.includes('shipped_at')) &&
+    (schemaError.includes('tracking_no') || schemaError.includes('carrier') || schemaError.includes('packed_at') || schemaError.includes('shipped_at')) &&
     (schemaError.includes('does not exist') || schemaError.includes('42703') || schemaError.includes('pgrst204'));
   if(missingShippingSchema){
     ordersRes = await sbAuth
@@ -939,7 +953,7 @@ async function fetchOrdersBundle(){
       .limit(200);
     if(!ordersRes.error){
       ordersRes.data = (ordersRes.data || []).map(order => ({
-        ...order, tracking_no:'', packed_at:'', shipped_at:''
+        ...order, tracking_no:'', carrier:'', packed_at:'', shipped_at:''
       }));
     }
   }
@@ -959,7 +973,7 @@ async function fetchOrdersBundle(){
         ...order,
         currency:'PLN',
         price_list:'pln',
-        tracking_no:'', packed_at:'', shipped_at:''
+        tracking_no:'', carrier:'', packed_at:'', shipped_at:''
       }));
     }
   }
