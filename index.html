@@ -351,6 +351,34 @@ Object.assign(TRANSLATIONS.it, {
   'stock.failed':'Impossibile caricare i dati attuali del magazzino. Le vecchie disponibilità non vengono mostrate.'
 });
 
+Object.assign(PL_TRANSLATIONS, {
+  'status.packing':'W trakcie pakowania / czeka na kuriera',
+  'status.shipped':'Wysłane',
+  'orders.packingLeadTime':'Planowana wysyłka: 1 dzień roboczy.',
+  'orders.tracking':'Numer przesyłki',
+  'orders.trackShipment':'Śledź przesyłkę'
+});
+Object.assign(TRANSLATIONS.de, {
+  'status.packing':'Wird verpackt / wartet auf den Kurier', 'status.shipped':'Versandt',
+  'orders.packingLeadTime':'Geplanter Versand: 1 Werktag.',
+  'orders.tracking':'Sendungsnummer', 'orders.trackShipment':'Sendung verfolgen'
+});
+Object.assign(TRANSLATIONS.en, {
+  'status.packing':'Being packed / awaiting courier', 'status.shipped':'Shipped',
+  'orders.packingLeadTime':'Planned dispatch: 1 business day.',
+  'orders.tracking':'Tracking number', 'orders.trackShipment':'Track shipment'
+});
+Object.assign(TRANSLATIONS.es, {
+  'status.packing':'En preparación / esperando al mensajero', 'status.shipped':'Enviado',
+  'orders.packingLeadTime':'Envío previsto: 1 día laborable.',
+  'orders.tracking':'Número de seguimiento', 'orders.trackShipment':'Seguir el envío'
+});
+Object.assign(TRANSLATIONS.it, {
+  'status.packing':'In preparazione / in attesa del corriere', 'status.shipped':'Spedito',
+  'orders.packingLeadTime':'Spedizione prevista: 1 giorno lavorativo.',
+  'orders.tracking':'Numero di tracciamento', 'orders.trackShipment':'Traccia la spedizione'
+});
+
 // Każdy język ma pełny zestaw komunikatów. Polski pozostaje wyłącznie
 // bezpiecznym fallbackiem dla nieznanego kodu lub przypadkowo brakującego klucza.
 Object.assign(PL_TRANSLATIONS, {
@@ -518,11 +546,17 @@ function orderStatusMeta(statusRaw) {
   if (key === 'new' || key === 'pending' || key === 'unconfirmed') {
     return { label: t('status.unconfirmed'), cls: 'status-new' };
   }
-  if (key === 'confirmed' || key === 'packed') {
+  if (key === 'confirmed') {
     return { label: t('status.confirmed'), cls: 'status-confirmed' };
   }
-  if (key === 'in_delivery' || key === 'shipped') {
+  if (key === 'packed') {
+    return { label: t('status.packing'), cls: 'status-in-delivery' };
+  }
+  if (key === 'in_delivery') {
     return { label: t('status.inDelivery'), cls: 'status-in-delivery' };
+  }
+  if (key === 'shipped') {
+    return { label: t('status.shipped'), cls: 'status-in-delivery' };
   }
   if(key === 'issued' || key === 'completed') return { label:t('status.completed'), cls:'status-other' };
   if(key === 'cancelled') return { label:t('status.cancelled'), cls:'status-other' };
@@ -783,6 +817,12 @@ function orderRealizationLabel(it){
 
 function renderOrderDetailsHtml(order, items, totals){
   const currency = String(order?.currency || items?.[0]?.currency || currentPriceCurrency()).toUpperCase();
+  const statusKey = String(order?.status || '').toLowerCase();
+  const shippingInfo = statusKey === 'packed'
+    ? `<div class="notice" style="margin-top:12px">${esc(t('status.packing'))}<br><span class="muted">${esc(t('orders.packingLeadTime'))}</span></div>`
+    : (statusKey === 'shipped'
+      ? `<div class="notice" style="margin-top:12px">${esc(t('status.shipped'))}${order?.tracking_no ? `<br>${esc(t('orders.tracking'))}: <b>${esc(order.tracking_no)}</b> &middot; <a href="https://t.17track.net/en#nums=${encodeURIComponent(order.tracking_no)}" target="_blank" rel="noopener">${esc(t('orders.trackShipment'))}</a>` : ''}</div>`
+      : '');
   const rows = (items || []).map(it => `
     <tr>
       <td>${esc(it.sku)}</td>
@@ -807,6 +847,7 @@ function renderOrderDetailsHtml(order, items, totals){
           <div class="muted">${esc(t('common.date'))}: ${esc(formatDate(order.created_at, true))}</div>
           <div class="muted">${esc(t('common.note'))}: ${esc(order.note || '-')}</div>
           <div style="margin-top:8px"><span class="badge">${esc(t('common.net'))}: ${formatPrice(totals.net, currency)}</span> <span class="badge">${esc(t('common.gross'))}: ${formatPrice(totals.gross, currency)}</span></div>
+          ${shippingInfo}
         </div>
         <button class="btn primary" type="button" data-inline-pdf-order="${Number(order?.id || 0)}">${esc(t('orders.downloadPdf'))}</button>
       </div>
@@ -877,7 +918,7 @@ async function fetchOrdersBundle(){
 
   let ordersRes = await sbAuth
     .from('orders')
-    .select('id,order_no,qr_data_url,status,created_at,customer_name,customer_email,note,currency,price_list')
+    .select('id,order_no,qr_data_url,status,created_at,customer_name,customer_email,note,currency,price_list,tracking_no,packed_at,shipped_at')
     .ilike('customer_email', email)
     .order('created_at', { ascending:false })
     .limit(200);
@@ -886,9 +927,26 @@ async function fetchOrdersBundle(){
   // kolumn EUR. Nie ukrywamy wtedy wszystkich dotychczasowych zamĂłwieĹ„:
   // pobieramy starszy zestaw kolumn i bezpiecznie traktujemy go jako PLN.
   const schemaError = `${ordersRes.error?.code || ''} ${ordersRes.error?.message || ''}`.toLowerCase();
-  const missingCurrencySchema = Boolean(ordersRes.error) &&
-    (schemaError.includes('currency') || schemaError.includes('price_list')) &&
+  const missingShippingSchema = Boolean(ordersRes.error) &&
+    (schemaError.includes('tracking_no') || schemaError.includes('packed_at') || schemaError.includes('shipped_at')) &&
     (schemaError.includes('does not exist') || schemaError.includes('42703') || schemaError.includes('pgrst204'));
+  if(missingShippingSchema){
+    ordersRes = await sbAuth
+      .from('orders')
+      .select('id,order_no,qr_data_url,status,created_at,customer_name,customer_email,note,currency,price_list')
+      .ilike('customer_email', email)
+      .order('created_at', { ascending:false })
+      .limit(200);
+    if(!ordersRes.error){
+      ordersRes.data = (ordersRes.data || []).map(order => ({
+        ...order, tracking_no:'', packed_at:'', shipped_at:''
+      }));
+    }
+  }
+  const fallbackSchemaError = `${ordersRes.error?.code || ''} ${ordersRes.error?.message || ''}`.toLowerCase();
+  const missingCurrencySchema = Boolean(ordersRes.error) &&
+    (fallbackSchemaError.includes('currency') || fallbackSchemaError.includes('price_list')) &&
+    (fallbackSchemaError.includes('does not exist') || fallbackSchemaError.includes('42703') || fallbackSchemaError.includes('pgrst204'));
   if(missingCurrencySchema){
     ordersRes = await sbAuth
       .from('orders')
@@ -900,7 +958,8 @@ async function fetchOrdersBundle(){
       ordersRes.data = (ordersRes.data || []).map(order => ({
         ...order,
         currency:'PLN',
-        price_list:'pln'
+        price_list:'pln',
+        tracking_no:'', packed_at:'', shipped_at:''
       }));
     }
   }
@@ -1335,9 +1394,9 @@ async function showOrderByCode(rawCode){
       out.innerHTML = `<div class="muted">${esc(t('scan.notFound'))}</div>`;
       return;
     }
-    const { items, totals } = await fetchOrderDetails(order);
-    out.innerHTML = renderOrderDetailsHtml(order, items, totals);
-    wireInlineOrderPdf(out, order);
+    const details = await fetchOrderDetails(order);
+    out.innerHTML = renderOrderDetailsHtml(details.order, details.items, details.totals);
+    wireInlineOrderPdf(out, details.order);
     out.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch(error){
     out.innerHTML = `<div class="muted">${esc(t('common.error', { error:clientErrorDetail(error) }))}</div>`;
