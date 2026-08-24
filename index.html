@@ -1303,6 +1303,10 @@ async function fetchInvoicesFromSupabase(email){
       return;
     }
 
+    const requestedInvoiceId = Number(new URLSearchParams(window.location.search).get('invoice') || 0);
+    if(requestedInvoiceId && invoices.some(invoice => Number(invoice.id) === requestedInvoiceId)){
+      INVOICES_SHOW_ALL = true;
+    }
     const visibleRows = INVOICES_SHOW_ALL ? invoices : invoices.slice(0, 10);
     const olderButtonRow = invoices.length > visibleRows.length ? `
       <tr class="invoices-more-row"><td colspan="6">
@@ -1311,7 +1315,7 @@ async function fetchInvoicesFromSupabase(email){
     ` : '';
 
     tb.innerHTML = visibleRows.map(invoice => `
-      <tr>
+      <tr data-invoice-row="${invoice.id}">
         <td><b>${esc(invoice.invoice_no || '')}</b>${Number(invoice.seen_by_client || 0) === 0 && !invoiceIsPaid(invoice) ? ` <span class="badge">${esc(t('invoices.new'))}</span>` : ''}${invoicePaymentBadge(invoice)}</td>
         <td>${esc(invoice.order_display || displayOrderLabel(invoice) || invoice.order_no || '')}</td>
         <td>${esc(formatDate(invoice.issue_date))}</td>
@@ -1320,6 +1324,16 @@ async function fetchInvoicesFromSupabase(email){
         <td><button class="btn" type="button" data-open-invoice="${invoice.id}">${esc(t('common.downloadPdf'))}</button></td>
       </tr>
     `).join('') + olderButtonRow;
+
+    if(requestedInvoiceId){
+      const requestedRow = tb.querySelector(`[data-invoice-row="${requestedInvoiceId}"]`);
+      if(requestedRow){
+        requestedRow.style.background = '#eef4ff';
+        requestedRow.style.outline = '2px solid #4f6fed';
+        requestedRow.style.outlineOffset = '-2px';
+        setTimeout(() => requestedRow.scrollIntoView({ behavior:'smooth', block:'center' }), 0);
+      }
+    }
 
     tb.querySelectorAll('[data-open-invoice]').forEach(button => {
       button.onclick = async () => {
@@ -1538,6 +1552,9 @@ async function loadSession(force = false) {
       loadOrders(false)
     ]);
     await loadInvoices(true, false);
+    if(requestedSection() === 'invoicesSection'){
+      openSection('invoicesSection');
+    }
   } catch(error){
     showAuth(t('auth.sessionError', { error:clientErrorDetail(error) }));
   }
@@ -1617,6 +1634,11 @@ function normalizeStockRow(r){
     qty_in_delivery: inDelivery,
     qty_total_visible: total
   };
+}
+
+function requestedSection(){
+  const section = new URLSearchParams(window.location.search).get('section');
+  return section === 'invoices' ? 'invoicesSection' : 'dashboardSection';
 }
 
 function applyStockCatalogRows(rows){
