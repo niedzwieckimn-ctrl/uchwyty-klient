@@ -354,27 +354,28 @@ Object.assign(TRANSLATIONS.it, {
 Object.assign(PL_TRANSLATIONS, {
   'status.packing':'W trakcie pakowania / czeka na kuriera',
   'status.shipped':'Wysłane',
+  'status.partiallyShipped':'Wysłane częściowo',
   'orders.packingLeadTime':'Planowana wysyłka: 1 dzień roboczy.',
   'orders.tracking':'Numer przesyłki',
   'orders.trackShipment':'Śledź przesyłkę'
 });
 Object.assign(TRANSLATIONS.de, {
-  'status.packing':'Wird verpackt / wartet auf den Kurier', 'status.shipped':'Versandt',
+  'status.packing':'Wird verpackt / wartet auf den Kurier', 'status.shipped':'Versandt', 'status.partiallyShipped':'Teilweise versandt',
   'orders.packingLeadTime':'Geplanter Versand: 1 Werktag.',
   'orders.tracking':'Sendungsnummer', 'orders.trackShipment':'Sendung verfolgen'
 });
 Object.assign(TRANSLATIONS.en, {
-  'status.packing':'Being packed / awaiting courier', 'status.shipped':'Shipped',
+  'status.packing':'Being packed / awaiting courier', 'status.shipped':'Shipped', 'status.partiallyShipped':'Partially shipped',
   'orders.packingLeadTime':'Planned dispatch: 1 business day.',
   'orders.tracking':'Tracking number', 'orders.trackShipment':'Track shipment'
 });
 Object.assign(TRANSLATIONS.es, {
-  'status.packing':'En preparación / esperando al mensajero', 'status.shipped':'Enviado',
+  'status.packing':'En preparación / esperando al mensajero', 'status.shipped':'Enviado', 'status.partiallyShipped':'Enviado parcialmente',
   'orders.packingLeadTime':'Envío previsto: 1 día laborable.',
   'orders.tracking':'Número de seguimiento', 'orders.trackShipment':'Seguir el envío'
 });
 Object.assign(TRANSLATIONS.it, {
-  'status.packing':'In preparazione / in attesa del corriere', 'status.shipped':'Spedito',
+  'status.packing':'In preparazione / in attesa del corriere', 'status.shipped':'Spedito', 'status.partiallyShipped':'Spedito parzialmente',
   'orders.packingLeadTime':'Spedizione prevista: 1 giorno lavorativo.',
   'orders.tracking':'Numero di tracciamento', 'orders.trackShipment':'Traccia la spedizione'
 });
@@ -549,7 +550,7 @@ function orderStatusMeta(statusRaw) {
   if (key === 'confirmed') {
     return { label: t('status.confirmed'), cls: 'status-confirmed' };
   }
-  if (key === 'packed') {
+  if (key === 'packed' || key === 'packed_partial') {
     return { label: t('status.packing'), cls: 'status-in-delivery' };
   }
   if (key === 'in_delivery') {
@@ -558,6 +559,9 @@ function orderStatusMeta(statusRaw) {
   if (key === 'shipped') {
     return { label: t('status.shipped'), cls: 'status-in-delivery' };
   }
+  if (key === 'partially_shipped') {
+    return { label: t('status.partiallyShipped'), cls: 'status-in-delivery' };
+  }
   if(key === 'issued' || key === 'completed') return { label:t('status.completed'), cls:'status-other' };
   if(key === 'cancelled') return { label:t('status.cancelled'), cls:'status-other' };
   return { label:t('status.other'), cls:'status-other' };
@@ -565,7 +569,7 @@ function orderStatusMeta(statusRaw) {
 
 function updateOrderSummaryBar(orders){
   const rows = Array.isArray(orders) ? orders : [];
-  const inProgressStatuses = new Set(['new','pending','unconfirmed','confirmed','packed','in_delivery','shipped']);
+  const inProgressStatuses = new Set(['new','pending','unconfirmed','confirmed','packed','packed_partial','in_delivery','shipped','partially_shipped']);
   const doneStatuses = new Set(['issued']);
   let inProgress = 0;
   let done = 0;
@@ -832,10 +836,10 @@ function carrierTrackingUrl(carrier, trackingNo){
 function renderOrderDetailsHtml(order, items, totals){
   const currency = String(order?.currency || items?.[0]?.currency || currentPriceCurrency()).toUpperCase();
   const statusKey = String(order?.status || '').toLowerCase();
-  const shippingInfo = statusKey === 'packed'
+  const shippingInfo = (statusKey === 'packed' || statusKey === 'packed_partial')
     ? `<div class="notice" style="margin-top:12px">${esc(t('status.packing'))}<br><span class="muted">${esc(t('orders.packingLeadTime'))}</span></div>`
-    : (statusKey === 'shipped'
-      ? `<div class="notice" style="margin-top:12px">${esc(t('status.shipped'))}${order?.tracking_no ? `<br>${esc(t('orders.tracking'))}: <b>${esc(order.tracking_no)}</b> &middot; <a href="${esc(carrierTrackingUrl(order.carrier, order.tracking_no))}" target="_blank" rel="noopener">${esc(t('orders.trackShipment'))}</a>` : ''}</div>`
+    : (statusKey === 'shipped' || statusKey === 'partially_shipped'
+      ? `<div class="notice" style="margin-top:12px">${esc(statusKey === 'partially_shipped' ? t('status.partiallyShipped') : t('status.shipped'))}${order?.tracking_no ? `<br>${esc(t('orders.tracking'))}: <b>${esc(order.tracking_no)}</b> &middot; <a href="${esc(carrierTrackingUrl(order.carrier, order.tracking_no))}" target="_blank" rel="noopener">${esc(t('orders.trackShipment'))}</a>` : ''}</div>`
       : '');
   const rows = (items || []).map(it => `
     <tr>
@@ -1303,10 +1307,6 @@ async function fetchInvoicesFromSupabase(email){
       return;
     }
 
-    const requestedInvoiceId = Number(new URLSearchParams(window.location.search).get('invoice') || 0);
-    if(requestedInvoiceId && invoices.some(invoice => Number(invoice.id) === requestedInvoiceId)){
-      INVOICES_SHOW_ALL = true;
-    }
     const visibleRows = INVOICES_SHOW_ALL ? invoices : invoices.slice(0, 10);
     const olderButtonRow = invoices.length > visibleRows.length ? `
       <tr class="invoices-more-row"><td colspan="6">
@@ -1315,7 +1315,7 @@ async function fetchInvoicesFromSupabase(email){
     ` : '';
 
     tb.innerHTML = visibleRows.map(invoice => `
-      <tr data-invoice-row="${invoice.id}">
+      <tr>
         <td><b>${esc(invoice.invoice_no || '')}</b>${Number(invoice.seen_by_client || 0) === 0 && !invoiceIsPaid(invoice) ? ` <span class="badge">${esc(t('invoices.new'))}</span>` : ''}${invoicePaymentBadge(invoice)}</td>
         <td>${esc(invoice.order_display || displayOrderLabel(invoice) || invoice.order_no || '')}</td>
         <td>${esc(formatDate(invoice.issue_date))}</td>
@@ -1324,16 +1324,6 @@ async function fetchInvoicesFromSupabase(email){
         <td><button class="btn" type="button" data-open-invoice="${invoice.id}">${esc(t('common.downloadPdf'))}</button></td>
       </tr>
     `).join('') + olderButtonRow;
-
-    if(requestedInvoiceId){
-      const requestedRow = tb.querySelector(`[data-invoice-row="${requestedInvoiceId}"]`);
-      if(requestedRow){
-        requestedRow.style.background = '#eef4ff';
-        requestedRow.style.outline = '2px solid #4f6fed';
-        requestedRow.style.outlineOffset = '-2px';
-        setTimeout(() => requestedRow.scrollIntoView({ behavior:'smooth', block:'center' }), 0);
-      }
-    }
 
     tb.querySelectorAll('[data-open-invoice]').forEach(button => {
       button.onclick = async () => {
@@ -1456,7 +1446,7 @@ function renderDashboardModelSearch(){
 }
 
 function renderClientDashboard(){
-  const openStatuses = new Set(['new','pending','unconfirmed','confirmed','packed','in_delivery','shipped']);
+  const openStatuses = new Set(['new','pending','unconfirmed','confirmed','packed','packed_partial','in_delivery','shipped','partially_shipped']);
   $('dashOrdersOpen').textContent = String(CLIENT_ORDERS.filter(o => openStatuses.has(String(o.status || '').toLowerCase())).length);
   $('dashOrdersDone').textContent = String(CLIENT_ORDERS.filter(o => String(o.status || '').toLowerCase() === 'issued').length);
   $('dashModelsAvailable').textContent = String(STOCK_VIEW.filter(r => Number(r.qty_total_visible || 0) > 0).length);
@@ -1552,9 +1542,6 @@ async function loadSession(force = false) {
       loadOrders(false)
     ]);
     await loadInvoices(true, false);
-    if(requestedSection() === 'invoicesSection'){
-      openSection('invoicesSection');
-    }
   } catch(error){
     showAuth(t('auth.sessionError', { error:clientErrorDetail(error) }));
   }
@@ -1634,11 +1621,6 @@ function normalizeStockRow(r){
     qty_in_delivery: inDelivery,
     qty_total_visible: total
   };
-}
-
-function requestedSection(){
-  const section = new URLSearchParams(window.location.search).get('section');
-  return section === 'invoices' ? 'invoicesSection' : 'dashboardSection';
 }
 
 function applyStockCatalogRows(rows){
