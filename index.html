@@ -836,10 +836,12 @@ function carrierTrackingUrl(carrier, trackingNo){
 function renderOrderDetailsHtml(order, items, totals){
   const currency = String(order?.currency || items?.[0]?.currency || currentPriceCurrency()).toUpperCase();
   const statusKey = String(order?.status || '').toLowerCase();
+  const trackingNo = String(order?.tracking_no || '').trim();
+  const trackingUrl = carrierTrackingUrl(order?.carrier, trackingNo);
   const shippingInfo = (statusKey === 'packed' || statusKey === 'packed_partial')
     ? `<div class="notice" style="margin-top:12px">${esc(t('status.packing'))}<br><span class="muted">${esc(t('orders.packingLeadTime'))}</span></div>`
-    : (statusKey === 'shipped' || statusKey === 'partially_shipped'
-      ? `<div class="notice" style="margin-top:12px">${esc(statusKey === 'partially_shipped' ? t('status.partiallyShipped') : t('status.shipped'))}${order?.tracking_no ? `<br>${esc(t('orders.tracking'))}: <b>${esc(order.tracking_no)}</b> &middot; <a href="${esc(carrierTrackingUrl(order.carrier, order.tracking_no))}" target="_blank" rel="noopener">${esc(t('orders.trackShipment'))}</a>` : ''}</div>`
+    : (statusKey === 'shipped' || statusKey === 'partially_shipped' || trackingNo
+      ? `<div class="notice" style="margin-top:12px">${esc(statusKey === 'partially_shipped' ? t('status.partiallyShipped') : t('status.shipped'))}${trackingNo ? `<br>${esc(t('orders.tracking'))}: <b>${esc(trackingNo)}</b> &middot; <a href="${esc(trackingUrl)}" target="_blank" rel="noopener">${esc(t('orders.trackShipment'))}</a>` : ''}</div>`
       : '');
   const rows = (items || []).map(it => `
     <tr>
@@ -1019,7 +1021,10 @@ async function fetchOrderDetails(order){
     gross: Number(payload.order?.total_gross ?? payload.total_gross ?? 0),
     retail: Number(payload.order?.total_retail ?? payload.total_retail ?? 0)
   };
-  return { order:{ ...order, ...(payload.order || {}) }, items, totals };
+  const mergedOrder = { ...order, ...(payload.order || {}) };
+  mergedOrder.tracking_no = String(payload.order?.tracking_no || order?.tracking_no || '').trim();
+  mergedOrder.carrier = String(payload.order?.carrier || order?.carrier || '').trim();
+  return { order:mergedOrder, items, totals };
 }
 
 function parseOrderCode(value){
@@ -1984,6 +1989,8 @@ function renderOrdersRows(orders){
 
   tb.innerHTML = rows.map(order => {
     const status = orderStatusMeta(order.status);
+    const trackingNo = String(order?.tracking_no || '').trim();
+    const trackingUrl = carrierTrackingUrl(order?.carrier, trackingNo);
     return `
       <tr>
         <td>${esc(displayOrderLabel(order))}</td>
@@ -1994,6 +2001,7 @@ function renderOrdersRows(orders){
         <td><div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn" type="button" data-open-order="${order.id}">${esc(t('orders.details'))}</button>
           <button class="btn" type="button" data-pdf-order="${order.id}">${esc(t('orders.downloadPdf'))}</button>
+          ${trackingNo ? `<a class="btn" href="${esc(trackingUrl)}" target="_blank" rel="noopener" title="${esc(t('orders.tracking'))}: ${esc(trackingNo)}">${esc(t('orders.trackShipment'))}</a>` : ''}
         </div></td>
       </tr>
       <tr id="order-detail-${order.id}" class="hidden">
