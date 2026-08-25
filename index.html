@@ -754,24 +754,54 @@ function calcClientGrossFromNet(netB2B){
   return Number(netB2B || 0) * 1.45 * 1.23;
 }
 
-async function fetchMagazynJson(path, options = {}){
-  const attempts = Number(options.attempts || 2);
+let SESSION_REFRESH_IN_FLIGHT = null;
+
+async function refreshClientSession(){
+  if(SESSION_REFRESH_IN_FLIGHT) return SESSION_REFRESH_IN_FLIGHT;
+  SESSION_REFRESH_IN_FLIGHT = (async () => {
+    const { data, error } = await sbAuth.auth.refreshSession();
+    if(error || !data?.session?.access_token){
+      throw error || new Error(t('auth.noSession'));
+    }
+    return data.session;
+  })();
+  try {
+    return await SESSION_REFRESH_IN_FLIGHT;
+  } finally {
+    SESSION_REFRESH_IN_FLIGHT = null;
+  }
+}
+
+async function fetchMagazynResponse(path, options = {}){
   const requestOptions = { ...options };
   delete requestOptions.attempts;
+  let session = await getSession();
+  if(!session?.access_token) throw new Error(t('auth.noSession'));
+
+  const send = accessToken => fetch(`${MAGAZYN_API_BASE}${path}`, {
+    cache: 'no-store',
+    ...requestOptions,
+    headers: {
+      ...(requestOptions.headers || {}),
+      'Authorization': `Bearer ${accessToken}`
+    }
+  });
+
+  let response = await send(session.access_token);
+  if(response.status === 401 || response.status === 403){
+    session = await refreshClientSession();
+    response = await send(session.access_token);
+  }
+  return response;
+}
+
+async function fetchMagazynJson(path, options = {}){
+  const attempts = Number(options.attempts || 2);
   let lastError = null;
 
   for(let attempt = 1; attempt <= attempts; attempt++){
     try {
-      const session = await getSession();
-      if(!session?.access_token) throw new Error(t('auth.noSession'));
-      const res = await fetch(`${MAGAZYN_API_BASE}${path}`, {
-        cache: 'no-store',
-        ...requestOptions,
-        headers: {
-          ...(requestOptions.headers || {}),
-          'Authorization': `Bearer ${session.access_token}`
-        }
-      });
+      const res = await fetchMagazynResponse(path, options);
       if(!res.ok){
         throw new Error(`Magazyn API: ${res.status}`);
       }
@@ -891,12 +921,7 @@ function downloadOrderPdf(order){
 
   return (async () => {
     try {
-      const session = await getSession();
-      if(!session?.access_token) throw new Error(t('auth.noSession'));
-      const response = await fetch(`${MAGAZYN_API_BASE}/api/client/orders/${Number(order.id)}/pdf`, {
-        cache:'no-store',
-        headers:{ 'Authorization':`Bearer ${session.access_token}` }
-      });
+      const response = await fetchMagazynResponse(`/api/client/orders/${Number(order.id)}/pdf`);
       if(!response.ok){
         let message = `PDF HTTP ${response.status}`;
         try { message = (await response.json())?.error || message; } catch(_) {}
@@ -1051,10 +1076,7 @@ function markInvoiceSeenAndOpenPdf(inv){
 
   return (async () => {
     try {
-      const session = await getSession();
-      if(!session?.user?.email) throw new Error(t('auth.noSession'));
-      const downloadUrl = `${MAGAZYN_API_BASE}/api/invoices/${inv.id}/download`;
-      const pdfResponse = await fetch(downloadUrl, { headers: { 'Authorization': `Bearer ${session.access_token}` } });
+      const pdfResponse = await fetchMagazynResponse(`/api/invoices/${inv.id}/download`);
       if(!pdfResponse.ok) throw new Error(`PDF HTTP ${pdfResponse.status}`);
       const pdfBlob = await pdfResponse.blob();
       const objectUrl = URL.createObjectURL(pdfBlob);
@@ -1064,10 +1086,7 @@ function markInvoiceSeenAndOpenPdf(inv){
       hideInvoiceNoticeModal();
 
       // Oznaczenie jako przeczytana nie opóźnia już otwarcia pliku.
-      fetch(`${MAGAZYN_API_BASE}/api/invoices/${inv.id}/seen`, {
-        method:'POST',
-        headers: { 'Authorization': `Bearer ${session.access_token}` }
-      }).catch(() => {});
+      fetchMagazynResponse(`/api/invoices/${inv.id}/seen`, { method:'POST' }).catch(() => {});
       LAST_LOADED.invoices = 0;
       setTimeout(showNextInvoiceNotice, 200);
     } catch(error){
@@ -1078,12 +1097,7 @@ function markInvoiceSeenAndOpenPdf(inv){
 }
 
 async function acknowledgeInvoiceSeen(inv){
-  const session = await getSession();
-  if(!session?.user?.email) throw new Error(t('auth.noSession'));
-  const response = await fetch(`${MAGAZYN_API_BASE}/api/invoices/${inv.id}/seen`, {
-    method:'POST',
-    headers: { 'Authorization': `Bearer ${session.access_token}` }
-  });
+  const response = await fetchMagazynResponse(`/api/invoices/${inv.id}/seen`, { method:'POST' });
   if(!response.ok) throw new Error(`HTTP ${response.status}`);
   inv.seen_by_client = 1;
   inv.seen_at = new Date().toISOString();
@@ -1732,11 +1746,10 @@ async function logStockSearch(query, rows){
   const accessToken = String(session?.access_token || '');
   if(!email || !accessToken) return;
 
-  await fetch(`${MAGAZYN_API_BASE}/api/client_search_log`, {
+  await fetchMagazynResponse('/api/client_search_log', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${accessToken}`
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({
       email,
@@ -1930,11 +1943,10 @@ $('btnCreateOrder').onclick = async () => {
         return (c === 'x' ? r : (r & 3 | 8)).toString(16);
       });
     }
-    const createRes = await fetch(`${MAGAZYN_API_BASE}/api/client/orders`, {
+    const createRes = await fetchMagazynResponse('/api/client/orders', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token || ''}`,
         'Idempotency-Key': ORDER_IDEMPOTENCY_KEY
       },
       body: JSON.stringify({
