@@ -576,7 +576,7 @@ function orderStatusMeta(statusRaw) {
 function updateOrderSummaryBar(orders){
   const rows = Array.isArray(orders) ? orders : [];
   const inProgressStatuses = new Set(['new','pending','unconfirmed','confirmed','packed','packed_partial','in_delivery','shipped','partially_shipped']);
-  const doneStatuses = new Set(['issued']);
+  const doneStatuses = new Set(['issued','completed']);
   let inProgress = 0;
   let done = 0;
 
@@ -1478,7 +1478,8 @@ function renderDashboardModelSearch(){
 function renderClientDashboard(){
   const openStatuses = new Set(['new','pending','unconfirmed','confirmed','packed','packed_partial','in_delivery','shipped','partially_shipped']);
   $('dashOrdersOpen').textContent = String(CLIENT_ORDERS.filter(o => openStatuses.has(String(o.status || '').toLowerCase())).length);
-  $('dashOrdersDone').textContent = String(CLIENT_ORDERS.filter(o => String(o.status || '').toLowerCase() === 'issued').length);
+  const doneStatuses = new Set(['issued','completed']);
+  $('dashOrdersDone').textContent = String(CLIENT_ORDERS.filter(o => doneStatuses.has(String(o.status || '').toLowerCase())).length);
   $('dashModelsAvailable').textContent = String(STOCK_VIEW.filter(r => Number(r.qty_total_visible || 0) > 0).length);
   $('dashInvoicesUnpaid').textContent = String(CLIENT_INVOICES.filter(inv => !invoiceIsPaid(inv)).length);
 
