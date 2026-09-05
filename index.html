@@ -635,6 +635,7 @@ let STOCK_SEARCH_LOG_TIMER = null;
 let LAST_STOCK_SEARCH_LOG_KEY = '';
 let INVOICES_SHOW_ALL = false;
 const PRODUCT_IMAGE_CACHE = new Map();
+const PRODUCT_IMAGE_IN_FLIGHT = new Map();
 
 // Jednorazowo usuń stare migawki stanów utworzone przez poprzednią wersję.
 // Aktualna wersja nie zapisuje ani nie odczytuje stanów z przeglądarki.
@@ -1487,15 +1488,22 @@ function productPhotoMarkup(row, extraClass=''){
   return `<img class="client-product-thumb client-product-image ${extraClass}" data-image-id="${imageId}" data-sku="${esc(row.sku || row.model || '')}" alt="${esc(row.model || row.sku || '')}" title="Kliknij, aby powiększyć">`;
 }
 
-async function clientProductImageUrl(imageId){
+async function clientProductImageUrl(imageId, size='thumb'){
   imageId = Number(imageId || 0);
   if(!imageId) return '';
-  if(PRODUCT_IMAGE_CACHE.has(imageId)) return PRODUCT_IMAGE_CACHE.get(imageId);
-  const response = await fetchMagazynResponse(`/api/client/product-images/${imageId}`);
-  if(!response.ok) throw new Error(`Nie udało się pobrać zdjęcia (${response.status})`);
-  const url = URL.createObjectURL(await response.blob());
-  PRODUCT_IMAGE_CACHE.set(imageId, url);
-  return url;
+  const cacheKey = `${imageId}:${size}`;
+  if(PRODUCT_IMAGE_CACHE.has(cacheKey)) return PRODUCT_IMAGE_CACHE.get(cacheKey);
+  if(PRODUCT_IMAGE_IN_FLIGHT.has(cacheKey)) return PRODUCT_IMAGE_IN_FLIGHT.get(cacheKey);
+  const pending = (async () => {
+    const response = await fetchMagazynResponse(`/api/client/product-images/${imageId}${size==='thumb'?'?thumb=1':''}`);
+    if(!response.ok) throw new Error(`Nie udało się pobrać zdjęcia (${response.status})`);
+    const url = URL.createObjectURL(await response.blob());
+    PRODUCT_IMAGE_CACHE.set(cacheKey, url);
+    return url;
+  })();
+  PRODUCT_IMAGE_IN_FLIGHT.set(cacheKey, pending);
+  try { return await pending; }
+  finally { PRODUCT_IMAGE_IN_FLIGHT.delete(cacheKey); }
 }
 
 function hydrateProductImages(scope=document){
@@ -1530,7 +1538,7 @@ function photoDetail(label,value,extra=''){
 
 async function openClientProductPhoto(image){
   const row = STOCK_VIEW.find(item => Number(item.image_id) === Number(image.dataset.imageId) && (!image.dataset.sku || item.sku === image.dataset.sku));
-  $('clientPhotoLarge').src = image.src || await clientProductImageUrl(image.dataset.imageId);
+  $('clientPhotoLarge').src = await clientProductImageUrl(image.dataset.imageId,'full');
   $('clientPhotoLarge').alt = image.alt || t('common.name');
   if(row){
     const variant = productVariantDetails(row.sku);
