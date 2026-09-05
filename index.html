@@ -1491,7 +1491,9 @@ function esc(v){
 function productPhotoMarkup(row, extraClass=''){
   const imageId = Number(row?.image_id || 0);
   if(!imageId) return `<span class="client-product-thumb client-product-placeholder ${extraClass}">◇</span>`;
-  return `<img class="client-product-thumb client-product-image ${extraClass}" data-image-id="${imageId}" data-product-id="${Number(row.product_id || 0)}" data-sku="${esc(row.sku || row.model || '')}" alt="${esc(row.model || row.sku || '')}">`;
+  const directThumbnail = String(row?.thumbnail_url || '').trim();
+  const src = directThumbnail ? ` src="${esc(directThumbnail)}"` : '';
+  return `<img class="client-product-thumb client-product-image ${extraClass}"${src} data-image-id="${imageId}" data-product-id="${Number(row.product_id || 0)}" data-sku="${esc(row.sku || row.model || '')}" alt="${esc(row.model || row.sku || '')}">`;
 }
 
 async function clientProductImageUrl(imageId, size='thumb'){
@@ -1774,6 +1776,7 @@ function normalizeStockRow(r){
     price_list: String(r.price_list || currentPriceList()),
     price_available: r.price_available !== false && Number(r.net_price || 0) > 0,
     image_id: Number(r.image_id || 0),
+    thumbnail_url: r.thumbnail_url || '',
     qty_physical: physical,
     qty_reserved: reserved,
     qty_on_stock: onStock,
@@ -1798,6 +1801,7 @@ function applyStockCatalogRows(rows){
     price_list: String(r.price_list || currentPriceList()),
     price_available: r.price_available !== false && Number(r.net_price || 0) > 0,
     image_id: Number(r.image_id || 0),
+    thumbnail_url: r.thumbnail_url || '',
     qty_physical: Number(r.qty_physical ?? r.qty_on_stock ?? 0),
     qty_reserved: Number(r.qty_reserved || 0),
     qty_on_stock: Number(r.qty_on_stock || 0),
