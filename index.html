@@ -1721,7 +1721,9 @@ sbAuth.auth.onAuthStateChange((event, session) => {
 });
 
 function normalizeStockRow(r){
-  const rawOn = Number(r.qty_on_stock ?? 0);
+  const physical = Math.max(0, Number(r.qty_physical ?? r.qty_on_stock ?? 0));
+  const reserved = Math.max(0, Number(r.qty_reserved ?? 0));
+  const rawOn = physical - reserved;
   const rawIn = Number(r.qty_in_delivery ?? 0);
   const debt = Math.max(0, -rawOn);
   const onStock = Math.max(0, rawOn);
@@ -1741,6 +1743,8 @@ function normalizeStockRow(r){
     price_list: String(r.price_list || currentPriceList()),
     price_available: r.price_available !== false && Number(r.net_price || 0) > 0,
     image_id: Number(r.image_id || 0),
+    qty_physical: physical,
+    qty_reserved: reserved,
     qty_on_stock: onStock,
     qty_in_delivery: inDelivery,
     qty_total_visible: total
@@ -1762,6 +1766,8 @@ function applyStockCatalogRows(rows){
     price_list: String(r.price_list || currentPriceList()),
     price_available: r.price_available !== false && Number(r.net_price || 0) > 0,
     image_id: Number(r.image_id || 0),
+    qty_physical: Number(r.qty_physical ?? r.qty_on_stock ?? 0),
+    qty_reserved: Number(r.qty_reserved || 0),
     qty_on_stock: Number(r.qty_on_stock || 0),
     qty_in_delivery: Number(r.qty_in_delivery || 0),
     qty_total_visible: Number(r.qty_on_stock || 0) + Number(r.qty_in_delivery || 0)
