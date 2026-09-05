@@ -1544,23 +1544,36 @@ function photoDetail(label,value,extra=''){
   return `<div class="client-photo-detail ${extra}"><small>${esc(label)}</small><b>${esc(value ?? '—')}</b></div>`;
 }
 
+let CLIENT_PRODUCT_OPEN_TOKEN = 0;
 async function openClientProduct(row){
   if(!row) return;
+  const openToken = ++CLIENT_PRODUCT_OPEN_TOKEN;
   const imageId = Number(row.image_id || 0);
-  $('clientPhotoLarge').alt = row.model || row.sku || t('common.name');
-  $('clientPhotoLarge').style.display = imageId ? 'block' : 'none';
+  const largeImage = $('clientPhotoLarge');
+  largeImage.alt = row.model || row.sku || t('common.name');
+  largeImage.style.display = imageId ? 'block' : 'none';
+  largeImage.removeAttribute('src');
   if(row){
     const variant = productVariantDetails(row.sku);
     $('clientPhotoInfo').innerHTML = `<h3 style="font-size:20px;margin:0">${esc(row.model || row.sku)}</h3><div class="muted">${esc(row.name || '')}</div><div class="client-photo-details">${photoDetail(t('stock.sku'),row.sku)}${photoDetail(t('stock.ean'),row.ean || '—')}${photoDetail(t('stock.finish'),variant.finish)}${photoDetail(t('stock.spacing'),variant.spacing)}${photoDetail(t('stock.dimensions'),variant.dimensions)}${photoDetail(t('stock.availableNow'),`${Number(row.qty_on_stock || 0)} ${t('common.pieces')}`,'available-now')}${photoDetail(t('stock.deliveryWindow'),`${Number(row.qty_available_in_delivery ?? row.qty_in_delivery ?? 0)} ${t('common.pieces')}`,'incoming')}</div><div class="client-cart-add"><div><small class="muted">${esc(t('cart.quantity'))}</small><div class="client-qty-stepper"><button type="button" data-product-qty-step="-1">−</button><input id="clientProductQty" type="number" min="1" value="1"><button type="button" data-product-qty-step="1">+</button></div></div><button class="btn primary" type="button" data-add-product="${Number(row.product_id)}">${esc(t('cart.add'))}</button><span id="clientCartMessage" class="client-cart-message"></span></div>`;
   } else $('clientPhotoInfo').innerHTML = '';
   $('clientPhotoModal').classList.remove('hidden');
   if(imageId){
-    clientProductImageUrl(imageId,'thumb').then(url => { if(!$('clientPhotoModal').classList.contains('hidden')) $('clientPhotoLarge').src=url; }).catch(()=>{});
-    clientProductImageUrl(imageId,'full').then(url => { if(!$('clientPhotoModal').classList.contains('hidden')) $('clientPhotoLarge').src=url; }).catch(()=>{});
+    const directThumbnail = String(row.thumbnail_url || '').trim();
+    let fullImageApplied = false;
+    if(directThumbnail) largeImage.src = directThumbnail;
+    else clientProductImageUrl(imageId,'thumb').then(url => {
+      if(openToken === CLIENT_PRODUCT_OPEN_TOKEN && !fullImageApplied && !$('clientPhotoModal').classList.contains('hidden')) largeImage.src = url;
+    }).catch(()=>{});
+    clientProductImageUrl(imageId,'full').then(url => {
+      if(openToken !== CLIENT_PRODUCT_OPEN_TOKEN || $('clientPhotoModal').classList.contains('hidden')) return;
+      fullImageApplied = true;
+      largeImage.src = url;
+    }).catch(()=>{});
   }
 }
 
-function closeClientProductPhoto(){ $('clientPhotoModal').classList.add('hidden'); $('clientPhotoLarge').removeAttribute('src'); }
+function closeClientProductPhoto(){ CLIENT_PRODUCT_OPEN_TOKEN++; $('clientPhotoModal').classList.add('hidden'); $('clientPhotoLarge').removeAttribute('src'); }
 
 $('clientPhotoClose').onclick = closeClientProductPhoto;
 $('clientPhotoModal').addEventListener('click', event => { if(event.target === $('clientPhotoModal')) closeClientProductPhoto(); });
