@@ -1724,10 +1724,12 @@ function normalizeStockRow(r){
   const physical = Math.max(0, Number(r.qty_physical ?? r.qty_on_stock ?? 0));
   const reserved = Math.max(0, Number(r.qty_reserved ?? 0));
   const rawOn = physical - reserved;
-  const rawIn = Number(r.qty_in_delivery ?? 0);
   const debt = Math.max(0, -rawOn);
   const onStock = Math.max(0, rawOn);
-  const inDelivery = Math.max(0, rawIn - debt);
+  const hasAvailableIncoming = r.qty_available_in_delivery !== null && r.qty_available_in_delivery !== undefined;
+  const inDelivery = hasAvailableIncoming
+    ? Math.max(0, Number(r.qty_available_in_delivery || 0))
+    : Math.max(0, Number(r.qty_in_delivery ?? 0) - debt);
   const total = onStock + inDelivery;
 
   return {
@@ -1747,6 +1749,7 @@ function normalizeStockRow(r){
     qty_reserved: reserved,
     qty_on_stock: onStock,
     qty_in_delivery: inDelivery,
+    qty_available_in_delivery: inDelivery,
     qty_total_visible: total
   };
 }
@@ -1770,7 +1773,8 @@ function applyStockCatalogRows(rows){
     qty_reserved: Number(r.qty_reserved || 0),
     qty_on_stock: Number(r.qty_on_stock || 0),
     qty_in_delivery: Number(r.qty_in_delivery || 0),
-    qty_total_visible: Number(r.qty_on_stock || 0) + Number(r.qty_in_delivery || 0)
+    qty_available_in_delivery: r.qty_available_in_delivery === null || r.qty_available_in_delivery === undefined ? null : Number(r.qty_available_in_delivery || 0),
+    qty_total_visible: Number(r.qty_on_stock || 0) + Number(r.qty_available_in_delivery ?? r.qty_in_delivery ?? 0)
   }));
   STOCK_VIEW = STOCK_RAW.map(normalizeStockRow);
   renderClientDashboard();
