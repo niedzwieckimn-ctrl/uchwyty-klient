@@ -24,6 +24,10 @@
     .language-switch{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}.language-switch .btn{min-width:46px;padding:8px 10px}.language-switch .btn.active{background:linear-gradient(135deg,var(--blue),var(--blue2));border-color:transparent;color:#fff}
     .boot-card{max-width:160px;margin:18vh auto;text-align:center}.boot-spinner{width:34px;height:34px;margin:auto;border:3px solid #e3e8f4;border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
     @media(max-width:560px){.card{padding:15px;border-radius:18px}h3{font-size:22px}.client-nav a{padding:9px 11px}#authCard{margin:5vh auto}}
+    .brand{height:92px}.brand-logo{width:170px;transform:none}
+    .client-nav a:before{display:none!important}.client-nav a{gap:12px}
+    .nav-icon{width:21px;height:21px;flex:0 0 21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+    @media(max-width:980px){.brand{width:130px;height:72px}.brand-logo{width:130px}.client-nav a{gap:8px}}
   </style>
 </head>
 <body>
@@ -34,13 +38,13 @@
       <span id="who" class="who"></span>
     </div>
     <div id="clientNav" class="client-nav hidden">
-      <a href="#" data-target="dashboardSection" data-i18n="nav.dashboard">Pulpit</a>
-      <a href="#" data-target="stockSection" data-i18n="nav.stock">Stany magazynowe</a>
-      <a href="#" data-target="orderSection" data-i18n="nav.newOrder">Koszyk</a>
-      <a href="#" data-target="ordersSection" data-i18n="nav.orders">Moje zamówienia</a>
-      <a href="#" data-target="invoicesSection" data-i18n="nav.invoices">Faktury</a>
-      <a href="#" data-target="settingsSection" data-i18n="nav.settings">Ustawienia</a>
-      <a href="#" data-target="scanSection" data-i18n="nav.scan">Skan QR</a>
+      <a href="#" data-target="dashboardSection"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v12h5v-7h4v7h5V9"/></svg><span data-i18n="nav.dashboard">Pulpit</span></a>
+      <a href="#" data-target="stockSection"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 7 9-5 9 5v10l-9 5-9-5ZM3 7l9 5 9-5M12 12v10M7.5 4.5l9 5"/></svg><span data-i18n="nav.stock">Stany magazynowe</span></a>
+      <a href="#" data-target="orderSection"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 3h3l3 12h11l3-9H6M8 15l-1 3h12"/><circle cx="9" cy="21" r="1"/><circle cx="18" cy="21" r="1"/></svg><span data-i18n="nav.newOrder">Koszyk</span></a>
+      <a href="#" data-target="ordersSection"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="4" width="14" height="18" rx="2"/><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 11h6M9 15h6M9 19h4"/></svg><span data-i18n="nav.orders">Moje zamówienia</span></a>
+      <a href="#" data-target="invoicesSection"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H5v20h14V7ZM14 2v5h5M8 12h8M8 16h8M8 19h5"/></svg><span data-i18n="nav.invoices">Faktury</span></a>
+      <a href="#" data-target="settingsSection"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 3 1-1h4l1 3 3 1 3 1v4l-2 1-1 3 1 3-3 3-3-1-3 1-1 1H7l-1-3-3-1-1-3 2-2v-3L3 7l3-3 3 1Z"/><circle cx="12" cy="12" r="3"/></svg><span data-i18n="nav.settings">Ustawienia</span></a>
+      <a href="#" data-target="scanSection"><svg class="nav-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2H2v6M16 2h6v6M22 16v6h-6M8 22H2v-6"/><path d="M6 6h4v4H6ZM14 6h4v4h-4ZM6 14h4v4H6ZM14 14h2v2h2v2h-4Z"/></svg><span data-i18n="nav.scan">Skan QR</span></a>
     </div>
     <div id="orderSummaryBar" class="hidden" style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
       <span class="badge" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18);color:#fff;padding:8px 12px;">
