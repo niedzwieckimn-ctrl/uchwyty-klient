@@ -7,6 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script src="search-telemetry.js"></script>
   <style>
     :root{--navy:#12213d;--navy2:#0b1730;--blue:#5577ee;--blue2:#3f63dc;--mint:#31b98b;--red:#df5264;--ink:#17233c;--muted:#718096;--bg:#f5f6fa;--line:#e7eaf2;--shadow:0 12px 35px rgba(31,45,78,.07)}
     *{box-sizing:border-box}body{font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at 88% -10%,#eaf0ff 0,transparent 30%),var(--bg);margin:0;color:var(--ink);line-height:1.45}
@@ -1586,7 +1587,7 @@ document.addEventListener('keydown', event => { if(event.key === 'Escape' && !$(
 document.addEventListener('click', event => {
   const hit = event.target.closest?.('.model-hit[data-product-id],.client-product-line[data-product-id]');
   const image = event.target.closest?.('.client-product-image');
-  if(hit){ event.preventDefault(); openClientProduct(STOCK_VIEW.find(row=>Number(row.product_id)===Number(hit.dataset.productId))); return; }
+  if(hit){ event.preventDefault(); searchTelemetry.select(Number(hit.dataset.productId)); openClientProduct(STOCK_VIEW.find(row=>Number(row.product_id)===Number(hit.dataset.productId))); return; }
   if(image){ event.preventDefault(); event.stopPropagation(); openClientProduct(STOCK_VIEW.find(row=>Number(row.product_id)===Number(image.dataset.productId))); return; }
   const step = event.target.closest?.('[data-product-qty-step]');
   if(step){ const input=$('clientProductQty'); input.value=Math.max(1,Number(input.value||1)+Number(step.dataset.productQtyStep||0)); return; }
@@ -1606,8 +1607,7 @@ function renderDashboardModelSearch(){
     out.innerHTML = `<div class="muted">${esc(t('dashboard.startTyping'))}</div>`;
     return;
   }
-  const matches = STOCK_VIEW.filter(r => `${r.sku} ${r.model} ${r.name}`.toLowerCase().includes(query)).slice(0,8);
-  scheduleStockSearchLog(queryRaw, matches);
+  const matches = searchMatchingRows(queryRaw).slice(0,8);
   out.innerHTML = matches.length ? matches.map(r => `
     <div class="model-hit" data-product-id="${Number(r.product_id)}"><div class="model-hit-main">${productPhotoMarkup(r)}<div><b>${esc(r.model || r.sku)}</b><span class="muted">${esc(r.name || r.sku)}</span>${incomingSoonMarkup(r)}</div></div><div class="available">${Number(r.qty_on_stock || 0)} ${esc(t('common.pieces'))}</div></div>
   `).join('') : `<div class="muted">${esc(t('dashboard.modelNotFound'))}</div>`;
@@ -1724,6 +1724,8 @@ async function loadSession(force = false) {
       loadStock(false),
       loadOrders(false)
     ]);
+    try { const response=await fetchMagazynJson('/api/client/search-aliases'); SEARCH_ALIASES=response.aliases||{}; } catch(_) { SEARCH_ALIASES={}; }
+    renderClientDashboard();
     await loadInvoices(true, false);
   } catch(error){
     showAuth(t('auth.sessionError', { error:clientErrorDetail(error) }));
@@ -1859,15 +1861,10 @@ function renderStockTable(){
   let rows = [...STOCK_VIEW];
 
   if (q) {
-    rows = rows.filter(r =>
-      r.sku.toLowerCase().includes(q) ||
-      r.model.toLowerCase().includes(q) ||
-      r.name.toLowerCase().includes(q)
-    );
+    rows = searchMatchingRows(queryRaw);
   }
 
   $('stockCount').textContent = t('stock.count', { count:rows.length });
-  scheduleStockSearchLog(queryRaw, rows);
 
   if (!rows.length) {
     tb.innerHTML = `<tr><td colspan="5">${esc(t('common.noData'))}</td></tr>`;
@@ -1890,58 +1887,26 @@ function renderStockTable(){
   hydrateProductImages(tb);
 }
 
-function scheduleStockSearchLog(query, rows){
-  clearTimeout(STOCK_SEARCH_LOG_TIMER);
-  const cleanQuery = String(query || '').trim();
-  const resultRows = Array.isArray(rows) ? rows : [];
-  if(cleanQuery.length < 2) return;
-
-  STOCK_SEARCH_LOG_TIMER = setTimeout(() => {
-    logStockSearch(cleanQuery, resultRows).catch(() => {});
-  }, 2000);
+let SEARCH_ALIASES = {};
+const searchKey = value => String(value||'').trim().toLowerCase().replace(/\s+/g,' ');
+function searchMatchingRows(query){
+  const q=searchKey(query), alias=SEARCH_ALIASES[q];
+  return STOCK_VIEW.filter(r=>alias ? searchKey(r.name)===searchKey(alias) :
+    [r.sku,r.model,r.name].some(value=>searchKey(value).includes(q)));
 }
-
-async function logStockSearch(query, rows){
-  const cleanQuery = String(query || '').trim();
-  if(cleanQuery.length < 2) return;
-
-  const resultRows = Array.isArray(rows) ? rows : [];
-
-  const normalizedQuery = cleanQuery.toLowerCase().replace(/\s+/g, '');
-  const matches = resultRows
-    .slice(0, 20)
-    .map(r => ({
-      sku: r.sku || '',
-      model: r.sku || r.model || '',
-      name: productDisplayName(r)
-    }));
-
-  const sentMatches = matches;
-  const matchKey = sentMatches.map(m => m.sku || m.model).join('|');
-  const logKey = `${cleanQuery.toLowerCase()}|${resultRows.length}|${matchKey}`;
-  if(logKey === LAST_STOCK_SEARCH_LOG_KEY) return;
-  LAST_STOCK_SEARCH_LOG_KEY = logKey;
-
-  const session = await getSession();
-  const email = String(session?.user?.email || '').trim().toLowerCase();
-  const accessToken = String(session?.access_token || '');
-  if(!email || !accessToken) return;
-
-  await fetchMagazynResponse('/api/client_search_log', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      email,
-      name: email,
-      query: cleanQuery,
-      results_count: resultRows.length,
-      source: 'stock',
-      matches: sentMatches
-    })
+const searchTelemetry = new SearchTelemetry(async event => {
+  const response=await fetchMagazynResponse('/api/client_search_log', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(event)
   });
-}
+  if(!response.ok)throw new Error('Search event save failed');
+});
+['stockSearch','dashboardModelSearch'].forEach(id=>{
+  $(id).addEventListener('input',()=>{
+    if(!LAST_LOADED.stock || LOAD_IN_FLIGHT.stock){ searchTelemetry.input('',id,0); return; }
+    searchTelemetry.input($(id).value,id,searchMatchingRows($(id).value).length);
+  });
+  $(id).addEventListener('keydown',event=>{if(event.key==='Enter' && LAST_LOADED.stock && !LOAD_IN_FLIGHT.stock)searchTelemetry.flush();});
+});
 
 function rebuildOrderProductList(){
   const dl = $('orderProductList');
