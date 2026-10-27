@@ -154,6 +154,15 @@
           </table>
         </div>
 
+        <div class="architect-code-box" style="margin-top:16px;padding:16px;border:1px solid #d9d0bc;border-radius:14px;background:#faf8f3">
+          <label for="architectCodeInput" data-i18n="architect.codeLabel">Kod rabatowy architekta</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <input id="architectCodeInput" type="text" autocomplete="off" maxlength="40" placeholder="KOWALSKA-4827" style="flex:1;min-width:180px" />
+            <button id="btnApplyArchitectCode" class="btn" type="button" data-i18n="architect.apply">Zastosuj kod</button>
+            <button id="btnRemoveArchitectCode" class="btn hidden" type="button" data-i18n="architect.remove">Usuń kod</button>
+          </div>
+          <div id="architectCodeStatus" class="muted" role="status" aria-live="polite" style="margin-top:8px"></div>
+        </div>
         <input id="orderNote" placeholder="Notatka (opcjonalnie)" data-i18n-placeholder="orders.notePlaceholder" style="margin-top:8px" />
         <div id="orderDraftSummary" class="muted" style="margin-top:8px">Pozycji: 0</div>
 
@@ -553,6 +562,87 @@ Object.assign(TRANSLATIONS.it, {
   'price.unavailable':'Questo prodotto non ha un prezzo nel listino assegnato.'
 });
 
+Object.assign(PL_TRANSLATIONS, {
+  'architect.codeLabel':'Kod rabatowy architekta', 'architect.apply':'Zastosuj kod', 'architect.remove':'Usuń kod',
+  'architect.addProducts':'Dodaj produkt, aby sprawdzić kod.', 'architect.checking':'Sprawdzam kod i aktualne ceny…',
+  'architect.applied':'Kod {code} zastosowany. Oszczędność dystrybutora: {saving} netto.',
+  'architect.rejected':'Nie zastosowano kodu: {error}', 'architect.enter':'Wpisz kod i dodaj produkty do koszyka.',
+  'architect.removed':'Kod usunięty. Przywrócono standardowe ceny.',
+  'architect.awaitInvoice':'Kod architekta zapisano. Potwierdzenie sprzedaży detalicznej będzie dostępne po wystawieniu faktury B2B.',
+  'architect.saleTitle':'Sprzedaż detaliczna z kodem architekta',
+  'architect.saleHelp':'Potwierdź tylko faktycznie sprzedane sztuki na podstawie dokumentu sprzedaży. Kwoty wynikają z ceny zapisanej przy użyciu kodu.',
+  'architect.item':'Pozycja', 'architect.max':'Maks.', 'architect.invoice':'Faktura B2B',
+  'architect.soldQty':'Sprzedane sztuki', 'architect.saleDate':'Data sprzedaży', 'architect.document':'Numer dokumentu',
+  'architect.documentHint':'Paragon lub faktura detaliczna', 'architect.retailBefore':'Detal brutto przed rabatem',
+  'architect.retailAfter':'Detal brutto po rabacie', 'architect.confirmSale':'Potwierdź sprzedaż',
+  'architect.saving':'Zapisywanie…', 'architect.saleSaved':'Sprzedaż zapisana. Prowizja czeka na zatwierdzenie przez administratora.',
+  'architect.saleFailed':'Nie udało się zapisać sprzedaży: {error}'
+});
+Object.assign(TRANSLATIONS.en, {
+  'architect.codeLabel':'Architect discount code', 'architect.apply':'Apply code', 'architect.remove':'Remove code',
+  'architect.addProducts':'Add a product to check the code.', 'architect.checking':'Checking code and current prices…',
+  'architect.applied':'Code {code} applied. Distributor saving: {saving} net.',
+  'architect.rejected':'Code not applied: {error}', 'architect.enter':'Enter a code and add products to the basket.',
+  'architect.removed':'Code removed. Standard prices restored.',
+  'architect.awaitInvoice':'Architect code saved. Retail sale confirmation will be available after the B2B invoice is issued.',
+  'architect.saleTitle':'Retail sale with architect code',
+  'architect.saleHelp':'Confirm only units actually sold, based on a sales document. Prices come from the saved code price.',
+  'architect.item':'Item', 'architect.max':'Max.', 'architect.invoice':'B2B invoice',
+  'architect.soldQty':'Units sold', 'architect.saleDate':'Sale date', 'architect.document':'Document number',
+  'architect.documentHint':'Retail receipt or invoice', 'architect.retailBefore':'Retail gross before discount',
+  'architect.retailAfter':'Retail gross after discount', 'architect.confirmSale':'Confirm sale',
+  'architect.saving':'Saving…', 'architect.saleSaved':'Sale saved. Commission awaits administrator approval.',
+  'architect.saleFailed':'Could not save sale: {error}'
+});
+Object.assign(TRANSLATIONS.de, {
+  'architect.codeLabel':'Rabattcode des Architekten', 'architect.apply':'Code anwenden', 'architect.remove':'Code entfernen',
+  'architect.addProducts':'Produkt hinzufügen, um den Code zu prüfen.', 'architect.checking':'Code und aktuelle Preise werden geprüft…',
+  'architect.applied':'Code {code} angewendet. Ersparnis des Händlers: {saving} netto.',
+  'architect.rejected':'Code nicht angewendet: {error}', 'architect.enter':'Code eingeben und Produkte zum Warenkorb hinzufügen.',
+  'architect.removed':'Code entfernt. Standardpreise wiederhergestellt.',
+  'architect.awaitInvoice':'Architektencode gespeichert. Die Bestätigung des Einzelhandelsverkaufs ist nach Ausstellung der B2B-Rechnung verfügbar.',
+  'architect.saleTitle':'Einzelhandelsverkauf mit Architektencode',
+  'architect.saleHelp':'Bestätigen Sie nur tatsächlich verkaufte Stücke anhand eines Verkaufsbelegs. Die Preise stammen aus dem gespeicherten Code.',
+  'architect.item':'Position', 'architect.max':'Max.', 'architect.invoice':'B2B-Rechnung',
+  'architect.soldQty':'Verkaufte Stücke', 'architect.saleDate':'Verkaufsdatum', 'architect.document':'Belegnummer',
+  'architect.documentHint':'Kassenbon oder Rechnung', 'architect.retailBefore':'Brutto vor Rabatt',
+  'architect.retailAfter':'Brutto nach Rabatt', 'architect.confirmSale':'Verkauf bestätigen',
+  'architect.saving':'Wird gespeichert…', 'architect.saleSaved':'Verkauf gespeichert. Provision wartet auf Freigabe.',
+  'architect.saleFailed':'Verkauf konnte nicht gespeichert werden: {error}'
+});
+Object.assign(TRANSLATIONS.es, {
+  'architect.codeLabel':'Código de descuento del arquitecto', 'architect.apply':'Aplicar código', 'architect.remove':'Quitar código',
+  'architect.addProducts':'Añade un producto para comprobar el código.', 'architect.checking':'Comprobando código y precios actuales…',
+  'architect.applied':'Código {code} aplicado. Ahorro del distribuidor: {saving} netos.',
+  'architect.rejected':'Código no aplicado: {error}', 'architect.enter':'Introduce un código y añade productos al carrito.',
+  'architect.removed':'Código eliminado. Se restauraron los precios normales.',
+  'architect.awaitInvoice':'Código de arquitecto guardado. La confirmación de venta estará disponible tras emitir la factura B2B.',
+  'architect.saleTitle':'Venta minorista con código de arquitecto',
+  'architect.saleHelp':'Confirma solo las unidades realmente vendidas según el justificante. Los precios proceden del código guardado.',
+  'architect.item':'Artículo', 'architect.max':'Máx.', 'architect.invoice':'Factura B2B',
+  'architect.soldQty':'Unidades vendidas', 'architect.saleDate':'Fecha de venta', 'architect.document':'Número de documento',
+  'architect.documentHint':'Ticket o factura minorista', 'architect.retailBefore':'Bruto antes del descuento',
+  'architect.retailAfter':'Bruto después del descuento', 'architect.confirmSale':'Confirmar venta',
+  'architect.saving':'Guardando…', 'architect.saleSaved':'Venta guardada. La comisión espera aprobación.',
+  'architect.saleFailed':'No se pudo guardar la venta: {error}'
+});
+Object.assign(TRANSLATIONS.it, {
+  'architect.codeLabel':'Codice sconto architetto', 'architect.apply':'Applica codice', 'architect.remove':'Rimuovi codice',
+  'architect.addProducts':'Aggiungi un prodotto per verificare il codice.', 'architect.checking':'Verifica del codice e dei prezzi…',
+  'architect.applied':'Codice {code} applicato. Risparmio del distributore: {saving} netti.',
+  'architect.rejected':'Codice non applicato: {error}', 'architect.enter':'Inserisci un codice e aggiungi prodotti al carrello.',
+  'architect.removed':'Codice rimosso. Prezzi standard ripristinati.',
+  'architect.awaitInvoice':'Codice architetto salvato. La conferma della vendita sarà disponibile dopo la fattura B2B.',
+  'architect.saleTitle':'Vendita al dettaglio con codice architetto',
+  'architect.saleHelp':'Conferma solo le unità effettivamente vendute secondo il documento di vendita. I prezzi derivano dal codice salvato.',
+  'architect.item':'Articolo', 'architect.max':'Max.', 'architect.invoice':'Fattura B2B',
+  'architect.soldQty':'Unità vendute', 'architect.saleDate':'Data vendita', 'architect.document':'Numero documento',
+  'architect.documentHint':'Scontrino o fattura al dettaglio', 'architect.retailBefore':'Lordo prima dello sconto',
+  'architect.retailAfter':'Lordo dopo lo sconto', 'architect.confirmSale':'Conferma vendita',
+  'architect.saving':'Salvataggio…', 'architect.saleSaved':'Vendita salvata. La provvigione attende approvazione.',
+  'architect.saleFailed':'Impossibile salvare la vendita: {error}'
+});
+
 function normalizeLanguage(value){
   const language = String(value || '').trim().toLowerCase();
   return SUPPORTED_LANGUAGES.includes(language) ? language : 'pl';
@@ -652,6 +742,10 @@ let STOCK_VIEW = [];
 let CLIENT_ORDERS = [];
 let CLIENT_INVOICES = [];
 let ORDER_DRAFT = [];
+let ARCHITECT_CODE = '';
+let ARCHITECT_QUOTE = null;
+let ARCHITECT_QUOTE_KEY = '';
+let ARCHITECT_QUOTE_TIMER = null;
 let ORDER_CREATE_IN_FLIGHT = false;
 let ORDER_IDEMPOTENCY_KEY = null;
 let LAST_ORDER_CONFIRMATION = null;
@@ -975,8 +1069,70 @@ function renderOrderDetailsHtml(order, items, totals){
           <tbody>${rows}</tbody>
         </table>
       </div>
+      <div data-architect-sale="${Number(order?.id || 0)}"></div>
     </div>
   `;
+}
+
+async function wireArchitectSale(root, order){
+  const target = root.querySelector(`[data-architect-sale="${Number(order?.id || 0)}"]`);
+  if(!target) return;
+  const response = await fetchMagazynResponse(`/api/client/architect-sales?order_id=${Number(order.id)}`);
+  if(response.status === 404) return;
+  if(!response.ok) throw new Error(`Nie udało się pobrać danych sprzedaży: HTTP ${response.status}`);
+  const data = await response.json();
+  const invoices = Array.isArray(data.invoices) ? data.invoices : [];
+  const lines = Array.isArray(data.lines) ? data.lines : [];
+  if(!invoices.length){
+    target.innerHTML = `<div class="notice" style="margin-top:14px">${esc(t('architect.awaitInvoice'))}</div>`;
+    return;
+  }
+  target.innerHTML = `<div class="notice" style="margin-top:14px"><b>${esc(t('architect.saleTitle'))}</b><p>${esc(t('architect.saleHelp'))}</p>
+  ${lines.map(line => `<form data-sale-line="${Number(line.id)}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;margin:12px 0;padding:12px;border:1px solid #d7dfeb;border-radius:10px">
+    <label>${esc(t('architect.item'))} ${Number(line.product_id)}<br><small>${esc(t('architect.max'))} ${Number(line.qty)} ${esc(t('common.pieces'))}</small></label>
+    <label>${esc(t('architect.invoice'))}<select name="invoice_id" required>${invoices.map(inv => `<option value="${Number(inv.id)}">${esc(inv.invoice_no || inv.id)}</option>`).join('')}</select></label>
+    <label>${esc(t('architect.soldQty'))}<input name="sold_qty" type="number" min="1" max="${Number(line.qty)}" value="1" required></label>
+    <label>${esc(t('architect.saleDate'))}<input name="sale_date" type="date" required></label>
+    <label>${esc(t('architect.document'))}<input name="sale_reference" maxlength="120" required placeholder="${esc(t('architect.documentHint'))}"></label>
+    <label>${esc(t('architect.retailBefore'))}<input name="retail_gross_before" readonly></label>
+    <label>${esc(t('architect.retailAfter'))}<input name="retail_gross_after" readonly></label>
+    <button class="btn primary" type="submit">${esc(t('architect.confirmSale'))}</button><span data-sale-message></span>
+  </form>`).join('')}</div>`;
+  for(const line of lines){
+    const form = target.querySelector(`[data-sale-line="${Number(line.id)}"]`);
+    if(!form) continue;
+    const qtyInput = form.querySelector('[name="sold_qty"]');
+    const recalc = () => {
+      const qty = Number(qtyInput.value || 0);
+      form.querySelector('[name="retail_gross_before"]').value = (Number(line.retail_gross_before) / Number(line.qty) * qty).toFixed(2);
+      form.querySelector('[name="retail_gross_after"]').value = (Number(line.retail_gross_after) / Number(line.qty) * qty).toFixed(2);
+    };
+    form.querySelector('[name="sale_date"]').value = new Date().toLocaleDateString('sv-SE');
+    qtyInput.addEventListener('input', recalc);
+    recalc();
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      const button = form.querySelector('button[type="submit"]');
+      const message = form.querySelector('[data-sale-message]');
+      button.disabled = true;
+      message.textContent = t('architect.saving');
+      try {
+        const payload = {
+          sale_line_id:Number(line.id),invoice_id:Number(form.elements.invoice_id.value),
+          sold_qty:Number(qtyInput.value),sale_date:form.elements.sale_date.value,
+          sale_reference:form.elements.sale_reference.value.trim(),
+          retail_gross_before:form.elements.retail_gross_before.value,
+          retail_gross_after:form.elements.retail_gross_after.value
+        };
+        await fetchMagazynJson('/api/client/architect-sales',{method:'POST',
+          headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),attempts:1});
+        message.textContent = t('architect.saleSaved');
+        form.reset(); recalc();
+      } catch(error){
+        message.textContent = t('architect.saleFailed',{error:clientErrorDetail(error)});
+      } finally { button.disabled = false; }
+    });
+  }
 }
 
 function downloadOrderPdf(order, retailPrices = false){
@@ -1025,61 +1181,8 @@ function wireInlineOrderPdf(root, order){
 }
 
 async function fetchOrdersBundle(){
-  const session = await getSession();
-  if(!session?.user?.email) throw new Error(t('auth.noSession'));
-  const email = session.user.email.trim().toLowerCase();
-
-  let ordersRes = await sbAuth
-    .from('orders')
-    .select('id,order_no,qr_data_url,status,created_at,customer_name,customer_email,note,currency,price_list,tracking_no,carrier,packed_at,shipped_at')
-    .ilike('customer_email', email)
-    .order('created_at', { ascending:false })
-    .limit(200);
-
-  // Podczas wdroĹĽenia etapowego stary schemat Supabase moĹĽe jeszcze nie mieÄ‡
-  // kolumn EUR. Nie ukrywamy wtedy wszystkich dotychczasowych zamĂłwieĹ„:
-  // pobieramy starszy zestaw kolumn i bezpiecznie traktujemy go jako PLN.
-  const schemaError = `${ordersRes.error?.code || ''} ${ordersRes.error?.message || ''}`.toLowerCase();
-  const missingShippingSchema = Boolean(ordersRes.error) &&
-    (schemaError.includes('tracking_no') || schemaError.includes('carrier') || schemaError.includes('packed_at') || schemaError.includes('shipped_at')) &&
-    (schemaError.includes('does not exist') || schemaError.includes('42703') || schemaError.includes('pgrst204'));
-  if(missingShippingSchema){
-    ordersRes = await sbAuth
-      .from('orders')
-      .select('id,order_no,qr_data_url,status,created_at,customer_name,customer_email,note,currency,price_list')
-      .ilike('customer_email', email)
-      .order('created_at', { ascending:false })
-      .limit(200);
-    if(!ordersRes.error){
-      ordersRes.data = (ordersRes.data || []).map(order => ({
-        ...order, tracking_no:'', carrier:'', packed_at:'', shipped_at:''
-      }));
-    }
-  }
-  const fallbackSchemaError = `${ordersRes.error?.code || ''} ${ordersRes.error?.message || ''}`.toLowerCase();
-  const missingCurrencySchema = Boolean(ordersRes.error) &&
-    (fallbackSchemaError.includes('currency') || fallbackSchemaError.includes('price_list')) &&
-    (fallbackSchemaError.includes('does not exist') || fallbackSchemaError.includes('42703') || fallbackSchemaError.includes('pgrst204'));
-  if(missingCurrencySchema){
-    ordersRes = await sbAuth
-      .from('orders')
-      .select('id,order_no,qr_data_url,status,created_at,customer_name,customer_email,note')
-      .ilike('customer_email', email)
-      .order('created_at', { ascending:false })
-      .limit(200);
-    if(!ordersRes.error){
-      ordersRes.data = (ordersRes.data || []).map(order => ({
-        ...order,
-        currency:'PLN',
-        price_list:'pln',
-        tracking_no:'', carrier:'', packed_at:'', shipped_at:''
-      }));
-    }
-  }
-  if(ordersRes.error) throw ordersRes.error;
-
-  const orders = ordersRes.data || [];
-  return { orders };
+  const payload = await fetchMagazynJson('/api/client/orders');
+  return { orders:Array.isArray(payload.orders) ? payload.orders : [] };
 }
 
 async function fetchOrderDetails(order){
@@ -1502,6 +1605,7 @@ async function showOrderByCode(rawCode){
     const details = await fetchOrderDetails(order);
     out.innerHTML = renderOrderDetailsHtml(details.order, details.items, details.totals);
     wireInlineOrderPdf(out, details.order);
+    await wireArchitectSale(out, details.order);
     out.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch(error){
     out.innerHTML = `<div class="muted">${esc(t('common.error', { error:clientErrorDetail(error) }))}</div>`;
@@ -1980,22 +2084,97 @@ async function loadStock(force = false){
 $('btnLoadStock').onclick = () => loadStock(true);
 $('stockSearch').oninput = renderStockTable;
 
+function architectBasketKey(){
+  return JSON.stringify(ORDER_DRAFT.map(x => ({ product_id:Number(x.product_id), qty:Number(x.qty) })));
+}
+
+async function refreshArchitectQuote(){
+  const code = ARCHITECT_CODE;
+  const key = architectBasketKey();
+  ARCHITECT_QUOTE = null;
+  ARCHITECT_QUOTE_KEY = '';
+  if(!code || !ORDER_DRAFT.length){
+    $('architectCodeStatus').textContent = code ? t('architect.addProducts') : '';
+    renderOrderDraft();
+    return;
+  }
+  $('architectCodeStatus').textContent = t('architect.checking');
+  renderOrderDraft();
+  try {
+    const response = await fetchMagazynResponse('/api/client/architect-code/quote', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({code,items:ORDER_DRAFT.map(x=>({product_id:Number(x.product_id),qty:Number(x.qty)}))})
+    });
+    const result = await response.json();
+    if(!response.ok || !result.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    if(ARCHITECT_CODE !== code || architectBasketKey() !== key) return;
+    ARCHITECT_QUOTE = result;
+    ARCHITECT_QUOTE_KEY = key;
+    $('architectCodeStatus').textContent = t('architect.applied',{code,saving:formatPrice(result.manufacturer_discount_net,'PLN')});
+    $('btnRemoveArchitectCode').classList.remove('hidden');
+    renderOrderDraft();
+  } catch(error){
+    if(ARCHITECT_CODE !== code || architectBasketKey() !== key) return;
+    ARCHITECT_CODE = '';
+    ARCHITECT_QUOTE = null;
+    ARCHITECT_QUOTE_KEY = '';
+    $('architectCodeStatus').textContent = t('architect.rejected',{error:clientErrorDetail(error)});
+    $('btnRemoveArchitectCode').classList.add('hidden');
+    renderOrderDraft();
+  }
+}
+
+function scheduleArchitectQuote(skipRender=false){
+  if(ARCHITECT_QUOTE_TIMER) clearTimeout(ARCHITECT_QUOTE_TIMER);
+  ARCHITECT_QUOTE = null;
+  ARCHITECT_QUOTE_KEY = '';
+  if(!skipRender) renderOrderDraft();
+  else $('btnCreateOrder').disabled = Boolean(ARCHITECT_CODE);
+  if(ARCHITECT_CODE) ARCHITECT_QUOTE_TIMER = setTimeout(refreshArchitectQuote, 250);
+}
+
+$('btnApplyArchitectCode').onclick = async () => {
+  const candidate = $('architectCodeInput').value.trim().toUpperCase();
+  if(!candidate || !ORDER_DRAFT.length){
+    $('architectCodeStatus').textContent = t('architect.enter');
+    return;
+  }
+  ARCHITECT_CODE = candidate;
+  ARCHITECT_QUOTE = null;
+  ARCHITECT_QUOTE_KEY = '';
+  await refreshArchitectQuote();
+};
+$('btnRemoveArchitectCode').onclick = () => {
+  ARCHITECT_CODE = '';
+  ARCHITECT_QUOTE = null;
+  ARCHITECT_QUOTE_KEY = '';
+  $('architectCodeInput').value = '';
+  $('architectCodeStatus').textContent = t('architect.removed');
+  $('btnRemoveArchitectCode').classList.add('hidden');
+  renderOrderDraft();
+};
+
 function renderOrderDraft(){
   const tb = $('orderDraftTable').querySelector('tbody');
+  const quote = ARCHITECT_QUOTE_KEY === architectBasketKey() ? ARCHITECT_QUOTE : null;
+  const quoteByProduct = new Map((quote?.lines || []).map(x => [Number(x.product_id), x]));
 
   if(!ORDER_DRAFT.length){
     tb.innerHTML = `<tr><td colspan="9">${esc(t('orders.noItems'))}</td></tr>`;
   } else {
     tb.innerHTML = ORDER_DRAFT.map((it, idx) => {
-      const grossLine = Number(it.gross_price || 0) * Number(it.qty || 0);
-      const retailGrossUnit = Number(it.retail_price || 0) || calcClientGrossFromNet(it.net_price);
+      const discounted = quoteByProduct.get(Number(it.product_id));
+      const unitNet = discounted ? Number(discounted.unit_net_price) : Number(it.net_price || 0);
+      const unitGross = discounted ? Number(discounted.unit_gross_price) : Number(it.gross_price || 0);
+      const grossLine = discounted ? Number(discounted.line_gross) : unitGross * Number(it.qty || 0);
+      const retailGrossUnit = discounted ? Number(discounted.retail_gross_after) : (Number(it.retail_price || 0) || calcClientGrossFromNet(it.net_price));
       const retailGrossLine = retailGrossUnit * Number(it.qty || 0);
       return `
       <tr>
         <td>${esc(it.sku)}</td>
         <td>${esc(productDisplayName(it))}</td>
-        <td>${formatPrice(it.net_price, it.currency)}</td>
-        <td class="pln-only-price ${isEurPriceList() ? 'hidden' : ''}">${formatPrice(it.gross_price, it.currency)}</td>
+        <td>${formatPrice(unitNet, it.currency)}</td>
+        <td class="pln-only-price ${isEurPriceList() ? 'hidden' : ''}">${formatPrice(unitGross, it.currency)}</td>
         <td>${formatPrice(retailGrossUnit, it.currency)}</td>
         <td><input type="number" min="1" value="${it.qty}" data-qty-idx="${idx}" style="width:90px" /></td>
         <td class="pln-only-price ${isEurPriceList() ? 'hidden' : ''}">${formatPrice(grossLine, it.currency)}</td>
@@ -2006,9 +2185,9 @@ function renderOrderDraft(){
     }).join('');
   }
 
-  const totalNet = ORDER_DRAFT.reduce((sum, it) => sum + Number(it.net_price || 0) * Number(it.qty || 0), 0);
-  const totalGross = ORDER_DRAFT.reduce((sum, it) => sum + Number(it.gross_price || 0) * Number(it.qty || 0), 0);
-  const totalRetailGross = ORDER_DRAFT.reduce((sum, it) => sum + (Number(it.retail_price || 0) || calcClientGrossFromNet(it.net_price)) * Number(it.qty || 0), 0);
+  const totalNet = quote ? Number(quote.total_net) : ORDER_DRAFT.reduce((sum, it) => sum + Number(it.net_price || 0) * Number(it.qty || 0), 0);
+  const totalGross = quote ? Number(quote.total_gross) : ORDER_DRAFT.reduce((sum, it) => sum + Number(it.gross_price || 0) * Number(it.qty || 0), 0);
+  const totalRetailGross = ORDER_DRAFT.reduce((sum, it) => sum + (Number(quoteByProduct.get(Number(it.product_id))?.retail_gross_after) || Number(it.retail_price || 0) || calcClientGrossFromNet(it.net_price)) * Number(it.qty || 0), 0);
   $('orderDraftSummary').textContent = isEurPriceList()
     ? t('price.eurSummary', {
         count:ORDER_DRAFT.length,
@@ -2022,6 +2201,7 @@ function renderOrderDraft(){
         retail:formatPrice(totalRetailGross, 'PLN')
       });
   applyPriceModeLabels();
+  $('btnCreateOrder').disabled = Boolean(ARCHITECT_CODE && !quote);
 }
 
 function parseProductInputToId(txt){
@@ -2041,6 +2221,7 @@ function addProductToDraft(row, qty){
     retail_price:Number(row.retail_price||0), currency:String(row.currency||currentPriceCurrency()).toUpperCase(), qty
   });
   renderOrderDraft();
+  if(ARCHITECT_CODE) scheduleArchitectQuote();
   return true;
 }
 
@@ -2077,13 +2258,17 @@ $('orderDraftTable').addEventListener('input', (e) => {
   if(idx == null) return;
   ORDER_DRAFT[Number(idx)].qty = Math.max(1, Number(e.target.value || 1));
   clearOrderConfirmation();
+  scheduleArchitectQuote(true);
+});
+$('orderDraftTable').addEventListener('change', e => {
+  if(e.target?.dataset?.qtyIdx != null && !ARCHITECT_CODE) renderOrderDraft();
 });
 
 $('orderDraftTable').addEventListener('click', (e) => {
   const btn = e.target.closest('[data-del-idx]');
   if(!btn) return;
   ORDER_DRAFT.splice(Number(btn.dataset.delIdx), 1);
-  renderOrderDraft();
+  scheduleArchitectQuote();
   clearOrderConfirmation();
 });
 
@@ -2122,6 +2307,10 @@ $('btnCreateOrder').onclick = async () => {
     $('orderMsg').textContent = t('orders.addAtLeastOne');
     return;
   }
+  if(ARCHITECT_CODE && (!ARCHITECT_QUOTE || ARCHITECT_QUOTE_KEY !== architectBasketKey())){
+    $('orderMsg').textContent = 'Poczekaj na ponowną wycenę kodu.';
+    return;
+  }
 
   ORDER_CREATE_IN_FLIGHT = true;
   if(createBtn){
@@ -2152,6 +2341,7 @@ $('btnCreateOrder').onclick = async () => {
         customer_email: email,
         customer_name: fallbackName,
         note: p_note || '',
+        architect_code: ARCHITECT_CODE || undefined,
         items: ORDER_DRAFT.map(x => ({ product_id: x.product_id, sku: x.sku, qty: x.qty }))
       })
     });
@@ -2167,6 +2357,12 @@ $('btnCreateOrder').onclick = async () => {
       : t('orders.createdRetry', { number:createdOrderNo });
     ORDER_IDEMPOTENCY_KEY = null;
     ORDER_DRAFT = [];
+    ARCHITECT_CODE = '';
+    ARCHITECT_QUOTE = null;
+    ARCHITECT_QUOTE_KEY = '';
+    $('architectCodeInput').value = '';
+    $('architectCodeStatus').textContent = '';
+    $('btnRemoveArchitectCode').classList.add('hidden');
     $('orderProductInput').value = '';
     $('orderQtyInput').value = 1;
     $('orderNote').value = '';
@@ -2190,7 +2386,7 @@ $('btnCreateOrder').onclick = async () => {
   } finally {
     ORDER_CREATE_IN_FLIGHT = false;
     if(createBtn){
-      createBtn.disabled = false;
+      createBtn.disabled = Boolean(ARCHITECT_CODE && (!ARCHITECT_QUOTE || ARCHITECT_QUOTE_KEY !== architectBasketKey()));
       createBtn.textContent = t('orders.send');
     }
   }
@@ -2249,6 +2445,7 @@ function renderOrdersRows(orders){
         const { items, totals } = details;
         detailRow.children[0].innerHTML = renderOrderDetailsHtml(details.order, items, totals);
         wireInlineOrderPdf(detailRow, details.order);
+        await wireArchitectSale(detailRow, details.order);
         const netCell = document.getElementById(`order-net-${id}`);
         const grossCell = document.getElementById(`order-gross-${id}`);
         const currency = String(details.order?.currency || 'PLN').toUpperCase();
