@@ -1884,7 +1884,9 @@ $('btnLogin').onclick = async () => {
 $('btnRegister').onclick = async () => {
   const email=$('email').value.trim();
   const password=$('password').value;
-  const { data, error } = await sbAuth.auth.signUp({ email, password });
+  const { data, error } = await sbAuth.auth.signUp({
+    email, password, options: { emailRedirectTo: window.location.origin }
+  });
   if(error){ showAuth(t('auth.registerError', { error:clientErrorDetail(error) })); return; }
   if(data?.session){
     await loadSession();
