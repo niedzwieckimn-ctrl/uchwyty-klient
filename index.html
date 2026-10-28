@@ -10,6 +10,7 @@
   <script src="search-telemetry.js"></script>
   <script src="sales-thoughts.js"></script>
   <script src="order-success.js"></script>
+  <script src="portal-api.js"></script>
   <style>
     :root{--navy:#12213d;--navy2:#0b1730;--blue:#5577ee;--blue2:#3f63dc;--mint:#31b98b;--red:#df5264;--ink:#17233c;--muted:#718096;--bg:#f5f6fa;--line:#e7eaf2;--shadow:0 12px 35px rgba(31,45,78,.07)}
     *{box-sizing:border-box}body{font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at 88% -10%,#eaf0ff 0,transparent 30%),var(--bg);margin:0;color:var(--ink);line-height:1.45}
@@ -155,7 +156,7 @@
           </table>
         </div>
 
-        <div class="architect-code-box" style="margin-top:16px;padding:16px;border:1px solid #d9d0bc;border-radius:14px;background:#faf8f3">
+        <div id="architectCodeBox" class="architect-code-box hidden" style="margin-top:16px;padding:16px;border:1px solid #d9d0bc;border-radius:14px;background:#faf8f3">
           <label for="architectCodeInput" data-i18n="architect.codeLabel">Kod rabatowy architekta</label>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <input id="architectCodeInput" type="text" autocomplete="off" maxlength="40" placeholder="KOWALSKA-4827" style="flex:1;min-width:180px" />
@@ -955,28 +956,37 @@ async function refreshClientSession(){
   }
 }
 
+const portalApi = PortalApi.create(sbAuth,{legacyBase:MAGAZYN_API_BASE});
 async function fetchMagazynResponse(path, options = {}){
-  const requestOptions = { ...options };
-  delete requestOptions.attempts;
-  let session = await getSession();
-  if(!session?.access_token) throw new Error(t('auth.noSession'));
-
-  const send = accessToken => fetch(`${MAGAZYN_API_BASE}${path}`, {
-    cache: 'no-store',
-    ...requestOptions,
-    headers: {
-      ...(requestOptions.headers || {}),
-      'Authorization': `Bearer ${accessToken}`
-    }
-  });
-
-  let response = await send(session.access_token);
-  if(response.status === 401){
-    session = await refreshClientSession();
-    response = await send(session.access_token);
+  const response = await portalApi.request(path,options);
+  // Supabase SDK owns refresh and persistent session; no Render auth hop.
+  if(response.ok && ['/api/client/profile','/api/client_stock_catalog'].includes(path)){
+    const payload=await response.clone().json();
+    setArchitectProgram(payload.customer?.architect_program_active ?? payload.architect_program_active);
   }
   return response;
 }
+
+function setArchitectProgram(active){
+  const enabled=active === true;
+  $('architectCodeBox').classList.toggle('hidden',!enabled);
+  if(!enabled){
+    if(ARCHITECT_QUOTE_TIMER) clearTimeout(ARCHITECT_QUOTE_TIMER);
+    ARCHITECT_CODE=''; ARCHITECT_QUOTE=null; ARCHITECT_QUOTE_KEY='';
+    $('architectCodeInput').value=''; $('architectCodeStatus').textContent='';
+    $('btnRemoveArchitectCode').classList.add('hidden');
+    renderOrderDraft();
+  }
+}
+let PROGRAM_REFRESH_IN_FLIGHT=null;
+function refreshArchitectProgram(){
+  if(PROGRAM_REFRESH_IN_FLIGHT) return PROGRAM_REFRESH_IN_FLIGHT;
+  PROGRAM_REFRESH_IN_FLIGHT=fetchClientProfile().catch(()=>setArchitectProgram(false)).finally(()=>{PROGRAM_REFRESH_IN_FLIGHT=null;});
+  return PROGRAM_REFRESH_IN_FLIGHT;
+}
+// Active baskets receive membership changes without a deployment or a login.
+setInterval(()=>{ if(document.visibilityState==='visible' && CURRENT_CUSTOMER) void refreshArchitectProgram(); },30000);
+window.addEventListener('focus',()=>{if(CURRENT_CUSTOMER) void refreshArchitectProgram();});
 
 async function fetchMagazynJson(path, options = {}){
   const attempts = Number(options.attempts || 2);
@@ -1435,79 +1445,6 @@ function showNewInvoiceModal(noticeOrInvoice){
   }
 }
 
-async function fetchInvoicesFromSupabase(email){
-  const normalizedEmail = String(email || '').trim().toLowerCase();
-
-  const ordersRes = await sbAuth
-    .from('orders')
-    .select('id,order_no,customer_email')
-    .ilike('customer_email', normalizedEmail)
-    .limit(500);
-  if(ordersRes.error) throw ordersRes.error;
-
-  const orders = ordersRes.data || [];
-  const orderById = new Map(orders.map(o => [Number(o.id), o]));
-  const orderIds = orders.map(o => Number(o.id)).filter(Number.isFinite);
-
-  const invoiceQueries = [
-    sbAuth
-      .from('invoices')
-      .select('id,order_id,invoice_no,issue_date,payment_type,buyer_email,total_net,total_gross,created_at')
-      .ilike('buyer_email', normalizedEmail)
-      .order('id', { ascending:false })
-      .limit(500)
-  ];
-
-  if(orderIds.length){
-    invoiceQueries.push(
-      sbAuth
-        .from('invoices')
-        .select('id,order_id,invoice_no,issue_date,payment_type,buyer_email,total_net,total_gross,created_at')
-        .in('order_id', orderIds)
-        .order('id', { ascending:false })
-        .limit(500)
-    );
-  }
-
-  const invoiceResults = await Promise.all(invoiceQueries);
-  const invoiceError = invoiceResults.find(r => r.error)?.error;
-  if(invoiceError) throw invoiceError;
-
-  const invoiceMap = new Map();
-  invoiceResults.forEach(result => {
-    (result.data || []).forEach(inv => invoiceMap.set(Number(inv.id), inv));
-  });
-  const invoices = [...invoiceMap.values()];
-  if(!invoices.length) return [];
-
-  const invoiceIds = invoices.map(inv => Number(inv.id));
-  const metaRes = await sbAuth
-    .from('invoice_meta')
-    .select('invoice_id,sent_to_client,seen_by_client,seen_at,payment_reminder,paid,paid_at')
-    .in('invoice_id', invoiceIds);
-  if(metaRes.error) throw metaRes.error;
-
-  const metaById = new Map((metaRes.data || []).map(m => [Number(m.invoice_id), m]));
-
-  return invoices
-    .map(inv => {
-      const meta = metaById.get(Number(inv.id)) || {};
-      const order = orderById.get(Number(inv.order_id)) || {};
-      return {
-        ...inv,
-        order_no: order.order_no || '',
-        sent_to_client: Number(meta.sent_to_client || 0),
-        seen_by_client: Number(meta.seen_by_client || 0),
-        seen_at: meta.seen_at || '',
-        payment_reminder: Number(meta.payment_reminder || 0),
-        paid: Number(meta.paid || 0),
-        paid_at: meta.paid_at || ''
-      };
-    })
-    .filter(inv => inv.sent_to_client === 1)
-    .sort((a, b) => Number(b.id) - Number(a.id));
-}
-
   function invoiceIsPaid(inv){
     if(!inv) return false;
     const text = String(inv.payment_status || inv.status_payment || inv.paid_status || inv.payment_state || '').trim().toLowerCase();
@@ -1868,6 +1805,7 @@ function hideAllSections(){
 }
 
 function openSection(sectionId){
+  if(CURRENT_CUSTOMER) void refreshArchitectProgram();
   hideAllSections();
   const el = document.getElementById(sectionId);
   const btn = document.querySelector(`#clientNav [data-target="${sectionId}"]`);

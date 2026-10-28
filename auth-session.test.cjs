@@ -66,7 +66,7 @@ async function harness({denied = false, authFailure = null} = {}) {
     LAST_LOADED:{}, document:{querySelector:()=>null,querySelectorAll:()=>[],getElementById:$},
     t:(key,params={})=>key+(params.error?`: ${params.error}`:''),clientErrorDetail:e=>e.message,
     showAuth:message=>{state.message=message||'';state.shown=0;state.history.push(['auth',message]);}, showApp:()=>{state.shown++;state.history.push(['app']);},
-    setLanguage(){},renderClientDashboard(){},loadStock:async()=>{},loadOrders:async()=>{},loadInvoices:async()=>{},
+    refreshArchitectProgram:async()=>{},setLanguage(){},renderClientDashboard(){},loadStock:async()=>{},loadOrders:async()=>{},loadInvoices:async()=>{},
     fetchMagazynJson:async endpoint=> {
       if(endpoint === '/api/client/profile') {
         state.profileCalls++;
