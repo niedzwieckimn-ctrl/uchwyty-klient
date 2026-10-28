@@ -2,7 +2,7 @@
   "name": "niedzwieccy-b2b-regression-tests",
   "private": true,
   "scripts": {
-    "test": "node --test order-success.test.cjs auth-session.test.cjs order-details.test.cjs portal-api.test.cjs order-rounding.test.cjs"
+    "test": "node --test order-success.test.cjs auth-session.test.cjs order-details.test.cjs portal-api.test.cjs order-rounding.test.cjs sale-invoices.test.cjs"
   },
   "devDependencies": {
     "@supabase/supabase-js": "2.118.0"

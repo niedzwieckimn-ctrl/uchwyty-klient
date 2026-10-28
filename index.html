@@ -1110,6 +1110,13 @@ function renderOrderDetailsHtml(order, items, totals){
   `;
 }
 
+function availableSaleInvoices(line){
+  const remaining = Math.max(0, Number(line.qty) - Number(line.sold_qty || 0));
+  return (Array.isArray(line.invoices) ? line.invoices : [])
+    .map(inv => ({...inv, remaining_qty: Math.min(remaining, Number(inv.remaining_qty) || 0)}))
+    .filter(inv => Number(inv.id) > 0 && inv.remaining_qty > 0);
+}
+
 async function wireArchitectSale(root, order){
   const target = root.querySelector(`[data-architect-sale="${Number(order?.id || 0)}"]`);
   if(!target) return;
@@ -1127,9 +1134,11 @@ async function wireArchitectSale(root, order){
   ${lines.map(line => {
     const remaining = Math.max(0, Number(line.qty) - Number(line.sold_qty || 0));
     if(!remaining) return `<p>${esc(t('architect.item'))} ${Number(line.product_id)}: ${esc(t('architect.soldOut'))}</p>`;
+    const eligibleInvoices = availableSaleInvoices(line);
+    if(!eligibleInvoices.length) return `<p>${esc(t('architect.item'))} ${Number(line.product_id)}: ${esc(t('architect.awaitInvoice'))}</p>`;
     return `<form data-sale-line="${Number(line.id)}" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;margin:12px 0;padding:12px;border:1px solid #d7dfeb;border-radius:10px">
     <label>${esc(t('architect.item'))} ${Number(line.product_id)}<br><small>${esc(t('architect.max'))} ${remaining} ${esc(t('common.pieces'))}</small></label>
-    <label>${esc(t('architect.invoice'))}<select name="invoice_id" required>${invoices.map(inv => `<option value="${Number(inv.id)}">${esc(inv.invoice_no || inv.id)}</option>`).join('')}</select></label>
+    <label>${esc(t('architect.invoice'))}<select name="invoice_id" required>${eligibleInvoices.map(inv => `<option value="${Number(inv.id)}">${esc(inv.invoice_no || inv.id)}</option>`).join('')}</select></label>
     <label>${esc(t('architect.soldQty'))}<input name="sold_qty" type="number" min="1" max="${remaining}" value="1" required></label>
     <label>${esc(t('architect.saleDate'))}<input name="sale_date" type="date" required></label>
     <label>${esc(t('architect.document'))}<input name="sale_reference" maxlength="120" required placeholder="${esc(t('architect.documentHint'))}"></label>
@@ -1142,6 +1151,14 @@ async function wireArchitectSale(root, order){
     const form = target.querySelector(`[data-sale-line="${Number(line.id)}"]`);
     if(!form) continue;
     const qtyInput = form.querySelector('[name="sold_qty"]');
+    const eligibleInvoices = availableSaleInvoices(line);
+    const invoiceInput = form.querySelector('[name="invoice_id"]');
+    const updateInvoiceLimit = () => {
+      const invoice = eligibleInvoices.find(inv => Number(inv.id) === Number(invoiceInput.value));
+      qtyInput.max = String(invoice?.remaining_qty || 0);
+      if(Number(qtyInput.value) > Number(qtyInput.max)) qtyInput.value = qtyInput.max;
+      recalc();
+    };
     const recalc = () => {
       const qty = Number(qtyInput.value || 0);
       form.querySelector('[name="retail_gross_before"]').value = (Number(line.retail_gross_before) / Number(line.qty) * qty).toFixed(2);
@@ -1149,7 +1166,8 @@ async function wireArchitectSale(root, order){
     };
     form.querySelector('[name="sale_date"]').value = new Date().toLocaleDateString('sv-SE');
     qtyInput.addEventListener('input', recalc);
-    recalc();
+    invoiceInput.addEventListener('change', updateInvoiceLimit);
+    updateInvoiceLimit();
     form.addEventListener('submit', async event => {
       event.preventDefault();
       const button = form.querySelector('button[type="submit"]');
