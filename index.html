@@ -67,24 +67,25 @@
   <div class="wrap">
     <div id="bootCard" class="card boot-card" aria-busy="true"><div class="boot-spinner"></div></div>
     <div id="authCard" class="card hidden">
-      <h3 data-i18n="auth.title">Logowanie klienta</h3>
-      <form onsubmit="return false;">
+      <h3 data-i18n="auth.title">Logowanie dystrybutora B2B</h3>
+      <p id="authLoginHelp" class="muted" data-i18n="auth.loginHelp">Zaloguj się adresem e-mail konta dystrybutora. Login „admin” służy do panelu IKUGO.</p>
+      <form id="clientLoginForm" novalidate>
         <div class="row">
           <div>
-            <label for="email" data-i18n="auth.email">Email</label>
-            <input id="email" type="email" autocomplete="email" placeholder="email" data-i18n-placeholder="auth.emailPlaceholder" />
+            <label for="email" data-i18n="auth.email">Adres e-mail dystrybutora</label>
+            <input id="email" type="email" autocomplete="username" aria-describedby="authLoginHelp" required placeholder="email" data-i18n-placeholder="auth.emailPlaceholder" />
           </div>
           <div>
             <label for="password" data-i18n="auth.password">Hasło</label>
-            <input id="password" type="password" autocomplete="current-password" placeholder="hasło" data-i18n-placeholder="auth.passwordPlaceholder" />
+            <input id="password" type="password" autocomplete="current-password" required placeholder="hasło" data-i18n-placeholder="auth.passwordPlaceholder" />
           </div>
         </div>
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
-          <button id="btnLogin" class="btn primary" type="button" data-i18n="auth.login">Zaloguj</button>
+          <button id="btnLogin" class="btn primary" type="submit" data-i18n="auth.login">Zaloguj</button>
           <button id="btnRegister" class="btn" type="button" data-i18n="auth.register">Załóż konto</button>
         </div>
       </form>
-      <div id="authMsg" class="muted" style="margin-top:8px"></div>
+      <div id="authMsg" class="muted" role="status" aria-live="polite" style="margin-top:8px"></div>
     </div>
 
     <div id="appArea" class="hidden">
@@ -287,7 +288,10 @@ const LOCALES = { pl:'pl-PL', de:'de-DE', en:'en-GB', es:'es-ES', it:'it-IT' };
 let CURRENT_LANGUAGE = 'pl';
 
 const PL_TRANSLATIONS = {
-  'app.title':'Panel Klienta', 'auth.title':'Logowanie klienta', 'auth.email':'Email',
+  'app.title':'Panel Klienta', 'auth.title':'Logowanie dystrybutora B2B', 'auth.email':'Adres e-mail dystrybutora',
+  'auth.loginHelp':'Zaloguj się adresem e-mail konta dystrybutora. Login „admin” służy do panelu IKUGO.',
+  'auth.invalidEmail':'Podaj pełny adres e-mail dystrybutora. Login „admin” służy do panelu IKUGO.',
+  'auth.passwordRequired':'Wpisz hasło konta dystrybutora.',
   'auth.emailPlaceholder':'email', 'auth.password':'Hasło', 'auth.passwordPlaceholder':'hasło',
   'auth.login':'Zaloguj', 'auth.register':'Załóż konto', 'auth.logout':'Wyloguj',
   'auth.loggedIn':'zalogowany', 'auth.loginError':'Błąd logowania: {error}',
@@ -458,7 +462,10 @@ Object.assign(PL_TRANSLATIONS, {
 Object.assign(TRANSLATIONS.de, {
   'invoices.acknowledge':'Gesehen',
   'invoices.readyText':'Die Rechnung <b>{invoice}</b> zur Bestellung <b>{order}</b> ist bereit.<br><span style="font-size:14px;">Bestätigen Sie, dass Sie sie gesehen haben. Das PDF können Sie jetzt oder später herunterladen.</span>',
-  'auth.email':'E-Mail', 'auth.emailPlaceholder':'E-Mail', 'auth.loggedIn':'angemeldet',
+  'auth.title':'B2B-Händleranmeldung', 'auth.email':'E-Mail-Adresse des Händlers', 'auth.emailPlaceholder':'E-Mail', 'auth.loggedIn':'angemeldet',
+  'auth.loginHelp':'Melden Sie sich mit der E-Mail-Adresse Ihres Händlerkontos an. Der Benutzername „admin“ gehört zum IKUGO-Panel.',
+  'auth.invalidEmail':'Geben Sie die vollständige E-Mail-Adresse des Händlers ein. Der Benutzername „admin“ gehört zum IKUGO-Panel.',
+  'auth.passwordRequired':'Geben Sie das Passwort Ihres Händlerkontos ein.',
   'auth.loginError':'Anmeldefehler: {error}', 'auth.registerError':'Registrierungsfehler: {error}',
   'auth.sessionError':'Sitzungsfehler: {error}',
   'auth.sessionMissing':'Die Anmeldung wurde akzeptiert, aber es gibt keine aktive Sitzung. Falls die E-Mail-Bestätigung aktiviert ist, bestätigen Sie bitte Ihre E-Mail-Adresse.',
@@ -486,7 +493,10 @@ Object.assign(TRANSLATIONS.de, {
 Object.assign(TRANSLATIONS.en, {
   'invoices.acknowledge':'I have seen it',
   'invoices.readyText':'Invoice <b>{invoice}</b> for order <b>{order}</b> is ready.<br><span style="font-size:14px;">Confirm that you have seen it. You can download the PDF now or later.</span>',
-  'auth.email':'Email', 'auth.emailPlaceholder':'email', 'auth.loggedIn':'signed in',
+  'auth.title':'B2B distributor login', 'auth.email':'Distributor email address', 'auth.emailPlaceholder':'email', 'auth.loggedIn':'signed in',
+  'auth.loginHelp':'Sign in with your distributor account email address. The username “admin” is for the IKUGO panel.',
+  'auth.invalidEmail':'Enter the distributor’s full email address. The username “admin” is for the IKUGO panel.',
+  'auth.passwordRequired':'Enter your distributor account password.',
   'auth.loginError':'Login error: {error}', 'auth.registerError':'Registration error: {error}',
   'auth.sessionError':'Session error: {error}',
   'auth.sessionMissing':'The login was accepted, but there is no active session. If email confirmation is enabled, confirm your email address.',
@@ -514,7 +524,10 @@ Object.assign(TRANSLATIONS.en, {
 Object.assign(TRANSLATIONS.es, {
   'invoices.acknowledge':'Ya la he visto',
   'invoices.readyText':'La factura <b>{invoice}</b> del pedido <b>{order}</b> está lista.<br><span style="font-size:14px;">Confirma que la has visto. Puedes descargar el PDF ahora o más tarde.</span>',
-  'auth.email':'Email', 'auth.emailPlaceholder':'email', 'auth.loggedIn':'sesión iniciada',
+  'auth.title':'Acceso de distribuidores B2B', 'auth.email':'Email del distribuidor', 'auth.emailPlaceholder':'email', 'auth.loggedIn':'sesión iniciada',
+  'auth.loginHelp':'Accede con el email de tu cuenta de distribuidor. El usuario «admin» corresponde al panel IKUGO.',
+  'auth.invalidEmail':'Introduce el email completo del distribuidor. El usuario «admin» corresponde al panel IKUGO.',
+  'auth.passwordRequired':'Introduce la contraseña de tu cuenta de distribuidor.',
   'auth.loginError':'Error de acceso: {error}', 'auth.registerError':'Error de registro: {error}',
   'auth.sessionError':'Error de sesión: {error}',
   'auth.sessionMissing':'El acceso fue aceptado, pero no hay una sesión activa. Si la confirmación por correo está habilitada, confirma tu dirección de email.',
@@ -542,7 +555,10 @@ Object.assign(TRANSLATIONS.es, {
 Object.assign(TRANSLATIONS.it, {
   'invoices.acknowledge':'L’ho vista',
   'invoices.readyText':'La fattura <b>{invoice}</b> per l’ordine <b>{order}</b> è pronta.<br><span style="font-size:14px;">Conferma di averla vista. Puoi scaricare il PDF ora o più tardi.</span>',
-  'auth.email':'Email', 'auth.emailPlaceholder':'email', 'auth.loggedIn':'accesso effettuato',
+  'auth.title':'Accesso distributori B2B', 'auth.email':'Email del distributore', 'auth.emailPlaceholder':'email', 'auth.loggedIn':'accesso effettuato',
+  'auth.loginHelp':'Accedi con l’email del tuo account distributore. Il nome utente «admin» è riservato al pannello IKUGO.',
+  'auth.invalidEmail':'Inserisci l’email completa del distributore. Il nome utente «admin» è riservato al pannello IKUGO.',
+  'auth.passwordRequired':'Inserisci la password del tuo account distributore.',
   'auth.loginError':'Errore di accesso: {error}', 'auth.registerError':'Errore di registrazione: {error}',
   'auth.sessionError':'Errore di sessione: {error}',
   'auth.sessionMissing':'L’accesso è stato accettato, ma non è presente una sessione attiva. Se la conferma e-mail è abilitata, conferma il tuo indirizzo e-mail.',
@@ -1902,10 +1918,23 @@ async function loadSession(force = false) {
   }
 }
 
-$('btnLogin').onclick = async () => {
+$('clientLoginForm').onsubmit = async event => {
+  event.preventDefault();
   if($('btnLogin').disabled) return;
-  const email=$('email').value.trim();
+  const emailInput=$('email');
+  const email=emailInput.value.trim();
+  emailInput.value=email;
+  if(!email || !emailInput.checkValidity()){
+    showAuth(t('auth.invalidEmail'));
+    emailInput.focus();
+    return;
+  }
   const password=$('password').value;
+  if(!password){
+    showAuth(t('auth.passwordRequired'));
+    $('password').focus();
+    return;
+  }
   $('btnLogin').disabled = true;
   $('btnRegister').disabled = true;
   $('authMsg').textContent = t('common.loading');
