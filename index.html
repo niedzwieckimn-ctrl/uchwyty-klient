@@ -955,7 +955,7 @@ async function fetchMagazynResponse(path, options = {}){
   });
 
   let response = await send(session.access_token);
-  if(response.status === 401 || response.status === 403){
+  if(response.status === 401){
     session = await refreshClientSession();
     response = await send(session.access_token);
   }
@@ -1870,7 +1870,7 @@ async function loadSession(force = false) {
       CURRENT_CUSTOMER = null;
       LOADED_USER_ID = null;
       if(/^Magazyn API: 403$/.test(String(error?.message || ''))){
-        await sbAuth.auth.signOut();
+        await sbAuth.auth.signOut({ scope: 'local' });
         showAuth(t('auth.b2bAccessDenied'));
       } else {
         showAuth(t('auth.sessionError', { error:clientErrorDetail(error) }));
@@ -1903,15 +1903,26 @@ async function loadSession(force = false) {
 }
 
 $('btnLogin').onclick = async () => {
+  if($('btnLogin').disabled) return;
   const email=$('email').value.trim();
   const password=$('password').value;
-  const { data, error } = await sbAuth.auth.signInWithPassword({ email, password });
-  if(error){ showAuth(t('auth.loginError', { error:clientErrorDetail(error) })); return; }
-  if(!data?.session){
-    showAuth(t('auth.sessionMissing'));
-    return;
+  $('btnLogin').disabled = true;
+  $('btnRegister').disabled = true;
+  $('authMsg').textContent = t('common.loading');
+  try {
+    const { data, error } = await sbAuth.auth.signInWithPassword({ email, password });
+    if(error){ showAuth(t('auth.loginError', { error:clientErrorDetail(error) })); return; }
+    if(!data?.session){
+      showAuth(t('auth.sessionMissing'));
+      return;
+    }
+    await loadSession();
+  } catch(error){
+    showAuth(t('auth.loginError', { error:clientErrorDetail(error) }));
+  } finally {
+    $('btnLogin').disabled = false;
+    $('btnRegister').disabled = false;
   }
-  await loadSession();
 };
 
 $('btnRegister').onclick = async () => {
@@ -1929,7 +1940,7 @@ $('btnRegister').onclick = async () => {
 };
 
 btnLogout.onclick = async () => {
-  await sbAuth.auth.signOut();
+  await sbAuth.auth.signOut({ scope: 'local' });
   CURRENT_CUSTOMER = null;
   LOADED_USER_ID = null;
   LAST_LOADED.stock = LAST_LOADED.orders = LAST_LOADED.invoices = 0;
@@ -1937,13 +1948,19 @@ btnLogout.onclick = async () => {
   showAuth(t('auth.loggedOut'));
 };
 
+let AUTH_EVENT_VERSION = 0;
 sbAuth.auth.onAuthStateChange((event, session) => {
+  const eventVersion = ++AUTH_EVENT_VERSION;
   if(event === 'SIGNED_OUT' || !session){
     LOADED_USER_ID = null;
     setLanguage('pl', false);
     showAuth();
   } else if(event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'USER_UPDATED'){
-    loadSession();
+    // Supabase holds its auth lock while notifying subscribers.
+    setTimeout(() => {
+      // A later sign-out invalidates queued sign-in work and its UI updates.
+      if(eventVersion === AUTH_EVENT_VERSION) void loadSession();
+    }, 0);
   }
   // TOKEN_REFRESHED jest celowo ignorowane. Powrót do karty nie przeładowuje danych.
 });
