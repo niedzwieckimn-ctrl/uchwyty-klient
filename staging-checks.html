@@ -1,0 +1,49 @@
+<!doctype html><html lang="pl"><meta charset="utf-8"><title>Odbiór staging — sesje, RLS, obciążenie</title><style>body{font:16px system-ui;padding:20px;max-width:1100px}button,input,select{font:inherit;padding:10px;margin:5px}pre{white-space:pre-wrap;background:#eef2f5;padding:16px}</style>
+<h1>Kontrole staging</h1><p>Istniejąca sesja, bez odczytu tokenów i haseł. Obciążenie oznacza równoległe scenariusze na jednym koncie, nie różne konta użytkowników.</p>
+<button id="security">Uprawnienia rzeczywistej roli</button><select id="concurrency" aria-label="Równoległość"><option>10</option><option>25</option><option>50</option><option>100</option></select><button id="load">Test odczytów i zdjęcia</button><br><input id="code" aria-label="Kod" placeholder="Kod testowy"><button id="quote">Test ceny i kodu</button><pre id="result">Gotowe</pre>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
+if(!location.hostname.endsWith('-staging.netlify.app'))throw Error('Staging only');
+const url='https://irhrzdsjnwjyqfvhiclk.supabase.co',key='sb_publishable_abzisHZdhfns5RQLPgDv6w_SWCdKOOv';
+const sb=supabase.createClient(url,key),anon=supabase.createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:'acceptance-anon'}});
+const isArch=location.hostname==='niedzwieccy-architekci-staging.netlify.app';
+const rpc=async(a,d={})=>{const r=await sb.rpc('portal_request',{p_action:a,p_data:d});return r.error?{ok:false,status:r.status,error:r.error.message}:r.data;};
+const show=x=>document.querySelector('#result').textContent=JSON.stringify({time:new Date().toISOString(),role:isArch?'architect':'distributor',...x},null,2);
+function run(id,fn){document.getElementById(id).onclick=async function(){this.disabled=true;try{show(await fn());}catch(e){show({error:e.message});}finally{this.disabled=false;}}}
+const denied=r=>!!r.error||(Array.isArray(r.data)&&r.data.length===0);
+run('security',async()=>{
+ const user=await sb.auth.getUser();if(!user.data.user)throw Error('Najpierw zaloguj panel');
+ const checks=[];const check=(name,pass)=>checks.push({name,pass});
+ for(const table of [...(isArch?['stock','products','client_stock_catalog_v']:[]),'architect_codes','architect_commission_ledger','distributor_program_memberships','architect_order_email_outbox']){
+ let q=sb.from(table).select('*').limit(1);
+ if(table==='architect_codes'||table==='architect_commission_ledger')q=q.neq('architect_id',user.data.user.id);
+ const r=await q; check('direct_read_'+table,denied(r));
+ }
+ const foreign=await sb.from('orders').select('id').neq('customer_id',101).limit(1);check('foreign_orders',denied(foreign));
+ const a=await anon.rpc('portal_request',{p_action:'b2b.profile',p_data:{}});check('anon_rpc',!!a.error);
+ check('private_worker_rpc',!!(await sb.rpc('portal_email_claim',{p_owner:crypto.randomUUID(),p_sender:'test@example.invalid',p_test_recipient:'test@example.invalid'})).error);
+ check('private_schema_dispatch',!!(await sb.schema('architect_portal').rpc('dispatch',{p_action:'b2b.profile',p_data:{}})).error);
+ const update=await sb.from('distributor_program_memberships').update({active:true}).eq('customer_id',-9999).select('customer_id');check('direct_activation_write',denied(update));
+ const ledger=await sb.from('architect_commission_ledger').update({amount_net:999999}).eq('id','00000000-0000-4000-8000-000000000000').select('id');check('direct_commission_write',denied(ledger));
+ const storage=await sb.storage.from('product-images').createSignedUrl('private-unassigned-acceptance-probe',60);check('unassigned_storage',!!storage.error);
+ if(isArch){check('b2b_profile_denied',!(await rpc('b2b.profile')).ok);const c=await rpc('architect.catalog');check('retail_only_catalog',c.ok&&!c.products.some(x=>['net_price','cost','qty_physical','qty_on_stock'].some(k=>k in x)));}
+ else {check('architect_role_denied',!(await rpc('architect.catalog')).ok);check('foreign_order_rpc',!(await rpc('b2b.order',{token:'FOREIGN-ACCEPTANCE-PROBE'})).ok);}
+ return {verified_session:true,checks,pass:checks.every(c=>c.pass)};
+});
+run('quote',async()=>{const r=await rpc('b2b.quote',{code:document.querySelector('#code').value.trim(),items:[{product_id:501,qty:1,unit_net_price:0.01,commission_rate:99}],customer_id:102,discount:99});return {quote:r};});
+run('load',async()=>{
+ const u=await sb.auth.getUser();if(!u.data.user)throw Error('Brak sesji');
+ const n=Number(document.querySelector('#concurrency').value),times=[],errors=[];let requests=0;
+ const timed=async(name,fn)=>{const start=performance.now();requests++;try{const r=await fn();if(r?.ok===false||r?.error)errors.push({name,status:r.status||null,error:r.error?.message||r.error||'failed'});return r;}catch(e){errors.push({name,error:e.message});}finally{times.push({name,ms:performance.now()-start});}};
+ const start=performance.now();
+ await Promise.all(Array.from({length:n},async(_,i)=>{
+ const c=await timed('catalog',()=>rpc(isArch?'architect.catalog':'b2b.catalog'));
+ await timed('history',()=>rpc(isArch?'architect.earnings':'b2b.orders'));
+ await timed('profile',()=>rpc(isArch?'architect.me':'b2b.profile'));
+ const image=(c?.products||c?.rows||[]).find(x=>x.image_ref)?.image_ref;
+ if(image&&i<10){const match=/^supabase:\/\/([^/]+)\/(.+)$/.exec(image);if(match)await timed('image',async()=>{const s=await sb.storage.from(match[1]).createSignedUrl(match[2],60);if(s.error)return s;const r=await fetch(s.data.signedUrl);await r.arrayBuffer();return {ok:r.ok,status:r.status};});}
+ }));
+ const seconds=(performance.now()-start)/1000,sorted=times.map(t=>t.ms).sort((a,b)=>a-b);
+ const perAction=Object.fromEntries([...new Set(times.map(t=>t.name))].map(name=>{const a=times.filter(t=>t.name===name).map(t=>t.ms).sort((a,b)=>a-b);return [name,{count:a.length,mean_ms:Math.round(a.reduce((a,b)=>a+b,0)/a.length),p95_ms:Math.round(a[Math.ceil(a.length*.95)-1])}];}));
+ return {parallel_scenarios:n,distinct_accounts:1,requests,seconds:+seconds.toFixed(3),rps:+(requests/seconds).toFixed(2),mean_ms:Math.round(sorted.reduce((a,b)=>a+b,0)/sorted.length),p95_ms:Math.round(sorted[Math.ceil(sorted.length*.95)-1]),errors,perAction};
+});
+</script></html>

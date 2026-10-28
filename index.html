@@ -11,6 +11,7 @@
   <script src="sales-thoughts.js"></script>
   <script src="order-success.js"></script>
   <script src="portal-api.js"></script>
+  <script src="runtime-config.js"></script>
   <style>
     :root{--navy:#12213d;--navy2:#0b1730;--blue:#5577ee;--blue2:#3f63dc;--mint:#31b98b;--red:#df5264;--ink:#17233c;--muted:#718096;--bg:#f5f6fa;--line:#e7eaf2;--shadow:0 12px 35px rgba(31,45,78,.07)}
     *{box-sizing:border-box}body{font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(circle at 88% -10%,#eaf0ff 0,transparent 30%),var(--bg);margin:0;color:var(--ink);line-height:1.45}
@@ -264,8 +265,8 @@
   </div>
 
 <script>
-const SUPABASE_URL = "https://qfzawzkynmqkbjlbtkjd.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFmemF3emt5bm1xa2JqbGJ0a2pkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MjQ4MTAsImV4cCI6MjA5MDEwMDgxMH0.Z_FcKX_iMS7rdx8gNOAWOEBJgO2MA7cqm8ppZiqu7DM";
+const SUPABASE_URL = window.PORTAL_CONFIG.supabaseUrl;
+const SUPABASE_ANON_KEY = window.PORTAL_CONFIG.publicKey;
 
 const sbAuth = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
@@ -282,7 +283,7 @@ const sbPublic = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 
 window.sb = sbAuth;
 window.sbPublic = sbPublic;
-const MAGAZYN_API_BASE = "https://uchwyty.onrender.com";
+const MAGAZYN_API_BASE = window.PORTAL_CONFIG.ikugoUrl;
 
 const SUPPORTED_LANGUAGES = ['pl', 'de', 'en', 'es', 'it'];
 const LOCALES = { pl:'pl-PL', de:'de-DE', en:'en-GB', es:'es-ES', it:'it-IT' };

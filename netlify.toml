@@ -1,0 +1,12 @@
+[build]
+command = "node build.cjs"
+publish = "dist"
+[[headers]]
+for = "/*"
+[headers.values]
+X-Content-Type-Options = "nosniff"
+Referrer-Policy = "strict-origin-when-cross-origin"
+[[headers]]
+for = "/runtime-config.js"
+[headers.values]
+Cache-Control = "no-store"
