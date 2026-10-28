@@ -1104,7 +1104,7 @@ async function wireArchitectSale(root, order){
   const target = root.querySelector(`[data-architect-sale="${Number(order?.id || 0)}"]`);
   if(!target) return;
   const response = await fetchMagazynResponse(`/api/client/architect-sales?order_id=${Number(order.id)}`);
-  if(response.status === 404) return;
+  if(response.status === 404){ target.innerHTML = ''; return; }
   if(!response.ok) throw new Error(`Nie udało się pobrać danych sprzedaży: HTTP ${response.status}`);
   const data = await response.json();
   const invoices = Array.isArray(data.invoices) ? data.invoices : [];
@@ -1173,6 +1173,18 @@ async function wireArchitectSale(root, order){
         message.textContent = t('architect.saleFailed',{error:clientErrorDetail(error)});
       } finally { button.disabled = saved; }
     });
+  }
+}
+
+async function loadArchitectSaleSection(root, order){
+  const target = root.querySelector(`[data-architect-sale="${Number(order?.id || 0)}"]`);
+  if(!target) return;
+  target.innerHTML = `<div class="muted" style="margin-top:14px">${esc(t('common.loading'))}</div>`;
+  try {
+    await wireArchitectSale(root, order);
+  } catch(error){
+    // Optional sale controls must not hide already loaded order details/PDFs.
+    target.innerHTML = `<div class="muted" role="status" style="margin-top:14px">${esc(t('common.error', {error:clientErrorDetail(error)}))}</div>`;
   }
 }
 
@@ -1646,7 +1658,7 @@ async function showOrderByCode(rawCode){
     const details = await fetchOrderDetails(order);
     out.innerHTML = renderOrderDetailsHtml(details.order, details.items, details.totals);
     wireInlineOrderPdf(out, details.order);
-    await wireArchitectSale(out, details.order);
+    void loadArchitectSaleSection(out, details.order);
     out.scrollIntoView({ behavior: 'smooth', block: 'start' });
   } catch(error){
     out.innerHTML = `<div class="muted">${esc(t('common.error', { error:clientErrorDetail(error) }))}</div>`;
@@ -2520,19 +2532,18 @@ function renderOrdersRows(orders){
       detailRow.children[0].innerHTML = `<div class="muted">${esc(t('orders.loadingDetails'))}</div>`;
       button.disabled = true;
       try {
-        await loadStock(false);
         const order = rows.find(item => Number(item.id) === id);
         const details = await fetchOrderDetails(order);
         const { items, totals } = details;
         detailRow.children[0].innerHTML = renderOrderDetailsHtml(details.order, items, totals);
         wireInlineOrderPdf(detailRow, details.order);
-        await wireArchitectSale(detailRow, details.order);
         const netCell = document.getElementById(`order-net-${id}`);
         const grossCell = document.getElementById(`order-gross-${id}`);
         const currency = String(details.order?.currency || 'PLN').toUpperCase();
         if(netCell) netCell.textContent = formatPrice(totals.net, currency);
         if(grossCell) grossCell.textContent = formatPrice(totals.gross, currency);
         button.dataset.loaded = '1';
+        void loadArchitectSaleSection(detailRow, details.order);
       } catch(error){
         detailRow.children[0].innerHTML = `<div class="muted">${esc(t('common.error', { error:clientErrorDetail(error) }))}</div>`;
       } finally {
