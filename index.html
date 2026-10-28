@@ -2185,6 +2185,12 @@ $('btnRemoveArchitectCode').onclick = () => {
   renderOrderDraft();
 };
 
+// Match invoice rounding: VAT on each net line, then sum rounded lines.
+function orderLineGross(unitNet, qty, currency='PLN'){
+  const netCents = Math.round(Number(unitNet || 0) * 100) * Number(qty || 0);
+  return (netCents + (currency === 'EUR' ? 0 : Math.round(netCents * 23 / 100))) / 100;
+}
+
 function renderOrderDraft(){
   const tb = $('orderDraftTable').querySelector('tbody');
   const quote = ARCHITECT_QUOTE_KEY === architectBasketKey() ? ARCHITECT_QUOTE : null;
@@ -2197,7 +2203,7 @@ function renderOrderDraft(){
       const discounted = quoteByProduct.get(Number(it.product_id));
       const unitNet = discounted ? Number(discounted.unit_net_price) : Number(it.net_price || 0);
       const unitGross = discounted ? Number(discounted.unit_gross_price) : Number(it.gross_price || 0);
-      const grossLine = discounted ? Number(discounted.line_gross) : unitGross * Number(it.qty || 0);
+      const grossLine = discounted ? Number(discounted.line_gross) : orderLineGross(unitNet, it.qty, it.currency);
       const retailGrossUnit = discounted ? Number(discounted.retail_gross_after) : (Number(it.retail_price || 0) || calcClientGrossFromNet(it.net_price));
       const retailGrossLine = retailGrossUnit * Number(it.qty || 0);
       return `
@@ -2217,7 +2223,7 @@ function renderOrderDraft(){
   }
 
   const totalNet = quote ? Number(quote.total_net) : ORDER_DRAFT.reduce((sum, it) => sum + Number(it.net_price || 0) * Number(it.qty || 0), 0);
-  const totalGross = quote ? Number(quote.total_gross) : ORDER_DRAFT.reduce((sum, it) => sum + Number(it.gross_price || 0) * Number(it.qty || 0), 0);
+  const totalGross = quote ? Number(quote.total_gross) : ORDER_DRAFT.reduce((sum, it) => sum + orderLineGross(it.net_price, it.qty, it.currency), 0);
   const totalRetailGross = ORDER_DRAFT.reduce((sum, it) => sum + (Number(quoteByProduct.get(Number(it.product_id))?.retail_gross_after) || Number(it.retail_price || 0) || calcClientGrossFromNet(it.net_price)) * Number(it.qty || 0), 0);
   $('orderDraftSummary').textContent = isEurPriceList()
     ? t('price.eurSummary', {

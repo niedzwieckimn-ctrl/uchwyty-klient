@@ -1,0 +1,18 @@
+<!doctype html><html lang="pl"><meta charset="utf-8"><title>Kontrole RPC — staging</title>
+<style>body{font:16px system-ui;max-width:1000px;margin:40px auto;padding:16px}button,input{font:inherit;padding:12px;margin:6px}pre{white-space:pre-wrap;background:#eef2f5;padding:20px}</style>
+<h1>Kontrole RPC — wyłącznie staging</h1><p>Testy korzystają z istniejącej sesji tego panelu. Wynik nie zawiera tokenów ani haseł. Testy zapisu tworzą jawne zamówienia testowe.</p>
+<button id="session">Sprawdź i odśwież sesję</button><button id="read">Sprawdź katalog i odmowy dostępu</button><br>
+<input id="code" placeholder="Kod do testu równoczesnego użycia"><button id="race">Dwa równoczesne użycia kodu</button>
+<button id="retry">Dwa równoczesne zapisy tego samego zamówienia</button><pre id="result">Gotowe.</pre>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script>
+const url='__STAGING_URL__',key='__STAGING_ANON_KEY__';
+if(!url.includes('irhrzdsjnwjyqfvhiclk.supabase.co'))throw Error('Tylko staging');
+const sb=supabase.createClient(url,key),out=document.querySelector('#result');
+const rpc=async(a,d={})=>{const r=await sb.rpc('portal_request',{p_action:a,p_data:d});return r.error?{error:r.error.message,code:r.error.code}:r.data;};
+const show=x=>out.textContent=JSON.stringify({time:new Date().toISOString(),...x},null,2);
+function run(id,fn){document.getElementById(id).onclick=async function(){this.disabled=true;try{show(await fn());}catch(e){show({error:e.message});}finally{this.disabled=false;}};}
+run('session',async()=>{const r=await sb.auth.refreshSession();const u=await sb.auth.getUser();return {refresh_ok:!r.error,user_verified:!!u.data.user,error:r.error?.message||u.error?.message||null,profile:await rpc('b2b.profile')};});
+run('read',async()=>{const cat=await rpc('b2b.catalog');const anon=supabase.createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:'staging-anonymous-probe'}});const a=await anon.rpc('portal_request',{p_action:'b2b.profile',p_data:{}});const privateFn=await sb.rpc('architect_create_discounted_order',{});const foreign=await rpc('b2b.order',{order_id:999999,token:'999999'});return {catalog_ok:cat.ok,products:cat.rows?.map(x=>({id:x.product_id,net_price:x.net_price})),anon_denied:!!a.error,anonymous_error:a.error?.message,private_function_denied:!!privateFn.error,foreign_order:foreign};});
+run('race',async()=>{const code=document.getElementById('code').value.trim();if(!code)throw Error('Wpisz świeży kod');const data={architect_code:code,code,items:[{product_id:501,qty:1}],note:'STAGING concurrency — one code, two requests'};const results=await Promise.all([1,2].map(()=>rpc('b2b.create_order',{...data,idempotency_key:crypto.randomUUID()})));return {test:'one_code_two_requests',results,pass:results.filter(r=>r.ok).length===1};});
+run('retry',async()=>{const data={items:[{product_id:503,qty:1}],note:'STAGING concurrency — same request key',idempotency_key:crypto.randomUUID()};const results=await Promise.all([rpc('b2b.create_order',data),rpc('b2b.create_order',data)]);return {test:'same_key_two_requests',results,pass:results.every(r=>r.ok)&&results[0].order.id===results[1].order.id};});
+</script></html>
