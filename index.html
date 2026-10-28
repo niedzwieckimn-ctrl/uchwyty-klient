@@ -295,6 +295,7 @@ const PL_TRANSLATIONS = {
   'auth.sessionMissing':'Logowanie przyjęte, ale brak aktywnej sesji. Jeśli masz włączone potwierdzenie mailowe, potwierdź e-mail.',
   'auth.accountCreated':'Konto utworzone. Jeśli masz włączone potwierdzenie mailowe, potwierdź e-mail i dopiero się zaloguj.',
   'auth.loggedOut':'Wylogowano.', 'auth.noSession':'Brak aktywnej sesji. Zaloguj się ponownie.',
+  'auth.b2bAccessDenied':'To konto nie ma aktywnego dostępu dystrybutora do Panelu Klienta B2B. Architekt generuje kod w Panelu Architekta; zamówienie składa dystrybutor na własnym koncie.',
   'nav.dashboard':'Pulpit', 'nav.stock':'Stany magazynowe', 'nav.newOrder':'Koszyk',
   'nav.orders':'Moje zamówienia', 'nav.invoices':'Faktury', 'nav.settings':'Ustawienia', 'nav.scan':'Skan QR',
   'common.name':'Nazwa', 'common.quantity':'Ilość', 'common.status':'Status', 'common.net':'Netto',
@@ -463,6 +464,7 @@ Object.assign(TRANSLATIONS.de, {
   'auth.sessionMissing':'Die Anmeldung wurde akzeptiert, aber es gibt keine aktive Sitzung. Falls die E-Mail-Bestätigung aktiviert ist, bestätigen Sie bitte Ihre E-Mail-Adresse.',
   'auth.accountCreated':'Das Konto wurde erstellt. Falls die E-Mail-Bestätigung aktiviert ist, bestätigen Sie bitte zuerst Ihre E-Mail-Adresse und melden Sie sich anschließend an.',
   'auth.loggedOut':'Abgemeldet.', 'auth.noSession':'Keine aktive Sitzung. Bitte melden Sie sich erneut an.',
+  'auth.b2bAccessDenied':'Dieses Konto hat keinen aktiven Händlerzugang zum B2B-Kundenportal. Architekten erstellen Codes im Architektenportal; Bestellungen gibt der Händler über sein eigenes Konto auf.',
   'common.error':'Fehler: {error}', 'common.email':'E-Mail',
   'common.refreshing':'Die Daten werden aktualisiert. Bitte versuchen Sie es gleich erneut.',
   'common.refreshFailed':'Die Daten konnten nicht aktualisiert werden. Bitte versuchen Sie es gleich erneut.',
@@ -490,6 +492,7 @@ Object.assign(TRANSLATIONS.en, {
   'auth.sessionMissing':'The login was accepted, but there is no active session. If email confirmation is enabled, confirm your email address.',
   'auth.accountCreated':'The account was created. If email confirmation is enabled, confirm your email address before signing in.',
   'auth.loggedOut':'Signed out.', 'auth.noSession':'No active session. Please sign in again.',
+  'auth.b2bAccessDenied':'This account has no active distributor access to the B2B portal. Architects generate codes in the Architect Portal; distributors place orders using their own accounts.',
   'common.error':'Error: {error}', 'common.email':'Email',
   'common.refreshing':'Data is being refreshed. Please try again shortly.',
   'common.refreshFailed':'The data could not be refreshed. Please try again shortly.',
@@ -517,6 +520,7 @@ Object.assign(TRANSLATIONS.es, {
   'auth.sessionMissing':'El acceso fue aceptado, pero no hay una sesión activa. Si la confirmación por correo está habilitada, confirma tu dirección de email.',
   'auth.accountCreated':'La cuenta se ha creado. Si la confirmación por correo está habilitada, confirma tu dirección de email antes de iniciar sesión.',
   'auth.loggedOut':'Sesión cerrada.', 'auth.noSession':'No hay una sesión activa. Inicia sesión de nuevo.',
+  'auth.b2bAccessDenied':'Esta cuenta no tiene acceso activo de distribuidor al portal B2B. El arquitecto genera el código en su portal; el distribuidor realiza el pedido con su propia cuenta.',
   'common.error':'Error: {error}', 'common.email':'Email',
   'common.refreshing':'Los datos se están actualizando. Inténtalo de nuevo en unos instantes.',
   'common.refreshFailed':'No se pudieron actualizar los datos. Inténtalo de nuevo en unos instantes.',
@@ -544,6 +548,7 @@ Object.assign(TRANSLATIONS.it, {
   'auth.sessionMissing':'L’accesso è stato accettato, ma non è presente una sessione attiva. Se la conferma e-mail è abilitata, conferma il tuo indirizzo e-mail.',
   'auth.accountCreated':'L’account è stato creato. Se la conferma e-mail è abilitata, conferma il tuo indirizzo prima di accedere.',
   'auth.loggedOut':'Disconnesso.', 'auth.noSession':'Nessuna sessione attiva. Accedi di nuovo.',
+  'auth.b2bAccessDenied':'Questo account non ha accesso attivo come distributore al portale B2B. L’architetto genera il codice nel suo portale; il distributore effettua l’ordine con il proprio account.',
   'common.error':'Errore: {error}', 'common.email':'Email',
   'common.refreshing':'I dati sono in aggiornamento. Riprova tra poco.',
   'common.refreshFailed':'Impossibile aggiornare i dati. Riprova tra poco.',
@@ -1861,8 +1866,16 @@ async function loadSession(force = false) {
     let profile = null;
     try {
       profile = await fetchClientProfile();
-    } catch(_){
-      profile = { email:session.user?.email || '', language:'pl' };
+    } catch(error){
+      CURRENT_CUSTOMER = null;
+      LOADED_USER_ID = null;
+      if(/^Magazyn API: 403$/.test(String(error?.message || ''))){
+        await sbAuth.auth.signOut();
+        showAuth(t('auth.b2bAccessDenied'));
+      } else {
+        showAuth(t('auth.sessionError', { error:clientErrorDetail(error) }));
+      }
+      return;
     }
     CURRENT_CUSTOMER = profile;
     setLanguage(profile?.language, false);
