@@ -85,7 +85,9 @@
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
           <button id="btnLogin" class="btn primary" type="submit" data-i18n="auth.login">Zaloguj</button>
           <button id="btnRegister" class="btn" type="button" data-i18n="auth.register">Załóż konto</button>
+          <button id="btnRecover" class="btn" type="button">Nie pamiętam hasła</button>
         </div>
+        <div id="authCaptcha" aria-label="Weryfikacja bezpieczeństwa" style="margin-top:12px"></div>
       </form>
       <div id="authMsg" class="muted" role="status" aria-live="polite" style="margin-top:8px"></div>
     </div>
@@ -267,6 +269,41 @@
 <script>
 const SUPABASE_URL = window.PORTAL_CONFIG.supabaseUrl;
 const SUPABASE_ANON_KEY = window.PORTAL_CONFIG.publicKey;
+const AUTH_CAPTCHA_SITE_KEY = window.PORTAL_CONFIG.turnstileSiteKey || '';
+let authCaptchaWidget = null;
+let authCaptchaTokenValue = '';
+function ensureAuthCaptcha(){
+  if(!AUTH_CAPTCHA_SITE_KEY || authCaptchaWidget !== null) return;
+  const render = () => {
+    if(authCaptchaWidget !== null || !window.turnstile) return;
+    authCaptchaWidget = window.turnstile.render('#authCaptcha', {
+      sitekey: AUTH_CAPTCHA_SITE_KEY,
+      callback: token => { authCaptchaTokenValue = token; },
+      'expired-callback': () => { authCaptchaTokenValue = ''; },
+      'error-callback': () => { authCaptchaTokenValue = ''; }
+    });
+  };
+  if(window.turnstile) { render(); return; }
+  if(document.querySelector('script[data-auth-captcha]')) return;
+  const script = document.createElement('script');
+  script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+  script.async = true; script.dataset.authCaptcha = '1'; script.onload = render;
+  document.head.appendChild(script);
+}
+function authCaptchaToken(){
+  if(!AUTH_CAPTCHA_SITE_KEY) return undefined;
+  if(!authCaptchaTokenValue) throw new Error('Potwierdź weryfikację bezpieczeństwa i spróbuj ponownie.');
+  return authCaptchaTokenValue;
+}
+function resetAuthCaptcha(){
+  authCaptchaTokenValue = '';
+  if(authCaptchaWidget !== null && window.turnstile) window.turnstile.reset(authCaptchaWidget);
+}
+function authCaptchaError(error, fallback){
+  if(error?.message === 'Potwierdź weryfikację bezpieczeństwa i spróbuj ponownie.') return error.message;
+  if(error?.code === 'captcha_failed') return 'Weryfikacja bezpieczeństwa wygasła lub nie powiodła się. Spróbuj ponownie.';
+  return fallback;
+}
 
 const sbAuth = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
@@ -1794,6 +1831,7 @@ function showAuth(msg='') {
   hideAllSections();
   who.textContent='';
   $('authMsg').textContent=msg;
+  ensureAuthCaptcha();
 }
 
 function showApp(email) {
@@ -1908,7 +1946,8 @@ $('clientLoginForm').onsubmit = async event => {
   $('btnRegister').disabled = true;
   $('authMsg').textContent = t('common.loading');
   try {
-    const { data, error } = await sbAuth.auth.signInWithPassword({ email, password });
+    const captchaToken = authCaptchaToken();
+    const { data, error } = await sbAuth.auth.signInWithPassword({ email, password, options: { captchaToken } });
     if(error){ showAuth(t('auth.loginError', { error:clientErrorDetail(error) })); return; }
     if(!data?.session){
       showAuth(t('auth.sessionMissing'));
@@ -1916,8 +1955,9 @@ $('clientLoginForm').onsubmit = async event => {
     }
     await loadSession();
   } catch(error){
-    showAuth(t('auth.loginError', { error:clientErrorDetail(error) }));
+    showAuth(authCaptchaError(error,t('auth.loginError', { error:clientErrorDetail(error) })));
   } finally {
+    resetAuthCaptcha();
     $('btnLogin').disabled = false;
     $('btnRegister').disabled = false;
   }
@@ -1926,15 +1966,36 @@ $('clientLoginForm').onsubmit = async event => {
 $('btnRegister').onclick = async () => {
   const email=$('email').value.trim();
   const password=$('password').value;
-  const { data, error } = await sbAuth.auth.signUp({
-    email, password, options: { emailRedirectTo: window.location.origin }
-  });
-  if(error){ showAuth(t('auth.registerError', { error:clientErrorDetail(error) })); return; }
-  if(data?.session){
-    await loadSession();
-    return;
+  try {
+    const captchaToken = authCaptchaToken();
+    const { data, error } = await sbAuth.auth.signUp({
+      email, password, options: { emailRedirectTo: window.location.origin, captchaToken }
+    });
+    if(error){ showAuth(t('auth.registerError', { error:clientErrorDetail(error) })); return; }
+    if(data?.session){ await loadSession(); return; }
+    showAuth(t('auth.accountCreated'));
+  } catch(error) {
+    showAuth(authCaptchaError(error,t('auth.registerError', { error:clientErrorDetail(error) })));
+  } finally {
+    resetAuthCaptcha();
   }
-  showAuth(t('auth.accountCreated'));
+};
+
+$('btnRecover').onclick = async () => {
+  const email = $('email').value.trim();
+  if(!email || !$('email').checkValidity()) { showAuth(t('auth.invalidEmail')); return; }
+  try {
+    const captchaToken = authCaptchaToken();
+    const { error } = await sbAuth.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin, captchaToken
+    });
+    if(error) throw error;
+    showAuth('Jeśli konto istnieje, wysłaliśmy link do ustawienia nowego hasła.');
+  } catch(error) {
+    showAuth(authCaptchaError(error,'Nie udało się wysłać linku. Spróbuj ponownie.'));
+  } finally {
+    resetAuthCaptcha();
+  }
 };
 
 btnLogout.onclick = async () => {
@@ -1953,11 +2014,13 @@ sbAuth.auth.onAuthStateChange((event, session) => {
     LOADED_USER_ID = null;
     setLanguage('pl', false);
     showAuth();
-  } else if(event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'USER_UPDATED'){
+  } else if(event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'USER_UPDATED' || event === 'PASSWORD_RECOVERY'){
     // Supabase holds its auth lock while notifying subscribers.
     setTimeout(() => {
       // A later sign-out invalidates queued sign-in work and its UI updates.
-      if(eventVersion === AUTH_EVENT_VERSION) void loadSession();
+      if(eventVersion === AUTH_EVENT_VERSION) void loadSession().then(() => {
+        if(event === 'PASSWORD_RECOVERY' && eventVersion === AUTH_EVENT_VERSION) openSection('settingsSection');
+      });
     }, 0);
   }
   // TOKEN_REFRESHED jest celowo ignorowane. Powrót do karty nie przeładowuje danych.

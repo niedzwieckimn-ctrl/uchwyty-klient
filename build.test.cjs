@@ -10,3 +10,8 @@ test('production accepts only the shared operational Supabase',()=>{
 });
 test('service secret rejected',()=>assert.throws(()=>config({...env,PORTAL_SUPABASE_PUBLIC_KEY:'sb_secret_fixture'}),/Public key/));
 test('missing configuration rejected',()=>assert.throws(()=>config({})));
+test('only a public Turnstile site key enters the client config',()=>{
+ assert.equal(config({...env,PORTAL_TURNSTILE_SITE_KEY:'0x4AAAAAATESTSITEKEY'}).turnstileSiteKey,'0x4AAAAAATESTSITEKEY');
+ assert.equal(config(env).turnstileSiteKey,'');
+ assert.throws(()=>config({...env,PORTAL_TURNSTILE_SITE_KEY:'bad key with spaces'}),/Turnstile/);
+});
