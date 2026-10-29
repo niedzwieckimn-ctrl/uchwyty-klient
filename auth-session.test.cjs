@@ -43,7 +43,7 @@ function authTransport() {
   return {client,sessions,calls,credentials};
 }
 
-async function harness({denied = false, authFailure = null} = {}) {
+async function harness({denied = false, authFailure = null, captchaToken = ''} = {}) {
   const transport = authTransport();
   const client = transport.client('b2b-fixture');
   await client.auth.getSession();
@@ -65,6 +65,7 @@ async function harness({denied = false, authFailure = null} = {}) {
     SESSION_LOAD_IN_FLIGHT:null,LOADED_USER_ID:null,CURRENT_CUSTOMER:null,SEARCH_ALIASES:{},
     LAST_LOADED:{}, document:{querySelector:()=>null,querySelectorAll:()=>[],getElementById:$},
     t:(key,params={})=>key+(params.error?`: ${params.error}`:''),clientErrorDetail:e=>e.message,
+    authCaptchaToken:()=>captchaToken, resetAuthCaptcha:()=>{}, authCaptchaError:(error,fallback)=>fallback,
     showAuth:message=>{state.message=message||'';state.shown=0;state.history.push(['auth',message]);}, showApp:()=>{state.shown++;state.history.push(['app']);},
     refreshArchitectProgram:async()=>{},setLanguage(){},renderClientDashboard(){},loadStock:async()=>{},loadOrders:async()=>{},loadInvoices:async()=>{},
     fetchMagazynJson:async endpoint=> {
@@ -93,6 +94,12 @@ test('accepted credentials load distributor profile before showing the applicati
   assert.equal(h.transport.credentials[0].email,'test@example.invalid');
   assert.equal(h.transport.credentials[0].password,' local-fixture-password ');
   assert.equal(h.state.submitPrevented,1);
+});
+
+test('login forwards a CAPTCHA token through Supabase Auth', {timeout:3000}, async()=>{
+  const h=await harness({captchaToken:'isolated-captcha-token'});
+  await h.submit();
+  assert.equal(h.transport.credentials[0].gotrue_meta_security.captcha_token,'isolated-captcha-token');
 });
 
 test('rejected credentials never open the panel or call the warehouse profile', {timeout:3000}, async()=>{
