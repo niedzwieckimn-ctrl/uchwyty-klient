@@ -30,6 +30,12 @@ test('permission and rate denials remain visible and never fall back to Render',
     assert.equal(response.status,status); assert.equal((await response.json()).error,'denied');
   }
 });
+test('expired Auth token is reported as 401 rather than warehouse 500',async()=>{
+  const api=create({rpc:async()=>({data:null,error:{status:401,message:'JWT expired'}})});
+  const response=await api.request('/api/client/profile');
+  assert.equal(response.status,401);
+  assert.equal((await response.json()).error,'JWT expired');
+});
 test('unknown paths fail closed without a network request',async()=>{
   const api=create({rpc:()=>{throw Error('unexpected RPC');}},{fetchImpl:()=>{throw Error('unexpected network');}});
   assert.equal((await api.request('/api/admin/set-role')).status,404);

@@ -996,7 +996,11 @@ async function refreshClientSession(){
 
 const portalApi = PortalApi.create(sbAuth,{legacyBase:MAGAZYN_API_BASE});
 async function fetchMagazynResponse(path, options = {}){
-  const response = await portalApi.request(path,options);
+  let response = await portalApi.request(path,options);
+  if(response.status === 401){
+    await refreshClientSession();
+    response = await portalApi.request(path,options);
+  }
   // Supabase SDK owns refresh and persistent session; no Render auth hop.
   if(response.ok && ['/api/client/profile','/api/client_stock_catalog'].includes(path)){
     const payload=await response.clone().json();
