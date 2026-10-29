@@ -720,7 +720,7 @@ function t(key, params = {}){
 
 function clientErrorDetail(error){
   const message = String(error?.message || error || '').trim();
-  if(CURRENT_LANGUAGE === 'pl') return message || t('common.requestFailed');
+  if(CURRENT_LANGUAGE === 'pl') return error?.code === 'invalid_credentials' ? 'Nieprawidłowy adres e-mail lub hasło.' : message || t('common.requestFailed');
   const technical = message.match(/(?:HTTP|API)\s*:?[ ]*\d{3}/i);
   return technical ? technical[0] : t('common.requestFailed');
 }
@@ -1952,7 +1952,7 @@ $('clientLoginForm').onsubmit = async event => {
   try {
     const captchaToken = authCaptchaToken();
     const { data, error } = await sbAuth.auth.signInWithPassword({ email, password, options: { captchaToken } });
-    if(error){ showAuth(t('auth.loginError', { error:clientErrorDetail(error) })); return; }
+    if(error){ if(error){ showAuth(authCaptchaError(error,t('auth.loginError', { error:clientErrorDetail(error) }))); return; }, { error:clientErrorDetail(error) })); return; }
     if(!data?.session){
       showAuth(t('auth.sessionMissing'));
       return;
@@ -1975,7 +1975,7 @@ $('btnRegister').onclick = async () => {
     const { data, error } = await sbAuth.auth.signUp({
       email, password, options: { emailRedirectTo: window.location.origin, captchaToken }
     });
-    if(error){ showAuth(t('auth.registerError', { error:clientErrorDetail(error) })); return; }
+    if(error){ showAuth(authCaptchaError(error,t('auth.registerError', { error:clientErrorDetail(error) }))); return; }
     if(data?.session){ await loadSession(); return; }
     showAuth(t('auth.accountCreated'));
   } catch(error) {
