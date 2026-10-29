@@ -31,7 +31,7 @@ test('permission and rate denials remain visible and never fall back to Render',
   }
 });
 test('expired Auth token is reported as 401 rather than warehouse 500',async()=>{
-  const api=create({rpc:async()=>({data:null,error:{status:401,message:'JWT expired'}})});
+  const api=create({rpc:async()=>({data:null,error:{message:'JWT expired'},status:401})});
   const response=await api.request('/api/client/profile');
   assert.equal(response.status,401);
   assert.equal((await response.json()).error,'JWT expired');

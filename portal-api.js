@@ -4,8 +4,8 @@
   function create(client, {legacyBase='', fetchImpl=fetch}={}) {
     const json = data => new Response(JSON.stringify(data),{status:data?.ok === false ? Number(data.status || 400) : 200,headers:{'Content-Type':'application/json'}});
     async function rpc(action,data) {
-      const {data:result,error}=await client.rpc('portal_request',{p_action:action,p_data:data});
-      if(error) return {ok:false,status:Number(error.status) || 500,error:error.message};
+      const {data:result,error,status}=await client.rpc('portal_request',{p_action:action,p_data:data});
+      if(error) return {ok:false,status:Number(status) || Number(error.status) || 500,error:error.message};
       return result || {ok:false,status:503,error:'Nie udało się pobrać danych.'};
     }
     async function file(ref) {
