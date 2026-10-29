@@ -6,8 +6,9 @@ function config(env) {
  if(!publicKey||publicKey.startsWith('sb_secret_'))throw Error('Public key required');
  if(publicKey.startsWith('ey')) {let jwt=JSON.parse(Buffer.from(publicKey.split('.')[1],'base64url'));if(jwt.role!=='anon')throw Error('Only anon JWT allowed');}
  else if(!publicKey.startsWith('sb_publishable_'))throw Error('Unsupported public key');
- const staging=supabaseUrl==='https://irhrzdsjnwjyqfvhiclk.supabase.co';
- if((mode==='staging')!==staging)throw Error('Environment/project mismatch');
+ const projects={staging:'https://irhrzdsjnwjyqfvhiclk.supabase.co',production:'https://qfzawzkynmqkbjlbtkjd.supabase.co'};
+ if(supabaseUrl!==projects[mode])throw Error('Environment/project mismatch');
+ const staging=mode==='staging';
  if((mode==='staging')!==ikugoUrl.includes('uchwyty-architekci-staging.onrender.com'))throw Error('Environment/backend mismatch');
  return {mode,supabaseUrl,publicKey,ikugoUrl};
 }
