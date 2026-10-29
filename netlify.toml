@@ -1,6 +1,13 @@
 [build]
 command = "node build.cjs"
 publish = "dist"
+
+[context.deploy-preview.environment]
+PORTAL_ENV = "staging"
+PORTAL_SUPABASE_URL = "https://irhrzdsjnwjyqfvhiclk.supabase.co"
+PORTAL_SUPABASE_PUBLIC_KEY = "sb_publishable_abzisHZdhfns5RQLPgDv6w_SWCdKOOv"
+PORTAL_IKUGO_URL = "https://uchwyty-architekci-staging.onrender.com"
+
 [[headers]]
 for = "/*"
 [headers.values]
