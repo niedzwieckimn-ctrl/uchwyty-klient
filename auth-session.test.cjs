@@ -65,7 +65,7 @@ async function harness({denied = false, authFailure = null, captchaToken = ''} =
     SESSION_LOAD_IN_FLIGHT:null,LOADED_USER_ID:null,CURRENT_CUSTOMER:null,SEARCH_ALIASES:{},
     LAST_LOADED:{}, document:{querySelector:()=>null,querySelectorAll:()=>[],getElementById:$},
     t:(key,params={})=>key+(params.error?`: ${params.error}`:''),clientErrorDetail:e=>e.message,
-    authCaptchaToken:()=>captchaToken, resetAuthCaptcha:()=>{}, authCaptchaError:(error,fallback)=>fallback,
+    authCaptchaToken:()=>captchaToken, resetAuthCaptcha:()=>{}, authCaptchaError:(error,fallback)=>error?.code === 'captcha_failed' ? 'captcha rejected' : fallback,
     showAuth:message=>{state.message=message||'';state.shown=0;state.history.push(['auth',message]);}, showApp:()=>{state.shown++;state.history.push(['app']);},
     refreshArchitectProgram:async()=>{},setLanguage(){},renderClientDashboard(){},loadStock:async()=>{},loadOrders:async()=>{},loadInvoices:async()=>{},
     fetchMagazynJson:async endpoint=> {
@@ -100,6 +100,13 @@ test('login forwards a CAPTCHA token through Supabase Auth', {timeout:3000}, asy
   const h=await harness({captchaToken:'isolated-captcha-token'});
   await h.submit();
   assert.equal(h.transport.credentials[0].gotrue_meta_security.captcha_token,'isolated-captcha-token');
+});
+
+test('server CAPTCHA rejection is shown when Auth returns an error object', {timeout:3000}, async()=>{
+  const h=await harness({authFailure:async()=>({data:{session:null},error:{code:'captcha_failed',message:'provider detail'}})});
+  await h.submit();
+  assert.equal(h.state.shown,0);
+  assert.equal(h.state.message,'captcha rejected');
 });
 
 test('rejected credentials never open the panel or call the warehouse profile', {timeout:3000}, async()=>{
