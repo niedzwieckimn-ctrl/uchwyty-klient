@@ -87,6 +87,7 @@
           <button id="btnRegister" class="btn" type="button" data-i18n="auth.register">Załóż konto</button>
           <button id="btnRecover" class="btn" type="button">Nie pamiętam hasła</button>
         </div>
+        <div id="authCaptcha" aria-label="Weryfikacja bezpieczeństwa" style="margin-top:12px"></div>
       </form>
       <div id="authMsg" class="muted" role="status" aria-live="polite" style="margin-top:8px"></div>
     </div>
@@ -268,8 +269,41 @@
 <script>
 const SUPABASE_URL = window.PORTAL_CONFIG.supabaseUrl;
 const SUPABASE_ANON_KEY = window.PORTAL_CONFIG.publicKey;
-function authLoginError(error, fallback){
-  if(error?.code === 'captcha_failed') return 'Serwer logowania nadal wymaga CAPTCHA. Administrator musi wyłączyć wymaganie CAPTCHA w Supabase Auth. Ta wersja B2B korzysta z sesji i tokenów, bez Cloudflare.';
+const AUTH_CAPTCHA_SITE_KEY = window.PORTAL_CONFIG.turnstileSiteKey || '';
+let authCaptchaWidget = null;
+let authCaptchaTokenValue = '';
+function ensureAuthCaptcha(){
+  if(!AUTH_CAPTCHA_SITE_KEY || authCaptchaWidget !== null) return;
+  const render = () => {
+    if(authCaptchaWidget !== null || !window.turnstile) return;
+    authCaptchaWidget = window.turnstile.render('#authCaptcha', {
+      sitekey: AUTH_CAPTCHA_SITE_KEY,
+      callback: token => { authCaptchaTokenValue = token; },
+      'expired-callback': () => { authCaptchaTokenValue = ''; },
+      'error-callback': () => { authCaptchaTokenValue = ''; }
+    });
+  };
+  if(window.turnstile) { render(); return; }
+  if(document.querySelector('script[data-auth-captcha]')) return;
+  const script = document.createElement('script');
+  script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+  script.async = true; script.dataset.authCaptcha = '1'; script.onload = render;
+  document.head.appendChild(script);
+}
+function authCaptchaToken(){
+  if(!AUTH_CAPTCHA_SITE_KEY) return undefined;
+  if(!authCaptchaTokenValue) throw new Error('Potwierdź weryfikację bezpieczeństwa i spróbuj ponownie.');
+  const token = authCaptchaTokenValue;
+  authCaptchaTokenValue = '';
+  return token;
+}
+function resetAuthCaptcha(){
+  authCaptchaTokenValue = '';
+  if(authCaptchaWidget !== null && window.turnstile) window.turnstile.reset(authCaptchaWidget);
+}
+function authCaptchaError(error, fallback){
+  if(error?.message === 'Potwierdź weryfikację bezpieczeństwa i spróbuj ponownie.') return error.message;
+  if(error?.code === 'captcha_failed') return 'Weryfikacja bezpieczeństwa wygasła lub nie powiodła się. Spróbuj ponownie.';
   return fallback;
 }
 
@@ -1813,6 +1847,7 @@ function showAuth(msg='') {
   hideAllSections();
   who.textContent='';
   $('authMsg').textContent=msg;
+  ensureAuthCaptcha();
 }
 
 function showApp(email) {
@@ -1889,8 +1924,8 @@ async function loadSession(force = false) {
         // A valid Auth session is not proof of B2B entitlement. Keep it so an
         // administrator can repair an existing mapping without another login.
         showAuth(error.code === 'B2B_ACCESS_DENIED'
-          ? 'Brak potwierdzonego aktywnego powiązania tego konta z dystrybutorem B2B. Administrator musi sprawdzić przypisanie konta. Udział w programie Architektów nie jest wymagany.'
-          : 'Nie udało się potwierdzić dostępu B2B. Administrator musi sprawdzić konfigurację dostępu i powiązanie konta. To nie oznacza wyłączenia programu Architektów.');
+          ? 'Nie udało się odnaleźć jednoznacznej istniejącej kartoteki dystrybutora. Sprawdź adres e-mail konta. Udział w programie Architektów nie jest wymagany.'
+          : 'Nie udało się potwierdzić dostępu do istniejącej kartoteki B2B. Dostęp B2B jest niezależny od programu Architektów.');
       } else {
         showAuth(t('auth.sessionError', { error:clientErrorDetail(error) }));
       }
@@ -1943,16 +1978,18 @@ $('clientLoginForm').onsubmit = async event => {
   $('btnRegister').disabled = true;
   $('authMsg').textContent = t('common.loading');
   try {
-    const { data, error } = await sbAuth.auth.signInWithPassword({ email, password });
-    if(error){ showAuth(authLoginError(error,t('auth.loginError', { error:clientErrorDetail(error) }))); return; }
+    const captchaToken = authCaptchaToken();
+    const { data, error } = await sbAuth.auth.signInWithPassword({ email, password, options: { captchaToken } });
+    if(error){ showAuth(authCaptchaError(error,t('auth.loginError', { error:clientErrorDetail(error) }))); return; }
     if(!data?.session){
       showAuth(t('auth.sessionMissing'));
       return;
     }
     await loadSession();
   } catch(error){
-    showAuth(authLoginError(error,t('auth.loginError', { error:clientErrorDetail(error) })));
+    showAuth(authCaptchaError(error,t('auth.loginError', { error:clientErrorDetail(error) })));
   } finally {
+    resetAuthCaptcha();
     endAuthAttempt();
   }
 };
@@ -1962,15 +1999,17 @@ $('btnRegister').onclick = async () => {
   const password=$('password').value;
   if(!beginAuthAttempt()) return;
   try {
+    const captchaToken = authCaptchaToken();
     const { data, error } = await sbAuth.auth.signUp({
-      email, password, options: { emailRedirectTo: window.location.origin }
+      email, password, options: { emailRedirectTo: window.location.origin, captchaToken }
     });
-    if(error){ showAuth(authLoginError(error,t('auth.registerError', { error:clientErrorDetail(error) }))); return; }
+    if(error){ showAuth(authCaptchaError(error,t('auth.registerError', { error:clientErrorDetail(error) }))); return; }
     if(data?.session){ await loadSession(); return; }
     showAuth(t('auth.accountCreated'));
   } catch(error) {
-    showAuth(authLoginError(error,t('auth.registerError', { error:clientErrorDetail(error) })));
+    showAuth(authCaptchaError(error,t('auth.registerError', { error:clientErrorDetail(error) })));
   } finally {
+    resetAuthCaptcha();
     endAuthAttempt();
   }
 };
@@ -1980,14 +2019,16 @@ $('btnRecover').onclick = async () => {
   if(!email || !$('email').checkValidity()) { showAuth(t('auth.invalidEmail')); return; }
   if(!beginAuthAttempt()) return;
   try {
+    const captchaToken = authCaptchaToken();
     const { error } = await sbAuth.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin
+      redirectTo: window.location.origin, captchaToken
     });
     if(error) throw error;
     showAuth('Jeśli konto istnieje, wysłaliśmy link do ustawienia nowego hasła.');
   } catch(error) {
-    showAuth(authLoginError(error,'Nie udało się wysłać linku. Spróbuj ponownie.'));
+    showAuth(authCaptchaError(error,'Nie udało się wysłać linku. Spróbuj ponownie.'));
   } finally {
+    resetAuthCaptcha();
     endAuthAttempt();
   }
 };
