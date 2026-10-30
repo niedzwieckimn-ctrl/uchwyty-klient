@@ -1,7 +1,6 @@
 const fs=require('node:fs'),path=require('node:path');
 function config(env) {
  const mode=env.PORTAL_ENV, supabaseUrl=env.PORTAL_SUPABASE_URL, publicKey=env.PORTAL_SUPABASE_PUBLIC_KEY,ikugoUrl=env.PORTAL_IKUGO_URL;
- const turnstileSiteKey=String(env.PORTAL_TURNSTILE_SITE_KEY||'').trim();
  if(!['staging','production'].includes(mode))throw Error('PORTAL_ENV must be staging or production');
  for(const url of [supabaseUrl,ikugoUrl])if(!url||new URL(url).protocol!=='https:')throw Error('HTTPS URL required');
  if(!publicKey||publicKey.startsWith('sb_secret_'))throw Error('Public key required');
@@ -11,8 +10,7 @@ function config(env) {
  if(supabaseUrl!==projects[mode])throw Error('Environment/project mismatch');
  const staging=mode==='staging';
  if((mode==='staging')!==ikugoUrl.includes('uchwyty-architekci-staging.onrender.com'))throw Error('Environment/backend mismatch');
- if(turnstileSiteKey && !/^[A-Za-z0-9_-]{8,128}$/.test(turnstileSiteKey))throw Error('Invalid public Turnstile site key');
- return {mode,supabaseUrl,publicKey,ikugoUrl,turnstileSiteKey};
+ return {mode,supabaseUrl,publicKey,ikugoUrl};
 }
 function build(env=process.env){
  const cfg=config(env),out=path.join(__dirname,'dist'); fs.mkdirSync(out,{recursive:true});

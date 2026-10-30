@@ -87,7 +87,6 @@
           <button id="btnRegister" class="btn" type="button" data-i18n="auth.register">Załóż konto</button>
           <button id="btnRecover" class="btn" type="button">Nie pamiętam hasła</button>
         </div>
-        <div id="authCaptcha" aria-label="Weryfikacja bezpieczeństwa" style="margin-top:12px"></div>
       </form>
       <div id="authMsg" class="muted" role="status" aria-live="polite" style="margin-top:8px"></div>
     </div>
@@ -269,41 +268,8 @@
 <script>
 const SUPABASE_URL = window.PORTAL_CONFIG.supabaseUrl;
 const SUPABASE_ANON_KEY = window.PORTAL_CONFIG.publicKey;
-const AUTH_CAPTCHA_SITE_KEY = window.PORTAL_CONFIG.turnstileSiteKey || '';
-let authCaptchaWidget = null;
-let authCaptchaTokenValue = '';
-function ensureAuthCaptcha(){
-  if(!AUTH_CAPTCHA_SITE_KEY || authCaptchaWidget !== null) return;
-  const render = () => {
-    if(authCaptchaWidget !== null || !window.turnstile) return;
-    authCaptchaWidget = window.turnstile.render('#authCaptcha', {
-      sitekey: AUTH_CAPTCHA_SITE_KEY,
-      callback: token => { authCaptchaTokenValue = token; },
-      'expired-callback': () => { authCaptchaTokenValue = ''; },
-      'error-callback': () => { authCaptchaTokenValue = ''; }
-    });
-  };
-  if(window.turnstile) { render(); return; }
-  if(document.querySelector('script[data-auth-captcha]')) return;
-  const script = document.createElement('script');
-  script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-  script.async = true; script.dataset.authCaptcha = '1'; script.onload = render;
-  document.head.appendChild(script);
-}
-function authCaptchaToken(){
-  if(!AUTH_CAPTCHA_SITE_KEY) return undefined;
-  if(!authCaptchaTokenValue) throw new Error('Potwierdź weryfikację bezpieczeństwa i spróbuj ponownie.');
-  const token = authCaptchaTokenValue;
-  authCaptchaTokenValue = '';
-  return token;
-}
-function resetAuthCaptcha(){
-  authCaptchaTokenValue = '';
-  if(authCaptchaWidget !== null && window.turnstile) window.turnstile.reset(authCaptchaWidget);
-}
-function authCaptchaError(error, fallback){
-  if(error?.message === 'Potwierdź weryfikację bezpieczeństwa i spróbuj ponownie.') return error.message;
-  if(error?.code === 'captcha_failed') return 'Weryfikacja bezpieczeństwa wygasła lub nie powiodła się. Spróbuj ponownie.';
+function authLoginError(error, fallback){
+  if(error?.code === 'captcha_failed') return 'Serwer logowania nadal wymaga CAPTCHA. Administrator musi wyłączyć wymaganie CAPTCHA w Supabase Auth. Ta wersja B2B korzysta z sesji i tokenów, bez Cloudflare.';
   return fallback;
 }
 
@@ -1012,8 +978,11 @@ async function fetchMagazynResponse(path, options = {}){
   return response;
 }
 
+let ARCHITECT_PROGRAM_ENABLED = false;
 function setArchitectProgram(active){
   const enabled=active === true;
+  ARCHITECT_PROGRAM_ENABLED = enabled;
+  for(const id of ['architectCodeInput','btnApplyArchitectCode','btnRemoveArchitectCode']) $(id).disabled = !enabled;
   $('architectCodeBox').classList.toggle('hidden',!enabled);
   if(!enabled){
     if(ARCHITECT_QUOTE_TIMER) clearTimeout(ARCHITECT_QUOTE_TIMER);
@@ -1833,6 +1802,7 @@ function renderClientDashboard(){
 }
 
 function showAuth(msg='') {
+  setArchitectProgram(false);
   clearOrderConfirmation();
   $('bootCard').classList.add('hidden');
   authCard.classList.remove('hidden');
@@ -1843,7 +1813,6 @@ function showAuth(msg='') {
   hideAllSections();
   who.textContent='';
   $('authMsg').textContent=msg;
-  ensureAuthCaptcha();
 }
 
 function showApp(email) {
@@ -1974,18 +1943,16 @@ $('clientLoginForm').onsubmit = async event => {
   $('btnRegister').disabled = true;
   $('authMsg').textContent = t('common.loading');
   try {
-    const captchaToken = authCaptchaToken();
-    const { data, error } = await sbAuth.auth.signInWithPassword({ email, password, options: { captchaToken } });
-    if(error){ showAuth(authCaptchaError(error,t('auth.loginError', { error:clientErrorDetail(error) }))); return; }
+    const { data, error } = await sbAuth.auth.signInWithPassword({ email, password });
+    if(error){ showAuth(authLoginError(error,t('auth.loginError', { error:clientErrorDetail(error) }))); return; }
     if(!data?.session){
       showAuth(t('auth.sessionMissing'));
       return;
     }
     await loadSession();
   } catch(error){
-    showAuth(authCaptchaError(error,t('auth.loginError', { error:clientErrorDetail(error) })));
+    showAuth(authLoginError(error,t('auth.loginError', { error:clientErrorDetail(error) })));
   } finally {
-    resetAuthCaptcha();
     endAuthAttempt();
   }
 };
@@ -1995,17 +1962,15 @@ $('btnRegister').onclick = async () => {
   const password=$('password').value;
   if(!beginAuthAttempt()) return;
   try {
-    const captchaToken = authCaptchaToken();
     const { data, error } = await sbAuth.auth.signUp({
-      email, password, options: { emailRedirectTo: window.location.origin, captchaToken }
+      email, password, options: { emailRedirectTo: window.location.origin }
     });
-    if(error){ showAuth(authCaptchaError(error,t('auth.registerError', { error:clientErrorDetail(error) }))); return; }
+    if(error){ showAuth(authLoginError(error,t('auth.registerError', { error:clientErrorDetail(error) }))); return; }
     if(data?.session){ await loadSession(); return; }
     showAuth(t('auth.accountCreated'));
   } catch(error) {
-    showAuth(authCaptchaError(error,t('auth.registerError', { error:clientErrorDetail(error) })));
+    showAuth(authLoginError(error,t('auth.registerError', { error:clientErrorDetail(error) })));
   } finally {
-    resetAuthCaptcha();
     endAuthAttempt();
   }
 };
@@ -2015,16 +1980,14 @@ $('btnRecover').onclick = async () => {
   if(!email || !$('email').checkValidity()) { showAuth(t('auth.invalidEmail')); return; }
   if(!beginAuthAttempt()) return;
   try {
-    const captchaToken = authCaptchaToken();
     const { error } = await sbAuth.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin, captchaToken
+      redirectTo: window.location.origin
     });
     if(error) throw error;
     showAuth('Jeśli konto istnieje, wysłaliśmy link do ustawienia nowego hasła.');
   } catch(error) {
-    showAuth(authCaptchaError(error,'Nie udało się wysłać linku. Spróbuj ponownie.'));
+    showAuth(authLoginError(error,'Nie udało się wysłać linku. Spróbuj ponownie.'));
   } finally {
-    resetAuthCaptcha();
     endAuthAttempt();
   }
 };
@@ -2233,6 +2196,7 @@ function architectBasketKey(){
 }
 
 async function refreshArchitectQuote(){
+  if(!ARCHITECT_PROGRAM_ENABLED){setArchitectProgram(false);return;}
   const code = ARCHITECT_CODE;
   const key = architectBasketKey();
   ARCHITECT_QUOTE = null;
@@ -2278,6 +2242,7 @@ function scheduleArchitectQuote(skipRender=false){
 }
 
 $('btnApplyArchitectCode').onclick = async () => {
+  if(!ARCHITECT_PROGRAM_ENABLED) return;
   const candidate = $('architectCodeInput').value.trim().toUpperCase();
   if(!candidate || !ORDER_DRAFT.length){
     $('architectCodeStatus').textContent = t('architect.enter');
