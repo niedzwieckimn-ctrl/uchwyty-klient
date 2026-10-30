@@ -81,6 +81,8 @@ function harness(){
     CURRENT_LANGUAGE:'pl', CLIENT_ORDERS:[previous()],
     ORDER_DRAFT:[{product_id:5,sku:'TEST',qty:2}], ORDER_CREATE_IN_FLIGHT:false,
     ORDER_IDEMPOTENCY_KEY:'stable-request-key', LAST_ORDER_CONFIRMATION:null,
+    ARCHITECT_CODE:'', ARCHITECT_QUOTE:null, ARCHITECT_QUOTE_KEY:'',
+    architectBasketKey:()=>JSON.stringify([{product_id:5,qty:2}]),
     getSession:async()=>({user:{email:'buyer@example.test'}}),
     t:(key,args)=>`${key} ${args?.number || args?.error || ''}`,
     renderOrderDraft:()=>{}, clientErrorDetail:error=>error.message,
