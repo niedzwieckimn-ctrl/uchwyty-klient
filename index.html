@@ -293,7 +293,9 @@ function ensureAuthCaptcha(){
 function authCaptchaToken(){
   if(!AUTH_CAPTCHA_SITE_KEY) return undefined;
   if(!authCaptchaTokenValue) throw new Error('Potwierdź weryfikację bezpieczeństwa i spróbuj ponownie.');
-  return authCaptchaTokenValue;
+  const token = authCaptchaTokenValue;
+  authCaptchaTokenValue = '';
+  return token;
 }
 function resetAuthCaptcha(){
   authCaptchaTokenValue = '';
@@ -1039,7 +1041,12 @@ async function fetchMagazynJson(path, options = {}){
     try {
       const res = await fetchMagazynResponse(path, options);
       if(!res.ok){
-        throw new Error(`Magazyn API: ${res.status}`);
+        let body = {};
+        try { body = await res.json(); } catch(_) {}
+        const error = new Error(`Magazyn API: ${res.status}`);
+        error.status = res.status;
+        error.code = body.code || '';
+        throw error;
       }
       return await res.json();
     } catch(error){
@@ -1856,6 +1863,18 @@ async function getSession(){
   return session;
 }
 
+let AUTH_ACTION_IN_FLIGHT = false;
+function beginAuthAttempt(){
+  if(AUTH_ACTION_IN_FLIGHT) return false;
+  AUTH_ACTION_IN_FLIGHT = true;
+  for(const id of ['btnLogin','btnRegister','btnRecover']) $(id).disabled = true;
+  return true;
+}
+function endAuthAttempt(){
+  AUTH_ACTION_IN_FLIGHT = false;
+  for(const id of ['btnLogin','btnRegister','btnRecover']) $(id).disabled = false;
+}
+
 async function fetchClientProfile(){
   const payload = await fetchMagazynJson('/api/client/profile', { attempts:2 });
   return payload?.customer || { language:'pl' };
@@ -1898,8 +1917,11 @@ async function loadSession(force = false) {
       CURRENT_CUSTOMER = null;
       LOADED_USER_ID = null;
       if(/^Magazyn API: 403$/.test(String(error?.message || ''))){
-        await sbAuth.auth.signOut({ scope: 'local' });
-        showAuth(t('auth.b2bAccessDenied'));
+        // A valid Auth session is not proof of B2B entitlement. Keep it so an
+        // administrator can repair an existing mapping without another login.
+        showAuth(error.code === 'B2B_ACCESS_DENIED'
+          ? 'Brak potwierdzonego aktywnego powiązania tego konta z dystrybutorem B2B. Administrator musi sprawdzić przypisanie konta. Udział w programie Architektów nie jest wymagany.'
+          : 'Nie udało się potwierdzić dostępu B2B. Administrator musi sprawdzić konfigurację dostępu i powiązanie konta. To nie oznacza wyłączenia programu Architektów.');
       } else {
         showAuth(t('auth.sessionError', { error:clientErrorDetail(error) }));
       }
@@ -1947,6 +1969,7 @@ $('clientLoginForm').onsubmit = async event => {
     $('password').focus();
     return;
   }
+  if(!beginAuthAttempt()) return;
   $('btnLogin').disabled = true;
   $('btnRegister').disabled = true;
   $('authMsg').textContent = t('common.loading');
@@ -1963,14 +1986,14 @@ $('clientLoginForm').onsubmit = async event => {
     showAuth(authCaptchaError(error,t('auth.loginError', { error:clientErrorDetail(error) })));
   } finally {
     resetAuthCaptcha();
-    $('btnLogin').disabled = false;
-    $('btnRegister').disabled = false;
+    endAuthAttempt();
   }
 };
 
 $('btnRegister').onclick = async () => {
   const email=$('email').value.trim();
   const password=$('password').value;
+  if(!beginAuthAttempt()) return;
   try {
     const captchaToken = authCaptchaToken();
     const { data, error } = await sbAuth.auth.signUp({
@@ -1983,12 +2006,14 @@ $('btnRegister').onclick = async () => {
     showAuth(authCaptchaError(error,t('auth.registerError', { error:clientErrorDetail(error) })));
   } finally {
     resetAuthCaptcha();
+    endAuthAttempt();
   }
 };
 
 $('btnRecover').onclick = async () => {
   const email = $('email').value.trim();
   if(!email || !$('email').checkValidity()) { showAuth(t('auth.invalidEmail')); return; }
+  if(!beginAuthAttempt()) return;
   try {
     const captchaToken = authCaptchaToken();
     const { error } = await sbAuth.auth.resetPasswordForEmail(email, {
@@ -2000,6 +2025,7 @@ $('btnRecover').onclick = async () => {
     showAuth(authCaptchaError(error,'Nie udało się wysłać linku. Spróbuj ponownie.'));
   } finally {
     resetAuthCaptcha();
+    endAuthAttempt();
   }
 };
 
