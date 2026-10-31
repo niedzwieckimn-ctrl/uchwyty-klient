@@ -3,8 +3,8 @@
 
   const COPY = {
     pl: {
-      title: 'Gotowe! Zamówienie {number} zapisane.',
-      saved: 'Zamówienie {number} jest już zapisane.',
+      title: 'Zamówienie {number} wysłane.',
+      saved: 'Zamówienie {number} zostało już wysłane.',
       thanks: 'Dziękujemy za zaufanie. Powodzenia przy realizacji!',
       returning: 'Dobrze Cię znów widzieć. Dziękujemy za kolejne zamówienie!',
       emailSent: 'Potwierdzenie e-mail zostało wysłane.',
@@ -12,8 +12,8 @@
       view: 'Zobacz zamówienie'
     },
     de: {
-      title: 'Geschafft! Bestellung {number} ist gespeichert.',
-      saved: 'Bestellung {number} ist bereits gespeichert.',
+      title: 'Bestellung {number} wurde gesendet.',
+      saved: 'Bestellung {number} wurde bereits gesendet.',
       thanks: 'Vielen Dank für Ihr Vertrauen. Viel Erfolg bei der Umsetzung!',
       returning: 'Schön, dass Sie wieder da sind. Vielen Dank für Ihre erneute Bestellung!',
       emailSent: 'Die Bestätigung wurde per E-Mail versendet.',
@@ -21,8 +21,8 @@
       view: 'Bestellung ansehen'
     },
     en: {
-      title: 'All set! Order {number} is saved.',
-      saved: 'Order {number} is already saved.',
+      title: 'Order {number} sent.',
+      saved: 'Order {number} has already been sent.',
       thanks: 'Thank you for your trust. Best wishes for your project!',
       returning: 'Good to see you again. Thank you for ordering with us again!',
       emailSent: 'The confirmation email has been sent.',
@@ -30,8 +30,8 @@
       view: 'View order'
     },
     es: {
-      title: '¡Listo! El pedido {number} está guardado.',
-      saved: 'El pedido {number} ya está guardado.',
+      title: 'Pedido {number} enviado.',
+      saved: 'El pedido {number} ya se ha enviado.',
       thanks: 'Gracias por tu confianza. ¡Mucho éxito con tu proyecto!',
       returning: 'Nos alegra verte de nuevo. ¡Gracias por volver a hacer un pedido!',
       emailSent: 'Se ha enviado el correo de confirmación.',
@@ -39,8 +39,8 @@
       view: 'Ver pedido'
     },
     it: {
-      title: 'Fatto! L’ordine {number} è salvato.',
-      saved: 'L’ordine {number} è già salvato.',
+      title: 'Ordine {number} inviato.',
+      saved: 'L’ordine {number} è già stato inviato.',
       thanks: 'Grazie per la fiducia. Buon lavoro con il tuo progetto!',
       returning: 'È bello rivederti. Grazie per aver ordinato di nuovo!',
       emailSent: 'L’e-mail di conferma è stata inviata.',
@@ -95,17 +95,12 @@
     const heading = doc.createElement('strong');
     heading.className = 'order-success-title';
     heading.textContent = copy.title;
-    const body = doc.createElement('p');
-    body.textContent = copy.body;
-    const email = doc.createElement('p');
-    email.className = 'order-success-email';
-    email.textContent = copy.email;
     const button = doc.createElement('button');
     button.type = 'button';
     button.className = 'btn';
     button.textContent = copy.view;
     button.addEventListener('click', () => onView(saved));
-    container.replaceChildren(heading, body, email, button);
+    container.replaceChildren(heading, button);
     container.classList.add('order-success');
     container.style.color = '';
     container.style.fontWeight = '';

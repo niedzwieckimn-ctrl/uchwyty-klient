@@ -723,6 +723,11 @@ Object.assign(TRANSLATIONS.de,{"architect.customerTotalAfter": "Brutto-Endkunden
 Object.assign(TRANSLATIONS.es,{"architect.customerTotalAfter": "Total minorista bruto con descuento", "architect.compareQuote": "Compare este importe con el presupuesto del cliente. Los importes B2B corresponden a su liquidación con Niedźwieccy.", "architect.afterUnit": "Bruto minorista/ud. con descuento", "architect.afterValue": "Total minorista bruto con descuento", "architect.totalChecking": "Comprobando el total con descuento…", "architect.totalUnknown": "No se pudo confirmar el total. Vuelva a comprobar el código.", "architect.orderSummaryAfter": "Artículos: {count} | Neto B2B: {net} | Bruto B2B: {gross} | Total minorista bruto con descuento: {retail}"});
 Object.assign(TRANSLATIONS.it,{"architect.customerTotalAfter": "Totale lordo al dettaglio dopo lo sconto", "architect.compareQuote": "Confronta questo importo con il preventivo del cliente. Gli importi B2B riguardano il tuo saldo con Niedźwieccy.", "architect.afterUnit": "Lordo al dettaglio/pz. dopo lo sconto", "architect.afterValue": "Totale lordo al dettaglio dopo lo sconto", "architect.totalChecking": "Verifica del totale scontato…", "architect.totalUnknown": "Impossibile confermare il totale. Verifica di nuovo il codice.", "architect.orderSummaryAfter": "Articoli: {count} | Netto B2B: {net} | Lordo B2B: {gross} | Totale lordo al dettaglio dopo lo sconto: {retail}"});
 
+Object.assign(PL_TRANSLATIONS, {'orders.createdMail':'Zamówienie {number} wysłane.','orders.createdRetry':'Zamówienie {number} wysłane.'});
+Object.assign(TRANSLATIONS.de, {'orders.createdMail':'Bestellung {number} wurde gesendet.','orders.createdRetry':'Bestellung {number} wurde gesendet.'});
+Object.assign(TRANSLATIONS.en, {'orders.createdMail':'Order {number} sent.','orders.createdRetry':'Order {number} sent.'});
+Object.assign(TRANSLATIONS.es, {'orders.createdMail':'Pedido {number} enviado.','orders.createdRetry':'Pedido {number} enviado.'});
+Object.assign(TRANSLATIONS.it, {'orders.createdMail':'Ordine {number} inviato.','orders.createdRetry':'Ordine {number} inviato.'});
 function normalizeLanguage(value){
   const language = String(value || '').trim().toLowerCase();
   return SUPPORTED_LANGUAGES.includes(language) ? language : 'pl';
