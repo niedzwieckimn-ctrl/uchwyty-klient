@@ -38,6 +38,7 @@
     .order-success{padding:18px;margin-top:16px!important;border:1px solid #bce5d6;border-radius:16px;background:#f0faf5;color:var(--ink);animation:rise .22s ease;overflow-wrap:anywhere}
     .order-success-title{display:block;font-size:19px;color:#126549}.order-success p{margin:8px 0}.order-success-email{font-size:13px;color:#526b60}.order-success .btn{margin-top:6px}
     @media(prefers-reduced-motion:reduce){.order-success{animation:none}}
+    #architectCodeStatus.architect-code-applied:not(:empty){padding:15px 18px;border:1px solid #95d8b7;border-left:5px solid #23865a;border-radius:10px;background:#e8f8ef;color:#17633f;font-size:16px;font-weight:700;line-height:1.5;margin-top:12px!important}
   </style>
 </head>
 <body>
@@ -168,6 +169,11 @@
           </div>
           <div id="architectCodeStatus" class="muted" role="status" aria-live="polite" style="margin-top:8px"></div>
         </div>
+        <section id="architectRetailSummary" class="hidden" role="status" aria-live="polite" style="margin:12px 0;padding:20px;border:1px solid #b7d5ef;border-radius:14px;background:#f0f7ff">
+          <div data-i18n="architect.customerTotalAfter" style="font-weight:700">Detal brutto po rabacie</div>
+          <strong id="architectRetailTotal" style="display:block;font-size:28px;color:#163e68;margin:6px 0"></strong>
+          <p data-i18n="architect.compareQuote" style="margin:0;color:#526581">Porównaj tę kwotę z wyceną klienta. Kwoty B2B dotyczą rozliczenia z Niedźwieccy.</p>
+        </section>
         <input id="orderNote" placeholder="Notatka (opcjonalnie)" data-i18n-placeholder="orders.notePlaceholder" style="margin-top:8px" />
         <div id="orderDraftSummary" class="muted" style="margin-top:8px">Pozycji: 0</div>
 
@@ -627,7 +633,7 @@ Object.assign(TRANSLATIONS.it, {
 Object.assign(PL_TRANSLATIONS, {
   'architect.codeLabel':'Kod rabatowy architekta', 'architect.apply':'Zastosuj kod', 'architect.remove':'Usuń kod',
   'architect.addProducts':'Dodaj produkt, aby sprawdzić kod.', 'architect.checking':'Sprawdzam kod i aktualne ceny…',
-  'architect.applied':'Kod {code} zastosowany. Oszczędność dystrybutora: {saving} netto.',
+  'architect.applied':'Kod zastosowany: {code}.',
   'architect.rejected':'Nie zastosowano kodu: {error}', 'architect.enter':'Wpisz kod i dodaj produkty do koszyka.',
   'architect.removed':'Kod usunięty. Przywrócono standardowe ceny.',
   'architect.awaitInvoice':'Kod architekta zapisano. Potwierdzenie sprzedaży detalicznej będzie dostępne po wystawieniu faktury B2B.',
@@ -644,7 +650,7 @@ Object.assign(PL_TRANSLATIONS, {
 Object.assign(TRANSLATIONS.en, {
   'architect.codeLabel':'Architect discount code', 'architect.apply':'Apply code', 'architect.remove':'Remove code',
   'architect.addProducts':'Add a product to check the code.', 'architect.checking':'Checking code and current prices…',
-  'architect.applied':'Code {code} applied. Distributor saving: {saving} net.',
+  'architect.applied':'Code applied: {code}.',
   'architect.rejected':'Code not applied: {error}', 'architect.enter':'Enter a code and add products to the basket.',
   'architect.removed':'Code removed. Standard prices restored.',
   'architect.awaitInvoice':'Architect code saved. Retail sale confirmation will be available after the B2B invoice is issued.',
@@ -661,7 +667,7 @@ Object.assign(TRANSLATIONS.en, {
 Object.assign(TRANSLATIONS.de, {
   'architect.codeLabel':'Rabattcode des Architekten', 'architect.apply':'Code anwenden', 'architect.remove':'Code entfernen',
   'architect.addProducts':'Produkt hinzufügen, um den Code zu prüfen.', 'architect.checking':'Code und aktuelle Preise werden geprüft…',
-  'architect.applied':'Code {code} angewendet. Ersparnis des Händlers: {saving} netto.',
+  'architect.applied':'Code angewendet: {code}.',
   'architect.rejected':'Code nicht angewendet: {error}', 'architect.enter':'Code eingeben und Produkte zum Warenkorb hinzufügen.',
   'architect.removed':'Code entfernt. Standardpreise wiederhergestellt.',
   'architect.awaitInvoice':'Architektencode gespeichert. Die Bestätigung des Einzelhandelsverkaufs ist nach Ausstellung der B2B-Rechnung verfügbar.',
@@ -678,7 +684,7 @@ Object.assign(TRANSLATIONS.de, {
 Object.assign(TRANSLATIONS.es, {
   'architect.codeLabel':'Código de descuento del arquitecto', 'architect.apply':'Aplicar código', 'architect.remove':'Quitar código',
   'architect.addProducts':'Añade un producto para comprobar el código.', 'architect.checking':'Comprobando código y precios actuales…',
-  'architect.applied':'Código {code} aplicado. Ahorro del distribuidor: {saving} netos.',
+  'architect.applied':'Código aplicado: {code}.',
   'architect.rejected':'Código no aplicado: {error}', 'architect.enter':'Introduce un código y añade productos al carrito.',
   'architect.removed':'Código eliminado. Se restauraron los precios normales.',
   'architect.awaitInvoice':'Código de arquitecto guardado. La confirmación de venta estará disponible tras emitir la factura B2B.',
@@ -695,7 +701,7 @@ Object.assign(TRANSLATIONS.es, {
 Object.assign(TRANSLATIONS.it, {
   'architect.codeLabel':'Codice sconto architetto', 'architect.apply':'Applica codice', 'architect.remove':'Rimuovi codice',
   'architect.addProducts':'Aggiungi un prodotto per verificare il codice.', 'architect.checking':'Verifica del codice e dei prezzi…',
-  'architect.applied':'Codice {code} applicato. Risparmio del distributore: {saving} netti.',
+  'architect.applied':'Codice applicato: {code}.',
   'architect.rejected':'Codice non applicato: {error}', 'architect.enter':'Inserisci un codice e aggiungi prodotti al carrello.',
   'architect.removed':'Codice rimosso. Prezzi standard ripristinati.',
   'architect.awaitInvoice':'Codice architetto salvato. La conferma della vendita sarà disponibile dopo la fattura B2B.',
@@ -709,6 +715,13 @@ Object.assign(TRANSLATIONS.it, {
   'architect.saleFailed':'Impossibile salvare la vendita: {error}',
   'architect.soldOut':'La vendita di tutte le unità di questa riga è già stata confermata.'
 });
+
+
+Object.assign(TRANSLATIONS.pl,{"architect.customerTotalAfter": "Detal brutto po rabacie", "architect.compareQuote": "Porównaj tę kwotę z wyceną klienta. Kwoty B2B dotyczą rozliczenia z Niedźwieccy.", "architect.afterUnit": "Brutto detal/szt. po rabacie", "architect.afterValue": "Detal brutto po rabacie", "architect.totalChecking": "Sprawdzam aktualną wartość po rabacie…", "architect.totalUnknown": "Nie udało się potwierdzić pełnej wartości. Odśwież kod.", "architect.orderSummaryAfter": "Pozycji: {count} | Netto B2B: {net} | Brutto B2B: {gross} | Detal brutto po rabacie: {retail}"});
+Object.assign(TRANSLATIONS.en,{"architect.customerTotalAfter": "Retail gross after discount", "architect.compareQuote": "Compare this amount with the customer quotation. B2B amounts concern your settlement with Niedźwieccy.", "architect.afterUnit": "Retail gross/unit after discount", "architect.afterValue": "Retail gross after discount", "architect.totalChecking": "Checking the current discounted total…", "architect.totalUnknown": "The full total could not be confirmed. Refresh the code.", "architect.orderSummaryAfter": "Items: {count} | Net B2B: {net} | Gross B2B: {gross} | Retail gross after discount: {retail}"});
+Object.assign(TRANSLATIONS.de,{"architect.customerTotalAfter": "Brutto-Endkundenwert nach Rabatt", "architect.compareQuote": "Vergleichen Sie diesen Betrag mit dem Kundenangebot. B2B-Beträge betreffen Ihre Abrechnung mit Niedźwieccy.", "architect.afterUnit": "Brutto/Stk. nach Rabatt", "architect.afterValue": "Brutto-Endkundenwert nach Rabatt", "architect.totalChecking": "Der aktuelle Rabattbetrag wird geprüft…", "architect.totalUnknown": "Der Gesamtbetrag konnte nicht bestätigt werden. Code erneut prüfen.", "architect.orderSummaryAfter": "Positionen: {count} | Netto B2B: {net} | Brutto B2B: {gross} | Brutto-Endkundenwert nach Rabatt: {retail}"});
+Object.assign(TRANSLATIONS.es,{"architect.customerTotalAfter": "Total minorista bruto con descuento", "architect.compareQuote": "Compare este importe con el presupuesto del cliente. Los importes B2B corresponden a su liquidación con Niedźwieccy.", "architect.afterUnit": "Bruto minorista/ud. con descuento", "architect.afterValue": "Total minorista bruto con descuento", "architect.totalChecking": "Comprobando el total con descuento…", "architect.totalUnknown": "No se pudo confirmar el total. Vuelva a comprobar el código.", "architect.orderSummaryAfter": "Artículos: {count} | Neto B2B: {net} | Bruto B2B: {gross} | Total minorista bruto con descuento: {retail}"});
+Object.assign(TRANSLATIONS.it,{"architect.customerTotalAfter": "Totale lordo al dettaglio dopo lo sconto", "architect.compareQuote": "Confronta questo importo con il preventivo del cliente. Gli importi B2B riguardano il tuo saldo con Niedźwieccy.", "architect.afterUnit": "Lordo al dettaglio/pz. dopo lo sconto", "architect.afterValue": "Totale lordo al dettaglio dopo lo sconto", "architect.totalChecking": "Verifica del totale scontato…", "architect.totalUnknown": "Impossibile confermare il totale. Verifica di nuovo il codice.", "architect.orderSummaryAfter": "Articoli: {count} | Netto B2B: {net} | Lordo B2B: {gross} | Totale lordo al dettaglio dopo lo sconto: {retail}"});
 
 function normalizeLanguage(value){
   const language = String(value || '').trim().toLowerCase();
@@ -955,11 +968,12 @@ function formatPrice(v, currency = currentPriceCurrency()){
 
 function applyPriceModeLabels(){
   const eur = isEurPriceList();
+  const after=Boolean(ARCHITECT_CODE&&ARCHITECT_QUOTE&&ARCHITECT_QUOTE_KEY===architectBasketKey());
   if($('stockPriceHead')) $('stockPriceHead').textContent = eur ? t('price.eur') : t('stock.netB2b');
   if($('stockRetailHead')) $('stockRetailHead').textContent = eur ? t('price.uvp') : t('stock.clientGross');
   if($('draftPriceHead')) $('draftPriceHead').textContent = eur ? t('price.eurUnit') : t('orders.netB2bUnit');
-  if($('draftRetailHead')) $('draftRetailHead').textContent = eur ? t('price.uvpUnit') : t('orders.retailGrossUnit');
-  if($('draftRetailValueHead')) $('draftRetailValueHead').textContent = eur ? t('price.uvpValue') : t('orders.retailGrossValue');
+  if($('draftRetailHead')) $('draftRetailHead').textContent = eur ? t('price.uvpUnit') : t(after?'architect.afterUnit':'orders.retailGrossUnit');
+  if($('draftRetailValueHead')) $('draftRetailValueHead').textContent = eur ? t('price.uvpValue') : t(after?'architect.afterValue':'orders.retailGrossValue');
   document.querySelectorAll('.pln-only-price').forEach(el => el.classList.toggle('hidden', eur));
 }
 
@@ -2232,6 +2246,13 @@ async function loadStock(force = false){
 $('btnLoadStock').onclick = () => loadStock(true);
 $('stockSearch').oninput = renderStockTable;
 
+function setArchitectCodeStatus(message,applied=false){
+  const status=$('architectCodeStatus');
+  status.textContent=message;
+  status.classList.toggle('architect-code-applied',applied);
+  status.classList.toggle('muted',!applied);
+}
+
 function architectBasketKey(){
   return JSON.stringify(ORDER_DRAFT.map(x => ({ product_id:Number(x.product_id), qty:Number(x.qty) })));
 }
@@ -2243,11 +2264,11 @@ async function refreshArchitectQuote(){
   ARCHITECT_QUOTE = null;
   ARCHITECT_QUOTE_KEY = '';
   if(!code || !ORDER_DRAFT.length){
-    $('architectCodeStatus').textContent = code ? t('architect.addProducts') : '';
+    setArchitectCodeStatus(code ? t('architect.addProducts') : '');
     renderOrderDraft();
     return;
   }
-  $('architectCodeStatus').textContent = t('architect.checking');
+  setArchitectCodeStatus(t('architect.checking'));
   renderOrderDraft();
   try {
     const response = await fetchMagazynResponse('/api/client/architect-code/quote', {
@@ -2259,7 +2280,7 @@ async function refreshArchitectQuote(){
     if(ARCHITECT_CODE !== code || architectBasketKey() !== key) return;
     ARCHITECT_QUOTE = result;
     ARCHITECT_QUOTE_KEY = key;
-    $('architectCodeStatus').textContent = t('architect.applied',{code,saving:formatPrice(result.manufacturer_discount_net,'PLN')});
+    setArchitectCodeStatus(t('architect.applied',{code}),true);
     $('btnRemoveArchitectCode').classList.remove('hidden');
     renderOrderDraft();
   } catch(error){
@@ -2267,7 +2288,7 @@ async function refreshArchitectQuote(){
     ARCHITECT_CODE = '';
     ARCHITECT_QUOTE = null;
     ARCHITECT_QUOTE_KEY = '';
-    $('architectCodeStatus').textContent = t('architect.rejected',{error:clientErrorDetail(error)});
+    setArchitectCodeStatus(t('architect.rejected',{error:clientErrorDetail(error)}));
     $('btnRemoveArchitectCode').classList.add('hidden');
     renderOrderDraft();
   }
@@ -2279,14 +2300,14 @@ function scheduleArchitectQuote(skipRender=false){
   ARCHITECT_QUOTE_KEY = '';
   if(!skipRender) renderOrderDraft();
   else $('btnCreateOrder').disabled = Boolean(ARCHITECT_CODE);
-  if(ARCHITECT_CODE) ARCHITECT_QUOTE_TIMER = setTimeout(refreshArchitectQuote, 250);
+  if(ARCHITECT_CODE){setArchitectCodeStatus(t('architect.checking'));ARCHITECT_QUOTE_TIMER = setTimeout(refreshArchitectQuote, 250);}
 }
 
 $('btnApplyArchitectCode').onclick = async () => {
   if(!ARCHITECT_PROGRAM_ENABLED) return;
   const candidate = $('architectCodeInput').value.trim().toUpperCase();
   if(!candidate || !ORDER_DRAFT.length){
-    $('architectCodeStatus').textContent = t('architect.enter');
+    setArchitectCodeStatus(t('architect.enter'));
     return;
   }
   ARCHITECT_CODE = candidate;
@@ -2299,7 +2320,7 @@ $('btnRemoveArchitectCode').onclick = () => {
   ARCHITECT_QUOTE = null;
   ARCHITECT_QUOTE_KEY = '';
   $('architectCodeInput').value = '';
-  $('architectCodeStatus').textContent = t('architect.removed');
+  setArchitectCodeStatus(t('architect.removed'));
   $('btnRemoveArchitectCode').classList.add('hidden');
   renderOrderDraft();
 };
@@ -2310,10 +2331,34 @@ function orderLineGross(unitNet, qty, currency='PLN'){
   return (netCents + (currency === 'EUR' ? 0 : Math.round(netCents * 23 / 100))) / 100;
 }
 
+function architectRetailAfterCents(quote,items){
+  if(!quote||!Array.isArray(quote.lines)||!items.length)return null;
+  const lines=new Map(quote.lines.map(line=>[Number(line.product_id),line]));
+  if(lines.size!==quote.lines.length||lines.size!==items.length)return null;
+  let total=0;
+  for(const item of items){
+    const line=lines.get(Number(item.product_id)),qty=Number(item.qty);
+    if(!line||!Number.isSafeInteger(qty)||qty<1||Number(line.qty)!==qty)return null;
+    const value=String(line.retail_gross_after??''),match=/^(\d+)(?:\.(\d+))?$/.exec(value);
+    if(!match||!/^[0]*$/.test((match[2]||'').slice(2)))return null;
+    const cents=Number(match[1])*100+Number(((match[2]||'')+'00').slice(0,2));
+    if(!Number.isSafeInteger(cents)||cents<=0)return null;
+    total+=cents*qty;
+    if(!Number.isSafeInteger(total))return null;
+  }
+  return total;
+}
+
 function renderOrderDraft(){
   const tb = $('orderDraftTable').querySelector('tbody');
   const quote = ARCHITECT_QUOTE_KEY === architectBasketKey() ? ARCHITECT_QUOTE : null;
   const quoteByProduct = new Map((quote?.lines || []).map(x => [Number(x.product_id), x]));
+  const retailAfterCents=architectRetailAfterCents(quote,ORDER_DRAFT);
+  const showRetailAfter=Boolean(ARCHITECT_CODE&&!isEurPriceList()&&ORDER_DRAFT.length);
+  $('architectRetailSummary').classList.toggle('hidden',!showRetailAfter);
+  $('architectRetailTotal').textContent=showRetailAfter
+    ? retailAfterCents!==null?formatPrice(retailAfterCents/100,'PLN'):t(quote?'architect.totalUnknown':'architect.totalChecking')
+    : '';
 
   if(!ORDER_DRAFT.length){
     tb.innerHTML = `<tr><td colspan="9">${esc(t('orders.noItems'))}</td></tr>`;
@@ -2343,21 +2388,21 @@ function renderOrderDraft(){
 
   const totalNet = quote ? Number(quote.total_net) : ORDER_DRAFT.reduce((sum, it) => sum + Number(it.net_price || 0) * Number(it.qty || 0), 0);
   const totalGross = quote ? Number(quote.total_gross) : ORDER_DRAFT.reduce((sum, it) => sum + orderLineGross(it.net_price, it.qty, it.currency), 0);
-  const totalRetailGross = ORDER_DRAFT.reduce((sum, it) => sum + (Number(quoteByProduct.get(Number(it.product_id))?.retail_gross_after) || Number(it.retail_price || 0) || calcClientGrossFromNet(it.net_price)) * Number(it.qty || 0), 0);
+  const totalRetailGross = retailAfterCents!==null?retailAfterCents/100:ORDER_DRAFT.reduce((sum, it) => sum + (Number(quoteByProduct.get(Number(it.product_id))?.retail_gross_after) || Number(it.retail_price || 0) || calcClientGrossFromNet(it.net_price)) * Number(it.qty || 0), 0);
   $('orderDraftSummary').textContent = isEurPriceList()
     ? t('price.eurSummary', {
         count:ORDER_DRAFT.length,
         total:formatPrice(totalNet, 'EUR'),
         retail:formatPrice(totalRetailGross, 'EUR')
       })
-    : t('orders.summary', {
+    : t(quote?'architect.orderSummaryAfter':'orders.summary', {
         count:ORDER_DRAFT.length,
         net:formatPrice(totalNet, 'PLN'),
         gross:formatPrice(totalGross, 'PLN'),
         retail:formatPrice(totalRetailGross, 'PLN')
       });
   applyPriceModeLabels();
-  $('btnCreateOrder').disabled = Boolean(ARCHITECT_CODE && !quote);
+  $('btnCreateOrder').disabled = Boolean(ARCHITECT_CODE && (!quote||retailAfterCents===null));
 }
 
 function parseProductInputToId(txt){
