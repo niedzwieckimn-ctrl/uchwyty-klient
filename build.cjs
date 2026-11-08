@@ -16,7 +16,7 @@ function config(env) {
 }
 function build(env=process.env){
  const cfg=config(env),out=path.join(__dirname,'dist'); fs.mkdirSync(out,{recursive:true});
- const files=['index.html','logo.png','order-success.js','portal-api.js','sales-thoughts.js','search-telemetry.js'];
+ const files=['index.html','logo.png','order-success.js','portal-api.js','sales-thoughts.js','search-telemetry.js','catalog-news.js','catalog-news.css'];
  for(const file of files)fs.copyFileSync(path.join(__dirname,file),path.join(out,file));
  for(const file of ['staging-checks.html','responsive-checks.html']){
   const target=path.join(out,file);
