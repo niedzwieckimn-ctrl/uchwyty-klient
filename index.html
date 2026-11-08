@@ -774,7 +774,7 @@ function setLanguage(value, rerender = true){
   CURRENT_LANGUAGE = normalizeLanguage(value);
   applyTranslations();
   if(rerender){
-    drawNews();
+    globalThis.CatalogNews?.render();
     renderOrderConfirmation();
     renderClientDashboard(); renderStockTable(); renderOrderDraft();
     if(CLIENT_ORDERS.length) renderOrdersRows(CLIENT_ORDERS);
@@ -1859,7 +1859,7 @@ function renderClientDashboard(){
 }
 
 function showAuth(msg='') {
-  ++newsRequest; newsProducts=[]; drawNews();
+  globalThis.CatalogNews?.clear();
   setArchitectProgram(false);
   clearOrderConfirmation();
   $('bootCard').classList.add('hidden');
@@ -1914,7 +1914,7 @@ function hideAllSections(){
 }
 
 function openSection(sectionId){
-  if(sectionId==='dashboardSection' && CURRENT_CUSTOMER) void refreshNews();
+  if(sectionId==='dashboardSection' && CURRENT_CUSTOMER) void globalThis.CatalogNews?.refresh();
   if(CURRENT_CUSTOMER) void refreshArchitectProgram();
   hideAllSections();
   const el = document.getElementById(sectionId);

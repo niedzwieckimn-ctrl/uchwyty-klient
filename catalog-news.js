@@ -58,3 +58,13 @@ async function refreshNews(){
   drawNews();
 }
 
+globalThis.CatalogNews = {
+  refresh: refreshNews,
+  render: drawNews,
+  clear(){
+    ++newsRequest;
+    newsProducts=[];
+    drawNews();
+  }
+};
+
